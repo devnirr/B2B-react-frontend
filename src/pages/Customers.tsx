@@ -327,7 +327,7 @@ export default function Customers() {
         {(!data?.data || data.data.length === 0) ? null : (
           <ButtonWithWaves onClick={openModal}>
             <Plus className="w-5 h-5" />
-            Add Customer
+          Add Customer
           </ButtonWithWaves>
         )}
       </div>
@@ -350,36 +350,36 @@ export default function Customers() {
         ) : (
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
+            <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
+            </tr>
+          </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data.data.map((customer: any) => (
                 <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {customer.name}
-                  </td>
+                  {customer.name}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {customer.email || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {customer.email || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
-                      {customer.type}
-                    </span>
-                  </td>
+                    {customer.type}
+                  </span>
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {customer.companyName || '-'}
-                  </td>
+                  {customer.companyName || '-'}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {customer.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
@@ -402,11 +402,11 @@ export default function Customers() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         )}
       </div>
 
@@ -422,15 +422,15 @@ export default function Customers() {
           <nav aria-label="Page navigation">
             <ul className="pagination pagination-rounded pagination-primary">
               <li className="page-item">
-                <button
+        <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
                   className="page-link"
                   aria-label="Previous"
-                >
+        >
                   <ChevronsLeft className="w-3.5 h-3.5" />
-                </button>
+        </button>
               </li>
               {(() => {
                 const totalPages = Math.max(1, Math.ceil((data?.total || 0) / 10));
@@ -467,7 +467,7 @@ export default function Customers() {
                       <li key={`ellipsis-${idx}`} className="page-item">
                         <span className="page-link" style={{ cursor: 'default', pointerEvents: 'none' }}>
                           ...
-                        </span>
+        </span>
                       </li>
                     );
                   }
@@ -485,19 +485,19 @@ export default function Customers() {
                 });
               })()}
               <li className="page-item">
-                <button
+        <button
                   type="button"
-                  onClick={() => setPage((p) => p + 1)}
+          onClick={() => setPage((p) => p + 1)}
                   disabled={!data?.data || data.data.length < 10 || page + 1 >= Math.ceil((data?.total || 0) / 10)}
                   className="page-link"
                   aria-label="Next"
-                >
+        >
                   <ChevronsRight className="w-3.5 h-3.5" />
-                </button>
+        </button>
               </li>
             </ul>
           </nav>
-        </div>
+      </div>
       )}
 
       {/* Add Customer Modal */}

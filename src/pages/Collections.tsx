@@ -324,7 +324,7 @@ export default function Collections() {
           {(!data || data.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
               <Plus className="w-5 h-5" />
-              Add Collection
+          Add Collection
             </ButtonWithWaves>
           )}
         </div>
@@ -382,21 +382,21 @@ export default function Collections() {
                     {collection.season ? `Season: ${collection.season}` : 'Season: -'}
                     {collection.season || collection.drop ? ' • ' : ''}
                     {collection.drop ? `Drop: ${collection.drop}` : collection.season ? 'Drop: -' : ''}
-                  </p>
+            </p>
                   
                   {/* Status Tag and Product Count */}
                   <div className="flex items-center justify-between mb-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       collection.lifecycle === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' :
                       collection.lifecycle === 'PLANNING' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400' :
                       collection.lifecycle === 'ARCHIVED' ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300' :
                       'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-                    }`}>
-                      {collection.lifecycle}
-                    </span>
+              }`}>
+                {collection.lifecycle}
+              </span>
                     <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {collection._count?.products || 0} products
-                    </span>
+                {collection._count?.products || 0} products
+              </span>
                   </div>
                   
                   {/* Collection Identifier at Bottom */}

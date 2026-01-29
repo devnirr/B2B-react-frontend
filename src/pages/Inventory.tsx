@@ -352,7 +352,7 @@ export default function Inventory() {
                 { value: '', label: 'All Warehouses' },
                 ...warehouses.map((w: any) => ({ value: w.id, label: w.name })),
               ]}
-              value={warehouseFilter}
+            value={warehouseFilter}
               onChange={(value) => {
                 setWarehouseFilter(value);
                 setPage(0);
@@ -363,7 +363,7 @@ export default function Inventory() {
           {(!filteredData || filteredData.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
               <Plus className="w-5 h-5" />
-              Add Inventory
+            Add Inventory
             </ButtonWithWaves>
           )}
         </div>
@@ -387,7 +387,7 @@ export default function Inventory() {
         ) : (
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
+            <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Product</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Warehouse</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantity</th>
@@ -395,37 +395,37 @@ export default function Inventory() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Available</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
+            </tr>
+          </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {paginatedData.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {item.product?.name || '-'}
-                  </td>
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {item.warehouse?.name || '-'}
-                  </td>
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {item.quantity}
-                  </td>
+                  {item.quantity}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {item.reservedQty || 0}
-                  </td>
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {item.availableQty || item.quantity - (item.reservedQty || 0)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                     {item.quantity <= (item.reorderPoint || 0) ? (
                       <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full">
-                        Low Stock
-                      </span>
-                    ) : (
+                      Low Stock
+                    </span>
+                  ) : (
                       <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full">
-                        In Stock
-                      </span>
-                    )}
-                  </td>
+                      In Stock
+                    </span>
+                  )}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button
@@ -450,10 +450,10 @@ export default function Inventory() {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         )}
       </div>
 
