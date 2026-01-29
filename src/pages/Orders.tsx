@@ -388,7 +388,7 @@ export default function Orders() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    ${order.totalAmount?.toFixed(2) || '0.00'}
+                    ${typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : (order.totalAmount ? parseFloat(order.totalAmount).toFixed(2) : '0.00')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(order.orderDate).toLocaleDateString()}

@@ -24,8 +24,6 @@ const CustomSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,21 +36,6 @@ const CustomSelect = ({
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Calculate position for dropdown to escape overflow clipping
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: 'fixed' as const,
-        top: `${rect.bottom + 4}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-      });
-    } else {
-      setDropdownStyle({});
     }
   }, [isOpen]);
 
@@ -83,7 +66,6 @@ const CustomSelect = ({
   return (
     <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 10001 : 'auto', position: 'relative' }}>
       <button
-        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
@@ -111,14 +93,12 @@ const CustomSelect = ({
           className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
           style={{
             zIndex: 10001,
-            ...(dropdownStyle.position === 'fixed' ? dropdownStyle : {
-              top: '100%',
-              left: 0,
-              right: 0,
-            }),
+            top: '100%',
+            left: 0,
+            right: 0,
             backgroundColor: '#fff',
             minWidth: '100%',
-            position: dropdownStyle.position || 'absolute',
+            position: 'absolute',
             overflow: 'visible',
           }}
         >
