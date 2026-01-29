@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { ShoppingCart, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { validators } from '../utils/validation';
@@ -634,7 +635,7 @@ function AddOrderModal({
       notes: formData.notes.trim() || undefined,
       shippingAddress: formData.shippingAddress.trim() || undefined,
       billingAddress: formData.billingAddress.trim() || undefined,
-      orderLines: formData.orderLines.map((line) => ({
+      orderLines: formData.orderLines.map((line: any) => ({
         productId: parseInt(line.productId),
         quantity: parseInt(line.quantity),
         unitPrice: parseFloat(line.unitPrice),
@@ -773,7 +774,7 @@ function AddOrderModal({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Order Lines <span className="text-red-500">*</span></label>
-                    {formData.orderLines.map((line, index) => (
+                    {formData.orderLines.map((line: any, index: number) => (
                       <div key={index} className="mb-4">
                         <div className="grid grid-cols-12 gap-2 mb-1">
                           <div className="col-span-5">
@@ -938,6 +939,13 @@ function EditOrderModal({
     notes: order.notes || '',
     shippingAddress: order.shippingAddress || '',
     billingAddress: order.billingAddress || '',
+    orderLines: order.orderLines?.length > 0 
+      ? order.orderLines.map((line: any) => ({
+          productId: line.productId?.toString() || '',
+          quantity: line.quantity?.toString() || '',
+          unitPrice: line.unitPrice?.toString() || '',
+        }))
+      : [{ productId: '', quantity: '', unitPrice: '' }],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -960,14 +968,44 @@ function EditOrderModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const newErrors: Record<string, string> = {};
 
     // Validation
     const customerError = validators.required(formData.customerId, 'Customer');
     if (customerError) newErrors.customerId = customerError;
 
+    // Validate order lines
+    if (!formData.orderLines.length) {
+      newErrors.orderLines = 'At least one order line is required';
+    } else {
+      formData.orderLines.forEach((line: any, index: number) => {
+        if (!line.productId) {
+          newErrors[`orderLines.${index}.productId`] = 'Product is required';
+        }
+        if (!line.quantity || parseInt(line.quantity) <= 0) {
+          newErrors[`orderLines.${index}.quantity`] = 'Quantity must be greater than 0';
+        }
+        if (!line.unitPrice || parseFloat(line.unitPrice) <= 0) {
+          newErrors[`orderLines.${index}.unitPrice`] = 'Unit price must be greater than 0';
+        }
+      });
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      // Show toast with first error message
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const firstErrorMessage = newErrors[firstErrorKey];
+      toast.error(`Validation Error: ${firstErrorMessage}`);
+      // Scroll to first error
+      const firstErrorField = Object.keys(newErrors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`) || 
+                          document.querySelector(`#${firstErrorField}`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (errorElement as HTMLElement).focus();
+      }
       return;
     }
 
@@ -978,6 +1016,11 @@ function EditOrderModal({
       notes: formData.notes.trim() || undefined,
       shippingAddress: formData.shippingAddress.trim() || undefined,
       billingAddress: formData.billingAddress.trim() || undefined,
+      orderLines: formData.orderLines.map((line: any) => ({
+        productId: parseInt(line.productId),
+        quantity: parseInt(line.quantity),
+        unitPrice: parseFloat(line.unitPrice),
+      })),
     };
 
     onSubmit(orderData);
@@ -994,7 +1037,47 @@ function EditOrderModal({
     }
   };
 
+  const handleOrderLineChange = (index: number, field: string, value: string) => {
+    setFormData((prev) => {
+      const newLines = [...prev.orderLines];
+      newLines[index] = { ...newLines[index], [field]: value };
+      return { ...prev, orderLines: newLines };
+    });
+    // Clear errors for this field
+    const errorKey = `orderLines.${index}.${field}`;
+    if (errors[errorKey]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
+    }
+    // Clear general orderLines error if it exists
+    if (errors.orderLines) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.orderLines;
+        return newErrors;
+      });
+    }
+  };
+
+  const addOrderLine = () => {
+    setFormData((prev) => ({
+      ...prev,
+      orderLines: [...prev.orderLines, { productId: '', quantity: '', unitPrice: '' }],
+    }));
+  };
+
+  const removeOrderLine = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      orderLines: prev.orderLines.filter((_: any, i: number) => i !== index),
+    }));
+  };
+
   const customerOptions = customers.map((c) => ({ value: c.id.toString(), label: c.name }));
+  const productOptions = products.map((p) => ({ value: p.id.toString(), label: p.name }));
   const statusOptions = ORDER_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, ' ') }));
   const typeOptions = ORDER_TYPES.map((t) => ({ value: t, label: t }));
 
@@ -1068,6 +1151,81 @@ function EditOrderModal({
                       onChange={(value) => handleChange('status', value)}
                       placeholder="Select status"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Order Lines <span className="text-red-500">*</span></label>
+                    {formData.orderLines.map((line: any, index: number) => (
+                      <div key={index} className="mb-4">
+                        <div className="grid grid-cols-12 gap-2 mb-1">
+                          <div className="col-span-5">
+                            <CustomSelect
+                              options={productOptions}
+                              value={line.productId}
+                              onChange={(value) => handleOrderLineChange(index, 'productId', value)}
+                              placeholder="Product"
+                              error={!!errors[`orderLines.${index}.productId`]}
+                            />
+                            {errors[`orderLines.${index}.productId`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.productId`]}</p>
+                            )}
+                          </div>
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              value={line.quantity}
+                              onChange={(e) => handleOrderLineChange(index, 'quantity', e.target.value)}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                                errors[`orderLines.${index}.quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                              placeholder="Qty"
+                              min="1"
+                            />
+                            {errors[`orderLines.${index}.quantity`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.quantity`]}</p>
+                            )}
+                          </div>
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={line.unitPrice}
+                              onChange={(e) => handleOrderLineChange(index, 'unitPrice', e.target.value)}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                                errors[`orderLines.${index}.unitPrice`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                              placeholder="Price"
+                              min="0"
+                            />
+                            {errors[`orderLines.${index}.unitPrice`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.unitPrice`]}</p>
+                            )}
+                          </div>
+                          <div className="col-span-1 flex items-center">
+                            {formData.orderLines.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeOrderLine(index)}
+                                className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Remove line"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addOrderLine}
+                      className="mt-2 px-4 py-2 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 dark:border-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                    >
+                      + Add Order Line
+                    </button>
+                    {errors.orderLines && (
+                      <p className="mt-1 text-sm text-red-500">{errors.orderLines}</p>
+                    )}
                   </div>
 
                   <div>
