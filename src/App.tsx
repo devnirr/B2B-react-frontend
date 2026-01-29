@@ -5,6 +5,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import SalesDashboard from './pages/SalesDashboard';
+import FinanceDashboard from './pages/FinanceDashboard';
 import Products from './pages/Products';
 import Collections from './pages/Collections';
 import Inventory from './pages/Inventory';
@@ -68,6 +70,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SalesDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FinanceDashboard />
                 </Layout>
               </ProtectedRoute>
             }

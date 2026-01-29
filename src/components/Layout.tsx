@@ -27,6 +27,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  TrendingUp,
+  DollarSign,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -60,6 +62,8 @@ export default function Layout({ children }: LayoutProps) {
 
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp },
+    { path: '/finance', label: 'Finance Dashboard', icon: DollarSign },
     { path: '/products', label: 'Products', icon: Package },
     { path: '/collections', label: 'Collections', icon: Layers },
     { path: '/inventory', label: 'Inventory', icon: Warehouse },
