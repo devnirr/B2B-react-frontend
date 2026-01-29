@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SalesDashboard from './pages/SalesDashboard';
 import FinanceDashboard from './pages/FinanceDashboard';
+import Review from './pages/Review';
 import Products from './pages/Products';
 import Collections from './pages/Collections';
 import Inventory from './pages/Inventory';
@@ -90,6 +91,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <FinanceDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Review />
                 </Layout>
               </ProtectedRoute>
             }

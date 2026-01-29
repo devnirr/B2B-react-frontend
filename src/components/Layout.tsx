@@ -29,6 +29,7 @@ import {
   Info,
   TrendingUp,
   DollarSign,
+  Star,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -64,6 +65,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp },
     { path: '/finance', label: 'Finance Dashboard', icon: DollarSign },
+    { path: '/review', label: 'Reviews', icon: Star },
     { path: '/products', label: 'Products', icon: Package },
     { path: '/collections', label: 'Collections', icon: Layers },
     { path: '/inventory', label: 'Inventory', icon: Warehouse },
