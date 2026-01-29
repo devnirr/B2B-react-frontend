@@ -1,0 +1,991 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import api from '../lib/api';
+import { Plus, Folder, X, ChevronDown, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { validators } from '../utils/validation';
+import { SkeletonPage } from '../components/Skeleton';
+
+// Custom Select Component with beautiful dropdown
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  className = '',
+  error = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  className?: string;
+  error?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Calculate position for dropdown to escape overflow clipping
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed' as const,
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      });
+    } else {
+      setDropdownStyle({});
+    }
+  }, [isOpen]);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleSelect = (optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      e.preventDefault();
+      handleSelect(options[highlightedIndex].value);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  return (
+    <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 10001 : 'auto', position: 'relative' }}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
+          error ? 'border-red-500' : 'border-gray-300'
+        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        style={{
+          padding: '0.532rem 0.6rem 0.532rem 1.2rem',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          lineHeight: 1.6,
+          backgroundColor: '#fff',
+        }}
+      >
+        <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div 
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+          style={{
+            zIndex: 10001,
+            ...(dropdownStyle.position === 'fixed' ? dropdownStyle : {
+              top: '100%',
+              left: 0,
+              right: 0,
+            }),
+            backgroundColor: '#fff',
+            minWidth: '100%',
+            position: dropdownStyle.position || 'absolute',
+            overflow: 'visible',
+          }}
+        >
+          {options.map((option, index) => {
+            const isSelected = option.value === value;
+            const isHighlighted = index === highlightedIndex;
+            
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isSelected || isHighlighted
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  backgroundColor: isSelected || isHighlighted ? '#5955D1' : 'transparent',
+                  color: isSelected || isHighlighted ? '#fff' : (index === highlightedIndex ? '#fff' : '#1C274C'),
+                  display: 'block',
+                  width: '100%',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Waves effect button component matching sample
+const ButtonWithWaves = ({ 
+  children, 
+  onClick, 
+  className = '',
+  disabled = false 
+}: { 
+  children: React.ReactNode; 
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean;
+}) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={handleClick}
+      disabled={disabled}
+      className={`btn-primary-lg relative overflow-hidden ${className} ${disabled ? 'opacity-65 cursor-not-allowed pointer-events-none' : ''}`}
+    >
+      {children}
+      {ripples.map((ripple) => (
+        <span
+          key={ripple.id}
+          className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+          style={{
+            left: `${ripple.x}px`,
+            top: `${ripple.y}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
+    </button>
+  );
+};
+
+export default function Collections() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalShowing, setIsModalShowing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (isModalOpen || isEditModalOpen || isDeleteModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (isModalOpen) setIsModalShowing(true);
+          if (isEditModalOpen) setIsEditModalShowing(true);
+          if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsModalShowing(false);
+      setIsEditModalShowing(false);
+      setIsDeleteModalShowing(false);
+    }
+  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['collections'],
+    queryFn: async () => {
+      const response = await api.get('/collections');
+      return response.data;
+    },
+  });
+
+  const createCollectionMutation = useMutation({
+    mutationFn: async (collectionData: any) => {
+      const response = await api.post('/collections', collectionData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      closeModal();
+    },
+  });
+
+  const updateCollectionMutation = useMutation({
+    mutationFn: async ({ id, collectionData }: { id: number; collectionData: any }) => {
+      const response = await api.patch(`/collections/${id}`, collectionData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      closeEditModal();
+    },
+  });
+
+  const deleteCollectionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.delete(`/collections/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      closeDeleteModal();
+    },
+  });
+
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalShowing(false);
+    setTimeout(() => {
+      setIsModalOpen(false);
+    }, 300);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalShowing(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setSelectedCollection(null);
+    }, 300);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setSelectedCollection(null);
+    }, 300);
+  };
+
+  if (isLoading) {
+    return <SkeletonPage />;
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Collections</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and view all your collections</p>
+          </div>
+          {(!data || data.length === 0) ? null : (
+            <ButtonWithWaves onClick={openModal}>
+              <Plus className="w-5 h-5" />
+              Add Collection
+            </ButtonWithWaves>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {!data || data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No collections found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+              Get started by creating your first collection to organize your products.
+            </p>
+            <ButtonWithWaves onClick={openModal}>
+              <Plus className="w-5 h-5" />
+              Add Collection
+            </ButtonWithWaves>
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.map((collection: any) => (
+                <div key={collection.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow relative">
+                  {/* Header with ID and Action Icons */}
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{collection.id}</h3>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          setSelectedCollection(collection);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCollection(collection);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Season and Drop Information */}
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                    {collection.season ? `Season: ${collection.season}` : 'Season: -'}
+                    {collection.season || collection.drop ? ' • ' : ''}
+                    {collection.drop ? `Drop: ${collection.drop}` : collection.season ? 'Drop: -' : ''}
+                  </p>
+                  
+                  {/* Status Tag and Product Count */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      collection.lifecycle === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' :
+                      collection.lifecycle === 'PLANNING' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400' :
+                      collection.lifecycle === 'ARCHIVED' ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300' :
+                      'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                    }`}>
+                      {collection.lifecycle}
+                    </span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {collection._count?.products || 0} products
+                    </span>
+                  </div>
+                  
+                  {/* Collection Identifier at Bottom */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{collection.id}{collection.id}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add Collection Modal */}
+      {isModalOpen && (
+        <AddCollectionModal
+          onClose={closeModal}
+          onSubmit={(collectionData) => createCollectionMutation.mutate(collectionData)}
+          isLoading={createCollectionMutation.isPending}
+          isShowing={isModalShowing}
+        />
+      )}
+
+      {/* Edit Collection Modal */}
+      {isEditModalOpen && selectedCollection && (
+        <EditCollectionModal
+          collection={selectedCollection}
+          onClose={closeEditModal}
+          onSubmit={(collectionData) => updateCollectionMutation.mutate({ id: selectedCollection.id, collectionData })}
+          isLoading={updateCollectionMutation.isPending}
+          isShowing={isEditModalShowing}
+        />
+      )}
+
+      {/* Delete Collection Modal */}
+      {isDeleteModalOpen && selectedCollection && (
+        <DeleteCollectionModal
+          collection={selectedCollection}
+          onClose={closeDeleteModal}
+          onConfirm={() => deleteCollectionMutation.mutate(selectedCollection.id)}
+          isLoading={deleteCollectionMutation.isPending}
+          isShowing={isDeleteModalShowing}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add Collection Modal Component
+function AddCollectionModal({
+  onClose,
+  onSubmit,
+  isLoading,
+  isShowing,
+}: {
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    season: '',
+    drop: '',
+    lifecycle: 'PLANNING',
+    description: '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isLoading) return;
+
+    const button = submitButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    // Validation
+    const nameError = validators.required(formData.name, 'Collection Name');
+    if (nameError) newErrors.name = nameError;
+    else {
+      const nameLengthError = validators.minLength(formData.name, 2, 'Collection Name');
+      if (nameLengthError) newErrors.name = nameLengthError;
+      else {
+        const nameMaxLengthError = validators.maxLength(formData.name, 200, 'Collection Name');
+        if (nameMaxLengthError) newErrors.name = nameMaxLengthError;
+      }
+    }
+
+    if (formData.season) {
+      const seasonLengthError = validators.maxLength(formData.season, 100, 'Season');
+      if (seasonLengthError) newErrors.season = seasonLengthError;
+    }
+
+    if (formData.drop) {
+      const dropLengthError = validators.maxLength(formData.drop, 100, 'Drop');
+      if (dropLengthError) newErrors.drop = dropLengthError;
+    }
+
+    if (formData.description) {
+      const descriptionLengthError = validators.maxLength(formData.description, 1000, 'Description');
+      if (descriptionLengthError) newErrors.description = descriptionLengthError;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Prepare collection data
+    const collectionData = {
+      name: formData.name.trim(),
+      season: formData.season.trim() || undefined,
+      drop: formData.drop.trim() || undefined,
+      lifecycle: formData.lifecycle,
+      description: formData.description.trim() || undefined,
+    };
+
+    onSubmit(collectionData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addCollectionModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '42rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            <div className="modal-header">
+              <h5 id="addCollectionModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Add New Collection
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <form id="addCollectionForm" onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="modal-body flex-1 overflow-y-auto" style={{ overflowX: 'visible', overflowY: 'auto', position: 'relative', overflow: 'visible' }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Collection Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                        errors.name ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Enter collection name"
+                    />
+                    {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Season</label>
+                      <input
+                        type="text"
+                        value={formData.season}
+                        onChange={(e) => handleChange('season', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="e.g., Spring 2024"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Drop</label>
+                      <input
+                        type="text"
+                        value={formData.drop}
+                        onChange={(e) => handleChange('drop', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="e.g., Drop 1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lifecycle</label>
+                    <CustomSelect
+                      value={formData.lifecycle}
+                      onChange={(value) => handleChange('lifecycle', value)}
+                      options={[
+                        { value: 'PLANNING', label: 'Planning' },
+                        { value: 'ACTIVE', label: 'Active' },
+                        { value: 'ARCHIVED', label: 'Archived' },
+                        { value: 'DISCONTINUED', label: 'Discontinued' },
+                      ]}
+                      placeholder="Select lifecycle"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Enter collection description"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  ref={submitButtonRef}
+                  type="submit"
+                  onClick={handleButtonClick}
+                  disabled={isLoading}
+                  className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed relative overflow-hidden"
+                >
+                  {isLoading ? 'Adding...' : 'Add Collection'}
+                  {ripples.map((ripple) => (
+                    <span
+                      key={ripple.id}
+                      className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+                      style={{
+                        left: `${ripple.x}px`,
+                        top: `${ripple.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    />
+                  ))}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Edit Collection Modal Component
+function EditCollectionModal({
+  collection,
+  onClose,
+  onSubmit,
+  isLoading,
+  isShowing,
+}: {
+  collection: any;
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: collection.name || '',
+    season: collection.season || '',
+    drop: collection.drop || '',
+    lifecycle: collection.lifecycle || 'PLANNING',
+    description: collection.description || '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isLoading) return;
+
+    const button = submitButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    const collectionData = {
+      name: formData.name.trim(),
+      season: formData.season.trim() || undefined,
+      drop: formData.drop.trim() || undefined,
+      lifecycle: formData.lifecycle,
+      description: formData.description.trim() || undefined,
+    };
+
+    onSubmit(collectionData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editCollectionModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '42rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            <div className="modal-header">
+              <h5 id="editCollectionModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Edit Collection
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <form id="editCollectionForm" onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="modal-body flex-1 overflow-y-auto" style={{ overflowX: 'visible', overflowY: 'auto', position: 'relative', overflow: 'visible' }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Collection Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                        errors.name ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Enter collection name"
+                    />
+                    {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Season</label>
+                      <input
+                        type="text"
+                        value={formData.season}
+                        onChange={(e) => handleChange('season', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="e.g., Spring 2024"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Drop</label>
+                      <input
+                        type="text"
+                        value={formData.drop}
+                        onChange={(e) => handleChange('drop', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="e.g., Drop 1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lifecycle</label>
+                    <CustomSelect
+                      value={formData.lifecycle}
+                      onChange={(value) => handleChange('lifecycle', value)}
+                      options={[
+                        { value: 'PLANNING', label: 'Planning' },
+                        { value: 'ACTIVE', label: 'Active' },
+                        { value: 'ARCHIVED', label: 'Archived' },
+                        { value: 'DISCONTINUED', label: 'Discontinued' },
+                      ]}
+                      placeholder="Select lifecycle"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Enter collection description"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  ref={submitButtonRef}
+                  type="submit"
+                  onClick={handleButtonClick}
+                  disabled={isLoading}
+                  className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed relative overflow-hidden"
+                >
+                  {isLoading ? 'Updating...' : 'Update Collection'}
+                  {ripples.map((ripple) => (
+                    <span
+                      key={ripple.id}
+                      className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+                      style={{
+                        left: `${ripple.x}px`,
+                        top: `${ripple.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    />
+                  ))}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Delete Collection Modal Component
+function DeleteCollectionModal({
+  collection,
+  onClose,
+  onConfirm,
+  isLoading,
+  isShowing,
+}: {
+  collection: any;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteCollectionModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            <div className="modal-body text-center py-8 px-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+              <h5 id="deleteCollectionModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Collection
+              </h5>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{collection.name}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={isLoading}
+                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isLoading ? 'Deleting...' : 'Delete Collection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

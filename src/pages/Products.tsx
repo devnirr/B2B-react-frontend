@@ -1,0 +1,1389 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import api from '../lib/api';
+import { Package, Plus, X, ChevronDown, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { validators } from '../utils/validation';
+import { SkeletonPage } from '../components/Skeleton';
+
+// Custom Select Component with beautiful dropdown
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  className = '',
+  error = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  className?: string;
+  error?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleSelect = (optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      e.preventDefault();
+      handleSelect(options[highlightedIndex].value);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  return (
+    <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 9999 : 'auto' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
+          error ? 'border-red-500' : 'border-gray-300'
+        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        style={{
+          padding: '0.532rem 0.8rem 0.532rem 1.2rem',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          lineHeight: 1.6,
+          backgroundColor: '#fff',
+        }}
+      >
+        <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div 
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-auto custom-dropdown-menu"
+          style={{
+            zIndex: 10000,
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: '#fff',
+            minWidth: '100%',
+          }}
+        >
+          {options.map((option, index) => {
+            const isSelected = option.value === value;
+            const isHighlighted = index === highlightedIndex;
+            
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isSelected || isHighlighted
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  backgroundColor: isSelected || isHighlighted ? '#5955D1' : 'transparent',
+                  color: isSelected || isHighlighted ? '#fff' : (index === highlightedIndex ? '#fff' : '#1C274C'),
+                  display: 'block',
+                  width: '100%',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Waves effect button component matching sample
+const ButtonWithWaves = ({ 
+  children, 
+  onClick, 
+  className = '',
+  disabled = false 
+}: { 
+  children: React.ReactNode; 
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean;
+}) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={handleClick}
+      disabled={disabled}
+      className={`btn-primary-lg relative overflow-hidden ${className} ${disabled ? 'opacity-65 cursor-not-allowed pointer-events-none' : ''}`}
+    >
+      {children}
+      {ripples.map((ripple) => (
+        <span
+          key={ripple.id}
+          className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+          style={{
+            left: `${ripple.x}px`,
+            top: `${ripple.y}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
+    </button>
+  );
+};
+
+export default function Products() {
+  const [page, setPage] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalShowing, setIsModalShowing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (isModalOpen || isEditModalOpen || isDeleteModalOpen) {
+      document.body.classList.add('modal-open');
+      // Trigger show animation after a brief delay
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (isModalOpen) setIsModalShowing(true);
+          if (isEditModalOpen) setIsEditModalShowing(true);
+          if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsModalShowing(false);
+      setIsEditModalShowing(false);
+      setIsDeleteModalShowing(false);
+    }
+  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['products', page],
+    queryFn: async () => {
+      const response = await api.get(`/products?skip=${page * 10}&take=10`);
+      return response.data;
+    },
+  });
+
+  const { data: collections } = useQuery({
+    queryKey: ['collections'],
+    queryFn: async () => {
+      const response = await api.get('/collections');
+      return response.data;
+    },
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      const response = await api.post('/products', productData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product added successfully!');
+      closeModal();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to add product';
+      toast.error(errorMessage);
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, productData }: { id: number; productData: any }) => {
+      const response = await api.patch(`/products/${id}`, productData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product updated successfully!');
+      closeEditModal();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update product';
+      toast.error(errorMessage);
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.delete(`/products/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product deleted successfully!');
+      closeDeleteModal();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product';
+      toast.error(errorMessage);
+    },
+  });
+
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalShowing(false);
+    // Wait for fade out animation (300ms)
+    setTimeout(() => {
+      setIsModalOpen(false);
+    }, 300);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalShowing(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setSelectedProduct(null);
+    }, 300);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setSelectedProduct(null);
+    }, 300);
+  };
+
+  if (isLoading) {
+    return <SkeletonPage />;
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Products</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and view all your products</p>
+          </div>
+          {(!data?.data || data.data.length === 0) ? null : (
+            <ButtonWithWaves onClick={openModal}>
+              <Plus className="w-5 h-5" />
+          Add Product
+            </ButtonWithWaves>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {!data?.data || data.data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Package className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No products found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+              Get started by adding your first product to the inventory.
+            </p>
+            <ButtonWithWaves onClick={openModal}>
+              <Plus className="w-5 h-5" />
+              Add Product
+            </ButtonWithWaves>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Collection</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sizes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Colors</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {data.data.map((product: any) => (
+                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-black">
+                  {product.sku}
+                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {product.name}
+                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {product.collection?.name || '-'}
+                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {product.sizes?.join(', ') || '-'}
+                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {product.colors?.join(', ') || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        )}
+      </div>
+
+      {data?.data && data.data.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
+            <span className="font-medium text-gray-900 dark:text-white">
+              {Math.min((page + 1) * 10, data?.total || 0)}
+            </span>{' '}
+            of <span className="font-medium text-gray-900 dark:text-white">{data?.total || 0}</span> results
+          </div>
+          <nav aria-label="Page navigation">
+            <ul className="pagination pagination-rounded pagination-primary">
+              <li className="page-item">
+        <button
+                  type="button"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+                  className="page-link"
+                  aria-label="Previous"
+        >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+        </button>
+              </li>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil((data?.total || 0) / 10));
+                const currentPage = page + 1;
+                const pages: (number | string)[] = [];
+
+                if (totalPages <= 7) {
+                  // Show all pages if 7 or fewer
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i);
+                  }
+                } else {
+                  // Always show first page
+                  pages.push(1);
+
+                  if (currentPage > 3) {
+                    pages.push('...');
+                  }
+
+                  // Show pages around current
+                  const start = Math.max(2, currentPage - 1);
+                  const end = Math.min(totalPages - 1, currentPage + 1);
+
+                  for (let i = start; i <= end; i++) {
+                    if (i !== 1 && i !== totalPages) {
+                      pages.push(i);
+                    }
+                  }
+
+                  if (currentPage < totalPages - 2) {
+                    pages.push('...');
+                  }
+
+                  // Always show last page
+                  if (totalPages > 1) {
+                    pages.push(totalPages);
+                  }
+                }
+
+                return pages.map((pageNum, idx) => {
+                  if (pageNum === '...') {
+                    return (
+                      <li key={`ellipsis-${idx}`} className="page-item">
+                        <span className="page-link" style={{ cursor: 'default', pointerEvents: 'none' }}>
+                          ...
+        </span>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={pageNum} className="page-item">
+                      <button
+                        type="button"
+                        onClick={() => setPage((pageNum as number) - 1)}
+                        className={`page-link ${currentPage === pageNum ? 'active' : ''}`}
+                      >
+                        {pageNum}
+                      </button>
+                    </li>
+                  );
+                });
+              })()}
+              <li className="page-item">
+        <button
+                  type="button"
+          onClick={() => setPage((p) => p + 1)}
+                  disabled={!data?.data || data.data.length < 10 || page + 1 >= Math.ceil((data?.total || 0) / 10)}
+                  className="page-link"
+                  aria-label="Next"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {isModalOpen && (
+        <AddProductModal
+          collections={collections || []}
+          onClose={closeModal}
+          onSubmit={(productData) => createProductMutation.mutate(productData)}
+          isLoading={createProductMutation.isPending}
+          isShowing={isModalShowing}
+        />
+      )}
+
+      {/* Edit Product Modal */}
+      {isEditModalOpen && selectedProduct && (
+        <EditProductModal
+          product={selectedProduct}
+          collections={collections || []}
+          onClose={closeEditModal}
+          onSubmit={(productData) => updateProductMutation.mutate({ id: selectedProduct.id, productData })}
+          isLoading={updateProductMutation.isPending}
+          isShowing={isEditModalShowing}
+        />
+      )}
+
+      {/* Delete Product Modal */}
+      {isDeleteModalOpen && selectedProduct && (
+        <DeleteProductModal
+          product={selectedProduct}
+          onClose={closeDeleteModal}
+          onConfirm={() => deleteProductMutation.mutate(selectedProduct.id)}
+          isLoading={deleteProductMutation.isPending}
+          isShowing={isDeleteModalShowing}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add Product Modal Component
+function AddProductModal({
+  collections,
+  onClose,
+  onSubmit,
+  isLoading,
+  isShowing,
+}: {
+  collections: any[];
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    style: '',
+    sizes: '',
+    colors: '',
+    materials: '',
+    ean: '',
+    description: '',
+    basePrice: '',
+    collectionId: '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isLoading) return;
+
+    const button = submitButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const newErrors: Record<string, string> = {};
+
+    // Validation
+    const nameError = validators.required(formData.name, 'Product Name');
+    if (nameError) newErrors.name = nameError;
+    else {
+      const nameLengthError = validators.minLength(formData.name, 2, 'Product Name');
+      if (nameLengthError) newErrors.name = nameLengthError;
+    }
+
+    const skuError = validators.sku(formData.sku);
+    if (skuError) newErrors.sku = skuError;
+
+    const sizesError = validators.commaSeparatedList(formData.sizes, 'Sizes', 1);
+    if (sizesError) newErrors.sizes = sizesError;
+
+    const colorsError = validators.commaSeparatedList(formData.colors, 'Colors', 1);
+    if (colorsError) newErrors.colors = colorsError;
+
+    const materialsError = validators.commaSeparatedList(formData.materials, 'Materials', 1);
+    if (materialsError) newErrors.materials = materialsError;
+
+    const collectionError = validators.required(formData.collectionId, 'Collection');
+    if (collectionError) newErrors.collectionId = collectionError;
+
+    if (formData.ean) {
+      const eanError = validators.ean(formData.ean);
+      if (eanError) newErrors.ean = eanError;
+    }
+
+    if (formData.basePrice) {
+      const priceError = validators.nonNegative(formData.basePrice, 'Base Price');
+      if (priceError) newErrors.basePrice = priceError;
+    }
+
+    if (formData.style) {
+      const styleLengthError = validators.maxLength(formData.style, 100, 'Style');
+      if (styleLengthError) newErrors.style = styleLengthError;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Show toast with first error message
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const firstErrorMessage = newErrors[firstErrorKey];
+      toast.error(`Validation Error: ${firstErrorMessage}`);
+      // Scroll to first error
+      const firstErrorField = Object.keys(newErrors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`) || 
+                          document.querySelector(`#${firstErrorField}`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (errorElement as HTMLElement).focus();
+      }
+      return;
+    }
+
+    // Convert comma-separated strings to arrays
+    const productData = {
+      name: formData.name.trim(),
+      sku: formData.sku.trim(),
+      style: formData.style.trim() || undefined,
+      sizes: formData.sizes.split(',').map((s) => s.trim()).filter(Boolean),
+      colors: formData.colors.split(',').map((c) => c.trim()).filter(Boolean),
+      materials: formData.materials.split(',').map((m) => m.trim()).filter(Boolean),
+      ean: formData.ean.trim() || undefined,
+      description: formData.description.trim() || undefined,
+      basePrice: formData.basePrice ? parseFloat(formData.basePrice) : undefined,
+      collectionId: parseInt(formData.collectionId),
+    };
+
+    onSubmit(productData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addProductModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '42rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h5 id="addProductModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Add New Product
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form id="addProductForm" onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="modal-body flex-1 overflow-y-auto" style={{ overflowX: 'visible', position: 'relative' }}>
+                <div className="space-y-4">
+            {/* Name and SKU */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter product name"
+                />
+                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  SKU <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => handleChange('sku', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.sku ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter SKU"
+                />
+                {errors.sku && <p className="mt-1 text-sm text-red-500">{errors.sku}</p>}
+              </div>
+            </div>
+
+            {/* Collection and Style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Collection <span className="text-red-500">*</span>
+                </label>
+                <CustomSelect
+                  value={formData.collectionId}
+                  onChange={(value) => handleChange('collectionId', value)}
+                  options={[
+                    { value: '', label: 'Select collection' },
+                    ...collections.map((collection: any) => ({
+                      value: collection.id.toString(),
+                      label: collection.name,
+                    })),
+                  ]}
+                  placeholder="Select collection"
+                  error={!!errors.collectionId}
+                />
+                {errors.collectionId && <p className="mt-1 text-sm text-red-500">{errors.collectionId}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Style</label>
+                <input
+                  type="text"
+                  value={formData.style}
+                  onChange={(e) => handleChange('style', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter style"
+                />
+              </div>
+            </div>
+
+            {/* Sizes, Colors, Materials */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sizes <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.sizes}
+                  onChange={(e) => handleChange('sizes', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.sizes ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="S, M, L, XL"
+                />
+                {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Colors <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.colors}
+                  onChange={(e) => handleChange('colors', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.colors ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Red, Blue, Green"
+                />
+                {errors.colors && <p className="mt-1 text-sm text-red-500">{errors.colors}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Materials <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.materials}
+                  onChange={(e) => handleChange('materials', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.materials ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Cotton, Polyester"
+                />
+                {errors.materials && <p className="mt-1 text-sm text-red-500">{errors.materials}</p>}
+              </div>
+            </div>
+
+            {/* EAN and Base Price */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EAN</label>
+                <input
+                  type="text"
+                  value={formData.ean}
+                  onChange={(e) => handleChange('ean', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter EAN"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.basePrice}
+                  onChange={(e) => handleChange('basePrice', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter product description"
+              />
+            </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  ref={submitButtonRef}
+                  type="submit"
+                  onClick={(e) => {
+                    handleButtonClick(e);
+                    // Form submission is handled by form's onSubmit
+                  }}
+                  disabled={isLoading}
+                  className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed relative overflow-hidden"
+                >
+                  {isLoading ? 'Adding...' : 'Add Product'}
+                  {ripples.map((ripple) => (
+                    <span
+                      key={ripple.id}
+                      className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+                      style={{
+                        left: `${ripple.x}px`,
+                        top: `${ripple.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    />
+                  ))}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Edit Product Modal Component
+function EditProductModal({
+  product,
+  collections,
+  onClose,
+  onSubmit,
+  isLoading,
+  isShowing,
+}: {
+  product: any;
+  collections: any[];
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: product.name || '',
+    sku: product.sku || '',
+    style: product.style || '',
+    sizes: Array.isArray(product.sizes) ? product.sizes.join(', ') : product.sizes || '',
+    colors: Array.isArray(product.colors) ? product.colors.join(', ') : product.colors || '',
+    materials: Array.isArray(product.materials) ? product.materials.join(', ') : product.materials || '',
+    ean: product.ean || '',
+    description: product.description || '',
+    basePrice: product.basePrice?.toString() || '',
+    collectionId: product.collectionId?.toString() || '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isLoading) return;
+
+    const button = submitButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+
+    setRipples((prev) => [...prev, { x, y, id }]);
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+    }, 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    // Validation
+    const nameError = validators.required(formData.name, 'Name');
+    if (nameError) newErrors.name = nameError;
+    else {
+      const nameLengthError = validators.minLength(formData.name, 2, 'Name');
+      if (nameLengthError) newErrors.name = nameLengthError;
+    }
+
+    const skuError = validators.sku(formData.sku);
+    if (skuError) newErrors.sku = skuError;
+
+    const sizesError = validators.commaSeparatedList(formData.sizes, 'Sizes', 1);
+    if (sizesError) newErrors.sizes = sizesError;
+
+    const colorsError = validators.commaSeparatedList(formData.colors, 'Colors', 1);
+    if (colorsError) newErrors.colors = colorsError;
+
+    const materialsError = validators.commaSeparatedList(formData.materials, 'Materials', 1);
+    if (materialsError) newErrors.materials = materialsError;
+
+    const collectionError = validators.required(formData.collectionId, 'Collection');
+    if (collectionError) newErrors.collectionId = collectionError;
+
+    if (formData.ean) {
+      const eanError = validators.ean(formData.ean);
+      if (eanError) newErrors.ean = eanError;
+    }
+
+    if (formData.basePrice) {
+      const priceError = validators.nonNegative(formData.basePrice, 'Base Price');
+      if (priceError) newErrors.basePrice = priceError;
+    }
+
+    if (formData.style) {
+      const styleLengthError = validators.maxLength(formData.style, 100, 'Style');
+      if (styleLengthError) newErrors.style = styleLengthError;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Show toast with first error message
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const firstErrorMessage = newErrors[firstErrorKey];
+      toast.error(`Validation Error: ${firstErrorMessage}`);
+      return;
+    }
+
+    // Convert comma-separated strings to arrays
+    const productData = {
+      name: formData.name.trim(),
+      sku: formData.sku.trim(),
+      style: formData.style.trim() || undefined,
+      sizes: formData.sizes.split(',').map((s: string) => s.trim()).filter(Boolean),
+      colors: formData.colors.split(',').map((c: string) => c.trim()).filter(Boolean),
+      materials: formData.materials.split(',').map((m: string) => m.trim()).filter(Boolean),
+      ean: formData.ean.trim() || undefined,
+      description: formData.description.trim() || undefined,
+      basePrice: formData.basePrice ? parseFloat(formData.basePrice) : undefined,
+      collectionId: parseInt(formData.collectionId),
+    };
+
+    onSubmit(productData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editProductModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '42rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h5 id="editProductModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Edit Product
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form id="editProductForm" onSubmit={handleSubmit} className="modal-body flex-1 overflow-y-auto" style={{ overflowX: 'visible', position: 'relative' }}>
+          <div className="space-y-4">
+            {/* Name and SKU */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter product name"
+                />
+                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  SKU <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => handleChange('sku', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.sku ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter SKU"
+                />
+                {errors.sku && <p className="mt-1 text-sm text-red-500">{errors.sku}</p>}
+              </div>
+            </div>
+
+            {/* Collection and Style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Collection <span className="text-red-500">*</span>
+                </label>
+                <CustomSelect
+                  value={formData.collectionId}
+                  onChange={(value) => handleChange('collectionId', value)}
+                  options={[
+                    { value: '', label: 'Select collection' },
+                    ...collections.map((collection: any) => ({
+                      value: collection.id.toString(),
+                      label: collection.name,
+                    })),
+                  ]}
+                  placeholder="Select collection"
+                  error={!!errors.collectionId}
+                />
+                {errors.collectionId && <p className="mt-1 text-sm text-red-500">{errors.collectionId}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Style</label>
+                <input
+                  type="text"
+                  value={formData.style}
+                  onChange={(e) => handleChange('style', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter style"
+                />
+              </div>
+            </div>
+
+            {/* Sizes, Colors, Materials */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sizes <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.sizes}
+                  onChange={(e) => handleChange('sizes', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.sizes ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="S, M, L, XL"
+                />
+                {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Colors <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.colors}
+                  onChange={(e) => handleChange('colors', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.colors ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Red, Blue, Green"
+                />
+                {errors.colors && <p className="mt-1 text-sm text-red-500">{errors.colors}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Materials <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.materials}
+                  onChange={(e) => handleChange('materials', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    errors.materials ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Cotton, Polyester"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Comma-separated</p>
+                {errors.materials && <p className="mt-1 text-sm text-red-500">{errors.materials}</p>}
+              </div>
+            </div>
+
+            {/* EAN and Base Price */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EAN</label>
+                <input
+                  type="text"
+                  value={formData.ean}
+                  onChange={(e) => handleChange('ean', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter EAN"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.basePrice}
+                  onChange={(e) => handleChange('basePrice', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter product description"
+              />
+            </div>
+          </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                ref={submitButtonRef}
+                type="submit"
+                onClick={handleButtonClick}
+                disabled={isLoading}
+                className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed relative overflow-hidden"
+              >
+                {isLoading ? 'Updating...' : 'Update Product'}
+                {ripples.map((ripple) => (
+                  <span
+                    key={ripple.id}
+                    className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
+                    style={{
+                      left: `${ripple.x}px`,
+                      top: `${ripple.y}px`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
+                ))}
+              </button>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Delete Product Modal Component
+function DeleteProductModal({
+  product,
+  onClose,
+  onConfirm,
+  isLoading,
+  isShowing,
+}: {
+  product: any;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteProductModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            {/* Modal Body with Icon */}
+            <div className="modal-body text-center py-8 px-6">
+              {/* Warning Icon */}
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h5 id="deleteProductModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Product
+              </h5>
+
+              {/* Description */}
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{product.name}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={isLoading}
+                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isLoading ? 'Deleting...' : 'Delete Product'}
+        </button>
+      </div>
+    </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
