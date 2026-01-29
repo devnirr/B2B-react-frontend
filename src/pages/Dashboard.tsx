@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, MoreVertical, Calendar } from 'lucide-react';
+import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, MoreVertical, Calendar, Search, Plus, Trash2 } from 'lucide-react';
 import { SkeletonStatsCard, SkeletonTable } from '../components/Skeleton';
 import Chart from 'react-apexcharts';
 import { Doughnut } from 'react-chartjs-2';
@@ -12,12 +12,48 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+  time: string;
+  color?: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerPage, setCustomerPage] = useState(1);
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: '1', text: 'Review monthly sales report', completed: false, time: '04:25PM' },
+    { id: '2', text: 'Follow up with new customers', completed: true, time: '04:25PM', color: 'blue' },
+    { id: '3', text: 'Update product inventory levels', completed: false, time: '04:25PM' },
+    { id: '4', text: 'Prepare quarterly business review', completed: false, time: '04:25PM' },
+    { id: '5', text: 'Contact suppliers for pricing', completed: true, time: '04:25PM', color: 'purple' },
+    { id: '6', text: 'Process pending orders', completed: true, time: '04:25PM', color: 'green' },
+    { id: '7', text: 'Schedule team meeting', completed: true, time: '04:25PM', color: 'orange' },
+  ]);
 
   // Fetch dashboard stats
   const { data: dashboardStats, isLoading } = useQuery({
@@ -55,6 +91,167 @@ export default function Dashboard() {
     },
     enabled: !isLoading && !hasLowStockInDashboard,
   });
+
+  // Fetch customers for New Customers card
+  const customersPerPage = 6;
+  const { data: customersData, isLoading: customersLoading } = useQuery({
+    queryKey: ['customers', 'dashboard', customerPage, customerSearch],
+    queryFn: async () => {
+      const response = await api.get('/customers', {
+        params: {
+          skip: (customerPage - 1) * customersPerPage,
+          take: customersPerPage,
+        },
+      });
+      return response.data;
+    },
+  });
+
+  // Helper function to calculate days since creation
+  const getDaysSince = (dateString: string) => {
+    const created = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      if (diffHours < 12) return '1st Half Day';
+      return '2nd Half Day';
+    }
+    if (diffDays === 1) return '1 Days';
+    return `${diffDays} Days`;
+  };
+
+  // Task management functions
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTasks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  // Sortable Task Item Component
+  const SortableTaskItem = ({ task }: { task: Task }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: task.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    const bgColorClass = task.completed 
+      ? task.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/10' 
+        : task.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/10'
+        : task.color === 'green' ? 'bg-green-50 dark:bg-green-900/10'
+        : task.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10'
+        : 'bg-gray-50/50 dark:bg-gray-900/30'
+      : 'bg-gray-50/50 dark:bg-gray-900/30';
+    
+    const checkboxColorClass = task.completed
+      ? task.color === 'blue' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
+        : task.color === 'purple' ? 'text-purple-600 dark:text-purple-400 border-purple-600 dark:border-purple-400'
+        : task.color === 'green' ? 'text-green-600 dark:text-green-400 border-green-600 dark:border-green-400'
+        : task.color === 'orange' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400'
+        : 'text-primary border-primary'
+      : 'text-gray-400 border-gray-300 dark:border-gray-600';
+
+    return (
+      <li
+        ref={setNodeRef}
+        style={style}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md mb-1 ${bgColorClass} ${isDragging ? 'shadow-lg' : ''}`}
+      >
+        <span 
+          className="sortable-handle cursor-move flex-shrink-0 touch-none"
+          {...attributes}
+          {...listeners}
+        >
+          <svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11.9998 3.16667C12.7362 3.16667 13.3332 2.56971 13.3332 1.83333C13.3332 1.09695 12.7362 0.5 11.9998 0.5C11.2635 0.5 10.6665 1.09695 10.6665 1.83333C10.6665 2.56971 11.2635 3.16667 11.9998 3.16667Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+            <path d="M11.9998 9.26237C12.7362 9.26237 13.3332 8.66542 13.3332 7.92904C13.3332 7.19266 12.7362 6.5957 11.9998 6.5957C11.2635 6.5957 10.6665 7.19266 10.6665 7.92904C10.6665 8.66542 11.2635 9.26237 11.9998 9.26237Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+            <path d="M11.9998 15.3571C12.7362 15.3571 13.3332 14.7601 13.3332 14.0238C13.3332 13.2874 12.7362 12.6904 11.9998 12.6904C11.2635 12.6904 10.6665 13.2874 10.6665 14.0238C10.6665 14.7601 11.2635 15.3571 11.9998 15.3571Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+            <path d="M4.7618 3.16667C5.49818 3.16667 6.09513 2.56971 6.09513 1.83333C6.09513 1.09695 5.49818 0.5 4.7618 0.5C4.02542 0.5 3.42847 1.09695 3.42847 1.83333C3.42847 2.56971 4.02542 3.16667 4.7618 3.16667Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+            <path d="M4.7618 9.26237C5.49818 9.26237 6.09513 8.66542 6.09513 7.92904C6.09513 7.19266 5.49818 6.5957 4.7618 6.5957C4.02542 6.5957 3.42847 7.19266 3.42847 7.92904C3.42847 8.66542 4.02542 9.26237 4.7618 9.26237Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+            <path d="M4.7618 15.3571C5.49818 15.3571 6.09513 14.7601 6.09513 14.0238C6.09513 13.2874 5.49818 12.6904 4.7618 12.6904C4.02542 12.6904 3.42847 13.2874 3.42847 14.0238C3.42847 14.7601 4.02542 15.3571 4.7618 15.3571Z" fill="currentColor" className="text-gray-500 dark:text-gray-400" />
+          </svg>
+        </span>
+        <input
+          type="checkbox"
+          checked={task.completed}
+          onChange={() => toggleTask(task.id)}
+          className={`w-4 h-4 rounded border-2 ${checkboxColorClass} cursor-pointer flex-shrink-0 accent-current`}
+          style={{ accentColor: task.completed && task.color ? undefined : 'currentColor' }}
+        />
+        <span
+          className={`flex-1 text-sm ${
+            task.completed
+              ? 'line-through text-gray-500 dark:text-gray-400'
+              : 'text-gray-900 dark:text-white'
+          }`}
+        >
+          {task.text}
+        </span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">{task.time}</span>
+        <button
+          onClick={() => deleteTask(task.id)}
+          className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0 ml-auto"
+        >
+          <Trash2 className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+        </button>
+      </li>
+    );
+  };
+
+  // Filter customers by search
+  const filteredCustomers = customersData?.data?.filter((customer: any) => {
+    if (!customerSearch) return true;
+    const searchLower = customerSearch.toLowerCase();
+    return (
+      customer.name?.toLowerCase().includes(searchLower) ||
+      customer.email?.toLowerCase().includes(searchLower) ||
+      customer.phone?.toLowerCase().includes(searchLower)
+    );
+  }) || [];
+
+  const totalCustomers = customersData?.total || 0;
+  const totalPages = Math.ceil(totalCustomers / customersPerPage);
 
   // Fetch sales report for the selected date range
   const getDateRange = () => {
@@ -330,7 +527,7 @@ export default function Dashboard() {
                   </span>
                 </div>
               </div>
-              <div className="relative -mx-1 -mb-3" style={{ height: '120px' }}>
+              <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
                 <Chart
                   type="area"
                   height={120}
@@ -370,7 +567,7 @@ export default function Dashboard() {
                     },
                     grid: {
                       show: false,
-                      padding: { top: 0, right: 0, bottom: -10, left: 0 }
+                      padding: { top: 0, right: 0, bottom: 20, left: 0 }
                     },
                     yaxis: {
                       min: 0,
@@ -385,7 +582,7 @@ export default function Dashboard() {
                     legend: { show: false }
                   }}
                 />
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
                   Compared to Last Month
                 </div>
               </div>
@@ -1092,6 +1289,205 @@ export default function Dashboard() {
                 <p className="text-gray-500 dark:text-gray-400">All items are well stocked</p>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* New Customers and Task Update Cards */}
+      <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* New Customers Card */}
+        <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between">
+            <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">New Customers</h6>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={() => navigate('/customers')}
+                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-md transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add New
+              </button>
+            </div>
+          </div>
+          <div className="p-2">
+            {customersLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="animate-pulse h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                ))}
+              </div>
+            ) : filteredCustomers.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <th className="px-2 py-2 text-left">
+                        <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600" />
+                      </th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[200px]">Name</th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[150px]">Phone</th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[150px]">Email</th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[125px]">Days</th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold">Status</th>
+                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((customer: any) => (
+                      <tr key={customer.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/30 rounded-lg">
+                        <td className="px-2 py-3">
+                          <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-xs">
+                              {customer.name?.charAt(0)?.toUpperCase() || 'C'}
+                            </div>
+                            <span className="text-gray-900 dark:text-white font-medium">{customer.name || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-gray-600 dark:text-gray-400">{customer.phone || 'N/A'}</td>
+                        <td className="px-3 py-3 text-gray-600 dark:text-gray-400">{customer.email || 'N/A'}</td>
+                        <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
+                          {customer.createdAt ? getDaysSince(customer.createdAt) : 'N/A'}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            customer.isActive 
+                              ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300' 
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          }`}>
+                            {customer.isActive ? 'Active' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="relative">
+                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+                              <MoreVertical className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">No customers found</p>
+              </div>
+            )}
+            {filteredCustomers.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {((customerPage - 1) * customersPerPage) + 1} to {Math.min(customerPage * customersPerPage, totalCustomers)} of {totalCustomers} entries
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCustomerPage(1)}
+                    disabled={customerPage === 1}
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    &lt;&lt;
+                  </button>
+                  <button
+                    onClick={() => setCustomerPage(p => Math.max(1, p - 1))}
+                    disabled={customerPage === 1}
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    &lt;
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCustomerPage(pageNum)}
+                        className={`px-3 py-1 text-sm border rounded ${
+                          customerPage === pageNum
+                            ? 'bg-primary text-white border-primary'
+                            : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setCustomerPage(p => Math.min(totalPages, p + 1))}
+                    disabled={customerPage === totalPages}
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    &gt;
+                  </button>
+                  <button
+                    onClick={() => setCustomerPage(totalPages)}
+                    disabled={customerPage === totalPages}
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    &gt;&gt;
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Task Update Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Task Update</h6>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/tasks')}
+                className="text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                View All
+              </button>
+              <button
+                onClick={() => {
+                  const newTask: Task = {
+                    id: Date.now().toString(),
+                    text: 'New task',
+                    completed: false,
+                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                  };
+                  setTasks([newTask, ...tasks]);
+                }}
+                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-md transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Task
+              </button>
+            </div>
+          </div>
+          <div className="p-2 pt-3 overflow-auto" style={{ maxHeight: '385px' }}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={tasks.map(task => task.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <ul className="space-y-1">
+                  {tasks.map((task) => (
+                    <SortableTaskItem key={task.id} task={task} />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
       </div>
