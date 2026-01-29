@@ -18,6 +18,34 @@ export default function Dashboard() {
     },
   });
 
+  // Fetch low stock items directly as fallback if not in dashboard stats
+  const hasLowStockInDashboard = dashboardStats?.lowStockItems && Array.isArray(dashboardStats.lowStockItems) && dashboardStats.lowStockItems.length > 0;
+  
+  const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
+    queryKey: ['inventory', 'low-stock'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/inventory');
+        const allInventory = response.data?.data || response.data || [];
+        // Filter for low stock items: quantity <= 10 OR quantity <= reorderPoint
+        const lowStock = allInventory
+          .filter((item: any) => {
+            const quantity = item.quantity || 0;
+            const reorderPoint = item.reorderPoint || 0;
+            // Consider low stock if quantity <= 10 OR quantity <= reorderPoint (if reorderPoint is set)
+            return quantity <= 10 || (reorderPoint > 0 && quantity <= reorderPoint);
+          })
+          .sort((a: any, b: any) => (a.quantity || 0) - (b.quantity || 0)) // Sort by quantity ascending
+          .slice(0, 10);
+        return lowStock;
+      } catch (error) {
+        console.error('Error fetching low stock items:', error);
+        return [];
+      }
+    },
+    enabled: !isLoading && !hasLowStockInDashboard,
+  });
+
   // Fetch sales report for the selected date range
   const getDateRange = () => {
     if (dateRange === 'all') return { startDate: undefined, endDate: undefined };
@@ -159,7 +187,12 @@ export default function Dashboard() {
   ];
 
   const recentOrders = dashboardStats?.recentOrders || [];
-  const lowStockItems = dashboardStats?.lowStockItems || [];
+  // Use low stock items from dashboard stats, or fallback to direct query
+  // Check if dashboard stats has lowStockItems and it's an array with items
+  const dashboardLowStock = dashboardStats?.lowStockItems;
+  const lowStockItems = (Array.isArray(dashboardLowStock) && dashboardLowStock.length > 0)
+    ? dashboardLowStock 
+    : (Array.isArray(lowStockData) && lowStockData.length > 0 ? lowStockData : []);
 
   // If dashboard stats failed to load, show error state
   if (!isLoading && !dashboardStats) {
@@ -314,7 +347,15 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="p-6">
-            {lowStockItems.length > 0 ? (
+            {(isLoading || lowStockLoading) ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  </div>
+                ))}
+              </div>
+            ) : lowStockItems && lowStockItems.length > 0 ? (
               <div className="space-y-4">
                 {lowStockItems.map((item: any) => (
                   <div
@@ -323,15 +364,15 @@ export default function Dashboard() {
                   >
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 dark:text-white mb-1">
-                        {item.product?.name || 'Unknown Product'}
+                        {item.product?.name || item.productName || 'Unknown Product'}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {item.warehouse?.name || 'Unknown Warehouse'}
+                        {item.warehouse?.name || item.warehouseName || 'Unknown Warehouse'}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-red-600 dark:text-red-400">
-                        {item.quantity} left
+                        {item.quantity || 0} left
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Low stock</p>
                     </div>
@@ -353,14 +394,14 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
-            onClick={() => navigate('/products/new')}
+            onClick={() => navigate('/products')}
             className="flex flex-col items-center justify-center p-4 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors border border-primary/20"
           >
             <Package className="w-6 h-6 text-primary mb-2" />
             <span className="text-sm font-medium text-gray-900 dark:text-white">Add Product</span>
           </button>
           <button
-            onClick={() => navigate('/orders/new')}
+            onClick={() => navigate('/orders')}
             className="flex flex-col items-center justify-center p-4 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 rounded-lg transition-colors border border-green-200 dark:border-green-800"
           >
             <ShoppingCart className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
