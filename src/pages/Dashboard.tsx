@@ -246,19 +246,15 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 text-gray-900 dark:text-gray-100">
-      {/* Breadcrumb */}
-      <nav className="text-sm mb-4">
-        <ol className="flex items-center gap-2">
-          <li>
-            <a href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
-              Home
-            </a>
-          </li>
-          <li className="text-gray-400 dark:text-gray-500">/</li>
-          <li className="text-gray-900 dark:text-black font-medium">Dashboard</li>
-        </ol>
-      </nav>
+    <div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">View and manage your business overview</p>
+          </div>
+        </div>
+      </div>
 
       {/* Top Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
