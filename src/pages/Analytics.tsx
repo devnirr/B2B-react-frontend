@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import api from '../lib/api';
 import { BarChart3, DollarSign, ShoppingCart, Users, Package, ArrowUp, ArrowDown, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -9,54 +9,212 @@ export default function Analytics() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'orders' | 'customers'>('revenue');
 
-  const { data: analyticsData, isLoading } = useQuery({
-    queryKey: ['analytics', dateRange],
+  // Calculate date range
+  const getDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    switch (dateRange) {
+      case '7d':
+        startDate.setDate(endDate.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(endDate.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(endDate.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+    }
+    
+    return { startDate: startDate.toISOString().split('T')[0], endDate: endDate.toISOString().split('T')[0] };
+  };
+
+  const { startDate, endDate } = getDateRange();
+
+  // Fetch orders data
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders', 'all'],
+    queryFn: async () => {
+      const response = await api.get('/orders?skip=0&take=10000');
+      return response.data?.data || [];
+    },
+  });
+
+  // Fetch sales report for current period
+  const { data: salesReport, isLoading: salesLoading } = useQuery({
+    queryKey: ['analytics', 'sales', startDate, endDate],
     queryFn: async () => {
       try {
-        const response = await api.get(`/analytics/sales?range=${dateRange}`);
+        const response = await api.get(`/analytics/sales?startDate=${startDate}&endDate=${endDate}`);
         return response.data;
       } catch (error) {
-        // Return mock data if API fails
-        return {
-          totalRevenue: 125000,
-          orderCount: 342,
-          customerCount: 189,
-          averageOrderValue: 365.50,
-          revenueGrowth: 12.5,
-          orderGrowth: 8.3,
-          customerGrowth: 15.2,
-          dailyRevenue: [
-            { date: '2024-01-01', revenue: 3200, orders: 12 },
-            { date: '2024-01-02', revenue: 4100, orders: 15 },
-            { date: '2024-01-03', revenue: 3800, orders: 14 },
-            { date: '2024-01-04', revenue: 5200, orders: 18 },
-            { date: '2024-01-05', revenue: 4800, orders: 16 },
-            { date: '2024-01-06', revenue: 6100, orders: 22 },
-            { date: '2024-01-07', revenue: 5500, orders: 20 },
-          ],
-          topProducts: [
-            { name: 'Product A', sales: 12500, quantity: 45 },
-            { name: 'Product B', sales: 9800, quantity: 38 },
-            { name: 'Product C', sales: 8700, quantity: 32 },
-            { name: 'Product D', sales: 7200, quantity: 28 },
-            { name: 'Product E', sales: 6500, quantity: 25 },
-          ],
-          ordersByStatus: [
-            { status: 'Completed', count: 280, value: 82000 },
-            { status: 'Pending', count: 45, value: 13500 },
-            { status: 'Processing', count: 17, value: 5100 },
-          ],
-          recentOrders: [
-            { id: 1, orderNumber: 'ORD-001', customer: 'John Doe', amount: 1250.00, date: '2024-01-15', status: 'Completed' },
-            { id: 2, orderNumber: 'ORD-002', customer: 'Jane Smith', amount: 890.50, date: '2024-01-15', status: 'Pending' },
-            { id: 3, orderNumber: 'ORD-003', customer: 'Bob Johnson', amount: 2340.00, date: '2024-01-14', status: 'Completed' },
-            { id: 4, orderNumber: 'ORD-004', customer: 'Alice Brown', amount: 567.75, date: '2024-01-14', status: 'Processing' },
-            { id: 5, orderNumber: 'ORD-005', customer: 'Charlie Wilson', amount: 1890.25, date: '2024-01-13', status: 'Completed' },
-          ],
-        };
+        return { orders: [], totalRevenue: 0, orderCount: 0 };
       }
     },
   });
+
+  // Fetch previous period data for growth calculation
+  const getPreviousPeriodDates = () => {
+    const end = new Date(startDate);
+    end.setDate(end.getDate() - 1);
+    const start = new Date(end);
+    const daysDiff = Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+    start.setDate(start.getDate() - daysDiff);
+    return { startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+  };
+
+  const { startDate: prevStartDate, endDate: prevEndDate } = getPreviousPeriodDates();
+
+  const { data: prevSalesReport } = useQuery({
+    queryKey: ['analytics', 'sales', prevStartDate, prevEndDate],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/analytics/sales?startDate=${prevStartDate}&endDate=${prevEndDate}`);
+        return response.data;
+      } catch (error) {
+        return { orders: [], totalRevenue: 0, orderCount: 0 };
+      }
+    },
+    enabled: !!startDate && !!endDate,
+  });
+
+  // Fetch customers data
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', 'all'],
+    queryFn: async () => {
+      const response = await api.get('/customers?skip=0&take=10000');
+      return response.data?.data || [];
+    },
+  });
+
+  // Calculate analytics data
+  const isLoading = ordersLoading || salesLoading;
+  
+  const analyticsData = useMemo(() => {
+    if (!ordersData || !salesReport) {
+      return null;
+    }
+
+    const allOrders = ordersData || [];
+    
+    // Filter orders by date range
+    const filteredOrders = allOrders.filter((order: any) => {
+      const orderDate = new Date(order.orderDate);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      return orderDate >= start && orderDate <= end;
+    });
+
+    // Calculate total revenue
+    const totalRevenue = filteredOrders.reduce((sum: number, order: any) => {
+      return sum + (typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(order.totalAmount || 0));
+    }, 0);
+
+    // Calculate order count
+    const orderCount = filteredOrders.length;
+
+    // Calculate customer count
+    const uniqueCustomers = new Set(filteredOrders.map((order: any) => order.customerId).filter(Boolean));
+    const customerCount = uniqueCustomers.size;
+
+    // Calculate average order value
+    const averageOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
+
+    // Calculate growth percentages
+    const prevRevenue = prevSalesReport?.totalRevenue || 0;
+    const prevOrderCount = prevSalesReport?.orderCount || 0;
+    const prevCustomerCount = prevSalesReport?.orders ? new Set(prevSalesReport.orders.map((o: any) => o.customerId).filter(Boolean)).size : 0;
+
+    const revenueGrowth = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+    const orderGrowth = prevOrderCount > 0 ? ((orderCount - prevOrderCount) / prevOrderCount) * 100 : 0;
+    const customerGrowth = prevCustomerCount > 0 ? ((customerCount - prevCustomerCount) / prevCustomerCount) * 100 : 0;
+
+    // Calculate daily revenue
+    const dailyRevenueMap = new Map<string, { revenue: number; orders: number }>();
+    filteredOrders.forEach((order: any) => {
+      const date = new Date(order.orderDate).toISOString().split('T')[0];
+      const amount = typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(order.totalAmount || 0);
+      const existing = dailyRevenueMap.get(date) || { revenue: 0, orders: 0 };
+      dailyRevenueMap.set(date, {
+        revenue: existing.revenue + amount,
+        orders: existing.orders + 1,
+      });
+    });
+    const dailyRevenue = Array.from(dailyRevenueMap.entries())
+      .map(([date, data]) => ({ date, ...data }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Calculate top products
+    const productSalesMap = new Map<string, { name: string; sales: number; quantity: number }>();
+    filteredOrders.forEach((order: any) => {
+      if (order.orderLines && Array.isArray(order.orderLines)) {
+        order.orderLines.forEach((line: any) => {
+          const productId = line.productId?.toString() || '';
+          const productName = line.product?.name || `Product ${productId}`;
+          const quantity = parseInt(line.quantity || 0);
+          const unitPrice = parseFloat(line.unitPrice || 0);
+          const sales = quantity * unitPrice;
+          
+          const existing = productSalesMap.get(productId) || { name: productName, sales: 0, quantity: 0 };
+          productSalesMap.set(productId, {
+            name: productName,
+            sales: existing.sales + sales,
+            quantity: existing.quantity + quantity,
+          });
+        });
+      }
+    });
+    const topProducts = Array.from(productSalesMap.values())
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    // Calculate orders by status
+    const statusMap = new Map<string, { count: number; value: number }>();
+    filteredOrders.forEach((order: any) => {
+      const status = order.status || 'PENDING';
+      const amount = typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(order.totalAmount || 0);
+      const existing = statusMap.get(status) || { count: 0, value: 0 };
+      statusMap.set(status, {
+        count: existing.count + 1,
+        value: existing.value + amount,
+      });
+    });
+    const ordersByStatus = Array.from(statusMap.entries()).map(([status, data]) => ({
+      status: status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      ...data,
+    }));
+
+    // Get recent orders
+    const recentOrders = filteredOrders
+      .sort((a: any, b: any) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+      .slice(0, 5)
+      .map((order: any) => ({
+        id: order.id,
+        orderNumber: order.orderNumber || `ORD-${order.id}`,
+        customer: order.customer?.name || 'Unknown',
+        amount: typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(order.totalAmount || 0),
+        date: order.orderDate,
+        status: order.status || 'PENDING',
+      }));
+
+    return {
+      totalRevenue,
+      orderCount,
+      customerCount,
+      averageOrderValue,
+      revenueGrowth,
+      orderGrowth,
+      customerGrowth,
+      dailyRevenue,
+      topProducts,
+      ordersByStatus,
+      recentOrders,
+    };
+  }, [ordersData, salesReport, prevSalesReport, customersData, startDate, endDate]);
 
   const COLORS = ['#5955D1', '#4a46b8', '#3d3a9f', '#333085', '#2d2a6f'];
 
