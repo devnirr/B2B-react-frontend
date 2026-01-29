@@ -99,6 +99,7 @@ export default function Analytics() {
     }
 
     const allOrders = ordersData || [];
+    const allCustomers = customersData || [];
     
     // Filter orders by date range
     const filteredOrders = allOrders.filter((order: any) => {
@@ -117,9 +118,11 @@ export default function Analytics() {
     // Calculate order count
     const orderCount = filteredOrders.length;
 
-    // Calculate customer count
-    const uniqueCustomers = new Set(filteredOrders.map((order: any) => order.customerId).filter(Boolean));
-    const customerCount = uniqueCustomers.size;
+    // Calculate customer count - use total customers from database, not just those with orders
+    const customerCount = allCustomers.length;
+    
+    // Calculate unique customers who placed orders in this period (for growth calculation)
+    const uniqueCustomersWithOrders = new Set(filteredOrders.map((order: any) => order.customerId).filter(Boolean));
 
     // Calculate average order value
     const averageOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
@@ -127,11 +130,19 @@ export default function Analytics() {
     // Calculate growth percentages
     const prevRevenue = prevSalesReport?.totalRevenue || 0;
     const prevOrderCount = prevSalesReport?.orderCount || 0;
-    const prevCustomerCount = prevSalesReport?.orders ? new Set(prevSalesReport.orders.map((o: any) => o.customerId).filter(Boolean)).size : 0;
-
+    
+    // For customer growth, we need to compare total customers
+    // Since we don't have previous period customer data easily available, 
+    // we'll calculate growth based on customers who placed orders in each period
+    // This is a reasonable approximation for customer growth
+    const prevUniqueCustomers = prevSalesReport?.orders ? new Set(prevSalesReport.orders.map((o: any) => o.customerId).filter(Boolean)).size : 0;
+    const currentUniqueCustomers = uniqueCustomersWithOrders.size;
+    
     const revenueGrowth = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
     const orderGrowth = prevOrderCount > 0 ? ((orderCount - prevOrderCount) / prevOrderCount) * 100 : 0;
-    const customerGrowth = prevCustomerCount > 0 ? ((customerCount - prevCustomerCount) / prevCustomerCount) * 100 : 0;
+    // For customer growth, we'll show growth based on active customers (those who placed orders)
+    // This gives a meaningful metric about customer engagement growth
+    const customerGrowth = prevUniqueCustomers > 0 ? ((currentUniqueCustomers - prevUniqueCustomers) / prevUniqueCustomers) * 100 : 0;
 
     // Calculate daily revenue
     const dailyRevenueMap = new Map<string, { revenue: number; orders: number }>();
