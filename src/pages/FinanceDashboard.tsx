@@ -52,8 +52,36 @@ const centerTextPlugin = {
 ChartJS.register(centerTextPlugin);
 
 export default function FinanceDashboard() {
+  const [selectedYear, setSelectedYear] = useState('This Year');
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+  const [transactionSearch, setTransactionSearch] = useState('');
+
+  // Get date range based on selected year
+  const getDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (selectedYear === 'This Year') {
+      startDate.setMonth(0, 1); // January 1st
+      startDate.setHours(0, 0, 0, 0);
+    } else if (selectedYear === 'Last Year') {
+      startDate.setFullYear(endDate.getFullYear() - 1, 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setFullYear(endDate.getFullYear() - 1, 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    return { 
+      startDate: startDate.toISOString().split('T')[0], 
+      endDate: endDate.toISOString().split('T')[0] 
+    };
+  };
+
+  const { startDate, endDate } = getDateRange();
+
   // Fetch finance data
-  const { isLoading } = useQuery({
+  const { isLoading: dashboardLoading } = useQuery({
     queryKey: ['finance', 'dashboard'],
     queryFn: async () => {
       const response = await api.get('/analytics/dashboard');
@@ -61,16 +89,65 @@ export default function FinanceDashboard() {
     },
   });
 
+  // Fetch sales report for charts and transactions
+  const { data: salesReport, isLoading: salesLoading } = useQuery({
+    queryKey: ['analytics', 'sales', startDate, endDate, selectedYear],
+    queryFn: async () => {
+      try {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        const queryString = params.toString();
+        const response = await api.get(`/analytics/sales${queryString ? `?${queryString}` : ''}`);
+        return response.data;
+      } catch (error) {
+        return { orders: [], totalRevenue: 0, orderCount: 0 };
+      }
+    },
+  });
+
+  const isLoading = dashboardLoading || salesLoading;
+
+  // Process orders data for charts - group by month
+  const processOrdersForChart = () => {
+    const orders = salesReport?.orders || [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Group orders by month
+    const monthlyData: Record<string, number> = {};
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`;
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = 0;
+      }
+      monthlyData[monthKey] += Number(order.totalAmount || 0);
+    });
+
+    // Get last 8 months of data
+    const sortedMonths = Object.keys(monthlyData).sort().slice(-8);
+    const revenueData = sortedMonths.map(key => monthlyData[key]);
+    const categories = sortedMonths.map(key => {
+      const [, month] = key.split('-');
+      return monthNames[parseInt(month)];
+    });
+
+    return { revenueData, categories, maxValue: Math.max(...revenueData, 0) };
+  };
+
+  const chartData = processOrdersForChart();
+
   // Revenue vs Expenses Chart
   const revenueExpensesChartConfig = {
     series: [
       {
         name: 'Revenue',
-        data: [300000, 80000, 300000, 300000, 290000, 210000, 350000, 500000, 380000],
+        data: chartData.revenueData.length > 0 ? chartData.revenueData : [0],
       },
       {
         name: 'Expenses',
-        data: [0, 200000, 350000, 180000, 190000, 400000, 400000, 280000, 220000],
+        data: new Array(chartData.revenueData.length || 1).fill(0), // Expenses would need separate endpoint
       },
     ],
     chart: {
@@ -92,7 +169,7 @@ export default function FinanceDashboard() {
     },
     yaxis: {
       min: 0,
-      max: 500000,
+      max: chartData.maxValue > 0 ? chartData.maxValue * 1.2 : 100000,
       tickAmount: 5,
       labels: {
         formatter: (value: number) => `${(value / 1000).toFixed(0)}K`,
@@ -104,7 +181,7 @@ export default function FinanceDashboard() {
       },
     },
     xaxis: {
-      categories: ['Jan', 'Feb', 'Mar', 'May', 'Jun', 'July', 'Aug', 'Sep'],
+      categories: chartData.categories.length > 0 ? chartData.categories : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
       axisBorder: { color: 'var(--bs-border-color)' },
       axisTicks: { show: false },
       labels: {
@@ -149,12 +226,12 @@ export default function FinanceDashboard() {
     },
   };
 
-  // Expense Breakdown Chart (Doughnut)
+  // Expense Breakdown Chart (Doughnut) - Using placeholder data since expenses endpoint doesn't exist
   const expenseChartData = {
     labels: ['Salaries', 'Rent', 'Software', 'Marketing'],
     datasets: [
       {
-        data: [800, 600, 400, 200],
+        data: [0, 0, 0, 0], // Would need expenses data from API
         backgroundColor: ['#5955D1', '#ACAAE8', '#d1d0f7', '#DEDDF6'],
         borderRadius: 3,
         spacing: 0,
@@ -220,22 +297,23 @@ export default function FinanceDashboard() {
     },
   };
 
-  // Sample transactions data
-  const transactions = [
-    { name: 'Emma Johnson', date: '28 Oct 2025', description: 'Client Payment - Project Alpha', category: 'Revenue', amount: '+$2,500', status: 'Completed' },
-    { name: 'Liam Anderson', date: '26 Oct 2025', description: 'Office Rent', category: 'Expense', amount: '-$1,200', status: 'Paid' },
-    { name: 'Olivia Brown', date: '23 Oct 2025', description: 'Software Subscription', category: 'Expense', amount: '-$89', status: 'Pending' },
-    { name: 'Noah Wilson', date: '22 Oct 2025', description: 'Consulting Income', category: 'Revenue', amount: '+$800', status: 'Completed' },
-    { name: 'Sophia Taylor', date: '28 Oct 2025', description: 'Client Payment - Project Alpha', category: 'Revenue', amount: '+$2,500', status: 'Completed' },
-    { name: 'James Miller', date: '26 Oct 2025', description: 'Office Rent', category: 'Expense', amount: '-$1,200', status: 'Paid' },
-  ];
+  // Transform orders to transactions format
+  const transactions = (salesReport?.orders || []).slice(0, 10).map((order: any) => {
+    const orderDate = order.orderDate || order.createdAt;
+    const date = new Date(orderDate);
+    const formattedDate = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    
+    return {
+      name: order.customer?.name || 'Unknown Customer',
+      date: formattedDate,
+      description: `Order #${order.id}`,
+      category: 'Revenue',
+      amount: `+$${Number(order.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      status: order.status || 'Completed',
+    };
+  });
 
-  const [transactionSearch, setTransactionSearch] = useState('');
-  const [selectedYear, setSelectedYear] = useState('This Year');
-  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
-  const yearDropdownRef = useRef<HTMLDivElement>(null);
-
-  const filteredTransactions = transactions.filter((tx) =>
+  const filteredTransactions = transactions.filter((tx: any) =>
     tx.name.toLowerCase().includes(transactionSearch.toLowerCase()) ||
     tx.description.toLowerCase().includes(transactionSearch.toLowerCase()) ||
     tx.category.toLowerCase().includes(transactionSearch.toLowerCase())
@@ -256,18 +334,85 @@ export default function FinanceDashboard() {
   }, []);
 
   const getStatusBadge = (status: string) => {
+    const statusLower = status?.toLowerCase() || '';
     const statusMap: Record<string, { bg: string; text: string }> = {
-      Completed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400' },
-      Paid: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' },
-      Pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' },
+      completed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400' },
+      paid: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400' },
+      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' },
+      processing: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' },
+      cancelled: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' },
+      failed: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' },
     };
-    const style = statusMap[status] || statusMap.Pending;
+    const style = statusMap[statusLower] || statusMap.pending;
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
-        {status}
+        {status || 'Pending'}
       </span>
     );
   };
+
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  // Calculate stats from real data
+  const totalRevenue = salesReport?.totalRevenue || 0;
+  const totalExpenses = 0; // Expenses would need a separate endpoint
+  const netProfit = totalRevenue - totalExpenses;
+  const pendingInvoices = (salesReport?.orders || []).filter((o: any) => 
+    ['pending', 'processing'].includes((o.status || '').toLowerCase())
+  ).length;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setIsYearDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -282,59 +427,53 @@ export default function FinanceDashboard() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)
-          ) : (
-            <>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$120,540</h2>
-                  </div>
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
+              <div>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$84,320</h2>
-                  </div>
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
+              <div>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$36,220</h2>
-                  </div>
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
+              <div>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
+              </div>
+            </div>
+          </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">12</h2>
-                  </div>
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
-            </>
-          )}
+              <div>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
@@ -495,7 +634,7 @@ export default function FinanceDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredTransactions.map((tx, idx) => (
+              {filteredTransactions.map((tx: any, idx: number) => (
                 <tr key={idx} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

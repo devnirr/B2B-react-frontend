@@ -7,15 +7,119 @@ import { SkeletonStatsCard } from '../components/Skeleton';
 
 export default function SalesDashboard() {
   const [salesTimeRange, setSalesTimeRange] = useState<'today' | 'week' | 'month'>('month');
+  const [salesSearch, setSalesSearch] = useState('');
+  const [topSellingSearch, setTopSellingSearch] = useState('');
+  const [topSellingPage, setTopSellingPage] = useState(1);
+  const itemsPerPage = 5;
 
-  // Fetch sales data
-  const { isLoading } = useQuery({
-    queryKey: ['sales', 'dashboard'],
+  // Get date range based on time range
+  const getDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    switch (salesTimeRange) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        startDate.setDate(endDate.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(endDate.getMonth() - 1);
+        break;
+    }
+    
+    return { 
+      startDate: startDate.toISOString().split('T')[0], 
+      endDate: endDate.toISOString().split('T')[0] 
+    };
+  };
+
+  const { startDate, endDate } = getDateRange();
+
+  // Fetch dashboard stats
+  const { data: dashboardStats, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
-      const response = await api.get('/analytics/sales');
+      const response = await api.get('/analytics/dashboard');
       return response.data;
     },
   });
+
+  // Fetch sales data
+  const { data: salesReport, isLoading: salesLoading } = useQuery({
+    queryKey: ['analytics', 'sales', startDate, endDate, salesTimeRange],
+    queryFn: async () => {
+      try {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        const queryString = params.toString();
+        const response = await api.get(`/analytics/sales${queryString ? `?${queryString}` : ''}`);
+        return response.data;
+      } catch (error) {
+        return { orders: [], totalRevenue: 0, orderCount: 0 };
+      }
+    },
+  });
+
+  const isLoading = dashboardLoading || salesLoading;
+
+  // Process orders data for charts based on time range
+  const processOrdersForChart = () => {
+    const orders = salesReport?.orders || [];
+    
+    if (salesTimeRange === 'today') {
+      // Group by hour
+      const hourlyData: Record<number, number> = {};
+      orders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate || order.createdAt);
+        const hour = orderDate.getHours();
+        if (!hourlyData[hour]) hourlyData[hour] = 0;
+        hourlyData[hour] += Number(order.totalAmount || 0);
+      });
+      
+      const hours = Array.from({ length: 12 }, (_, i) => i * 2);
+      const incomeData = hours.map(h => hourlyData[h] || 0);
+      const categories = hours.map(h => {
+        if (h === 0) return '12 AM';
+        if (h < 12) return `${h} AM`;
+        if (h === 12) return '12 PM';
+        return `${h - 12} PM`;
+      });
+      
+      return { incomeData, expensesData: new Array(12).fill(0), categories, maxValue: Math.max(...incomeData, 0) };
+    } else if (salesTimeRange === 'week') {
+      // Group by day
+      const dailyData: Record<string, number> = {};
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      orders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate || order.createdAt);
+        const dayName = dayNames[orderDate.getDay()];
+        if (!dailyData[dayName]) dailyData[dayName] = 0;
+        dailyData[dayName] += Number(order.totalAmount || 0);
+      });
+      
+      const incomeData = dayNames.map(day => dailyData[day] || 0);
+      return { incomeData, expensesData: new Array(7).fill(0), categories: dayNames, maxValue: Math.max(...incomeData, 0) };
+    } else {
+      // Group by month
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyData: Record<number, number> = {};
+      orders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate || order.createdAt);
+        const month = orderDate.getMonth();
+        if (!monthlyData[month]) monthlyData[month] = 0;
+        monthlyData[month] += Number(order.totalAmount || 0);
+      });
+      
+      const incomeData = monthNames.map((_, idx) => monthlyData[idx] || 0);
+      return { incomeData, expensesData: new Array(12).fill(0), categories: monthNames, maxValue: Math.max(...incomeData, 0) };
+    }
+  };
+
+  const chartData = processOrdersForChart();
 
   // Sales Chart Configuration
   const getSalesChartConfig = () => {
@@ -56,10 +160,10 @@ export default function SalesDashboard() {
       },
       yaxis: {
         min: 0,
-        max: 8000,
+        max: chartData.maxValue > 0 ? chartData.maxValue * 1.2 : 10000,
         tickAmount: 5,
         labels: {
-          formatter: (value: number) => `$${(value / 100).toFixed(0)}K`,
+          formatter: (value: number) => `$${(value / 1000).toFixed(0)}K`,
           style: {
             colors: 'var(--bs-body-color)',
             fontSize: '13px',
@@ -98,70 +202,26 @@ export default function SalesDashboard() {
       },
     };
 
-    if (salesTimeRange === 'today') {
-      return {
-        ...baseConfig,
-        series: [
-          { name: 'Income', data: [500, 700, 650, 800, 900, 950, 880, 920, 970, 1020, 1100, 1200] },
-          { name: 'Expenses', data: [300, 450, 400, 500, 480, 530, 490, 510, 560, 580, 600, 650] },
-        ],
-        xaxis: {
-          categories: ['2 AM', '4 AM', '6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM', '10 PM', '12 AM'],
-          axisBorder: { color: 'var(--bs-border-color)' },
-          axisTicks: { show: false },
-          labels: {
-            style: {
-              colors: 'var(--bs-body-color)',
-              fontSize: '13px',
-              fontWeight: '500',
-              fontFamily: 'var(--bs-body-font-family)',
-            },
+    return {
+      ...baseConfig,
+      series: [
+        { name: 'Income', data: chartData.incomeData.length > 0 ? chartData.incomeData : [0] },
+        { name: 'Expenses', data: chartData.expensesData.length > 0 ? chartData.expensesData : [0] },
+      ],
+      xaxis: {
+        categories: chartData.categories.length > 0 ? chartData.categories : ['N/A'],
+        axisBorder: { color: 'var(--bs-border-color)' },
+        axisTicks: { show: false },
+        labels: {
+          style: {
+            colors: 'var(--bs-body-color)',
+            fontSize: '13px',
+            fontWeight: '500',
+            fontFamily: 'var(--bs-body-font-family)',
           },
         },
-      };
-    } else if (salesTimeRange === 'week') {
-      return {
-        ...baseConfig,
-        series: [
-          { name: 'Income', data: [4200, 5200, 4800, 6100, 7000, 6400, 7200] },
-          { name: 'Expenses', data: [3100, 3700, 3400, 4000, 4600, 4200, 3900] },
-        ],
-        xaxis: {
-          categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          axisBorder: { color: 'var(--bs-border-color)' },
-          axisTicks: { show: false },
-          labels: {
-            style: {
-              colors: 'var(--bs-body-color)',
-              fontSize: '13px',
-              fontWeight: '500',
-              fontFamily: 'var(--bs-body-font-family)',
-            },
-          },
-        },
-      };
-    } else {
-      return {
-        ...baseConfig,
-        series: [
-          { name: 'Income', data: [3500, 5000, 4200, 5500, 5000, 6200, 4800, 6500, 5800, 7200, 6600, 7500] },
-          { name: 'Expenses', data: [2500, 3100, 2900, 3700, 3300, 4100, 3600, 3900, 4200, 4000, 4600, 4300] },
-        ],
-        xaxis: {
-          categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          axisBorder: { color: 'var(--bs-border-color)' },
-          axisTicks: { show: false },
-          labels: {
-            style: {
-              colors: 'var(--bs-body-color)',
-              fontSize: '13px',
-              fontWeight: '500',
-              fontFamily: 'var(--bs-body-font-family)',
-            },
-          },
-        },
-      };
-    }
+      },
+    };
   };
 
   // Monthly Target Chart
@@ -350,34 +410,60 @@ export default function SalesDashboard() {
     yaxis: { show: false },
   };
 
-  // Sample sales data
-  const recentSales = [
-    { id: '#TXN10234', customer: 'Emma Johnson', product: 'Wireless Headphones', amount: '$2499', payment: 'Debit Card', status: 'Failed' },
-    { id: '#TXN10235', customer: 'Liam Smith', product: 'Smart Watch', amount: '$3299', payment: 'UPI', status: 'Pending' },
-    { id: '#TXN10236', customer: 'Olivia Brown', product: 'Laptop Sleeve', amount: '$1249', payment: 'Credit Card', status: 'Completed' },
-    { id: '#TXN10237', customer: 'Noah Davis', product: 'Bluetooth Speaker', amount: '$2799', payment: 'Wallet', status: 'Completed' },
-    { id: '#TXN10238', customer: 'Sophia Wilson', product: 'DSLR Camera', amount: '$45499', payment: 'UPI', status: 'Completed' },
-  ];
+  // Transform orders to recent sales format
+  const recentSales = (salesReport?.orders || []).slice(0, 5).map((order: any) => {
+    const firstProduct = order.orderLines?.[0]?.product;
+    return {
+      id: `#${order.id}`,
+      customer: order.customer?.name || 'Unknown Customer',
+      product: firstProduct?.name || 'Multiple Products',
+      amount: `$${Number(order.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      payment: order.paymentMethod || 'N/A',
+      status: order.status || 'Pending',
+    };
+  });
 
-  // Top Selling Items data
-  const topSellingItems = [
-    { id: '#TXN10001', product: 'Smart Home Electronics Kit', stock: 1200, price: '$120.00', totalSale: '$2499.00', status: 'Available' },
-    { id: '#TXN10002', product: 'Modern Wooden Office Chair', stock: 1800, price: '$145.50', totalSale: '$3250.00', status: 'Available' },
-    { id: '#TXN10003', product: 'Luxury Fashion Hoodie Wear', stock: 0, price: '$125.50', totalSale: '$5275.00', status: 'Not-Available' },
-    { id: '#TXN10004', product: 'Organic Beauty Skincare Set', stock: 1275, price: '$75.50', totalSale: '$7075.00', status: 'Available' },
-    { id: '#TXN10005', product: 'Professional Sports Fitness Gear', stock: 0, price: '$125.50', totalSale: '$5275.00', status: 'Not-Available' },
-    { id: '#TXN10006', product: 'Trendy Travel Luggage Bag', stock: 0, price: '$125.50', totalSale: '$5275.00', status: 'Not-Available' },
-    { id: '#TXN10007', product: 'Premium Coffee Maker Machine', stock: 850, price: '$199.99', totalSale: '$3999.80', status: 'Available' },
-    { id: '#TXN10008', product: 'Wireless Bluetooth Earbuds', stock: 2100, price: '$89.99', totalSale: '$1889.79', status: 'Available' },
-    { id: '#TXN10009', product: 'Ergonomic Office Desk', stock: 450, price: '$299.00', totalSale: '$1345.50', status: 'Available' },
-    { id: '#TXN10010', product: 'Smart Fitness Tracker Watch', stock: 0, price: '$179.99', totalSale: '$3599.80', status: 'Not-Available' },
-    { id: '#TXN10011', product: 'Luxury Leather Handbag', stock: 320, price: '$249.99', totalSale: '$7999.68', status: 'Available' },
-  ];
+  // Process orders to get top selling items
+  const processTopSellingItems = () => {
+    const orders = salesReport?.orders || [];
+    const productSales: Record<string, { product: any; quantity: number; totalSale: number; price: number }> = {};
+    
+    orders.forEach((order: any) => {
+      order.orderLines?.forEach((line: any) => {
+        const productId = line.productId;
+        const product = line.product;
+        
+        if (!productSales[productId]) {
+          productSales[productId] = {
+            product,
+            quantity: 0,
+            totalSale: 0,
+            price: Number(line.unitPrice || 0),
+          };
+        }
+        
+        productSales[productId].quantity += Number(line.quantity || 0);
+        productSales[productId].totalSale += Number(line.totalPrice || line.unitPrice * line.quantity || 0);
+      });
+    });
 
-  const [salesSearch, setSalesSearch] = useState('');
-  const [topSellingSearch, setTopSellingSearch] = useState('');
-  const [topSellingPage, setTopSellingPage] = useState(1);
-  const itemsPerPage = 5;
+    // Fetch inventory for stock info
+    const topSelling = Object.values(productSales)
+      .sort((a, b) => b.totalSale - a.totalSale)
+      .slice(0, 11)
+      .map((item, idx) => ({
+        id: `#TXN${10000 + idx}`,
+        product: item.product?.name || 'Unknown Product',
+        stock: 0, // Would need inventory data
+        price: `$${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        totalSale: `$${item.totalSale.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        status: 'Available', // Would need inventory data to determine
+      }));
+
+    return topSelling;
+  };
+
+  const topSellingItems = processTopSellingItems();
 
   // Modal states for Recent Sales
   const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
@@ -438,10 +524,10 @@ export default function SalesDashboard() {
     setSelectedTopSelling(null);
   };
 
-  const filteredSales = recentSales.filter((sale) =>
+  const filteredSales = recentSales.filter((sale: any) =>
     sale.id.toLowerCase().includes(salesSearch.toLowerCase()) ||
     sale.customer.toLowerCase().includes(salesSearch.toLowerCase()) ||
-    sale.product.toLowerCase().includes(salesSearch.toLowerCase())
+    sale.product.toLowerCase().includes(topSellingSearch.toLowerCase())
   );
 
   const filteredTopSelling = topSellingItems.filter((item) =>
@@ -471,6 +557,46 @@ export default function SalesDashboard() {
     );
   };
 
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  // Calculate stats
+  const totalEarning = salesReport?.totalRevenue || 0;
+  const totalOrders = salesReport?.orderCount || dashboardStats?.totalOrders || 0;
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sales Dashboard</h1>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
+          <div className="lg:col-span-8 xl:col-span-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+          <div className="lg:col-span-4 xl:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+          <div className="lg:col-span-6 xl:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Page Header */}
@@ -482,73 +608,61 @@ export default function SalesDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)
-        ) : (
-          <>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-4 pb-0 border-0">
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <Wallet className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="p-4 flex items-end">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Earning</p>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">$12,354</h2>
-                </div>
-                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">
-                  +12.4%
-                </span>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 pb-0 border-0">
+            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <Wallet className="w-6 h-6" />
             </div>
+          </div>
+          <div className="p-4 flex items-end">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Earning</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">{formatCurrency(totalEarning)}</h2>
+            </div>
+          </div>
+        </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-4 pb-0 border-0">
-                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center">
-                  <ShoppingCart className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="p-4 flex items-end">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Orders</p>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">10,654</h2>
-                </div>
-                <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
-                  +18.2%
-                </span>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 pb-0 border-0">
+            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center">
+              <ShoppingCart className="w-6 h-6" />
             </div>
+          </div>
+          <div className="p-4 flex items-end">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Orders</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">{totalOrders.toLocaleString()}</h2>
+            </div>
+          </div>
+        </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-4 pb-0 border-0">
-                <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="p-4 flex items-end">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Revenue Growth</p>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">+18.5%</h2>
-                </div>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 pb-0 border-0">
+            <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6" />
             </div>
+          </div>
+          <div className="p-4 flex items-end">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Revenue Growth</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">N/A</h2>
+            </div>
+          </div>
+        </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-4 pb-0 border-0">
-                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center">
-                  <Target className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="p-4 flex items-end">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Conversion Rate</p>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">7.6%</h2>
-                </div>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 pb-0 border-0">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center">
+              <Target className="w-6 h-6" />
             </div>
-          </>
-        )}
+          </div>
+          <div className="p-4 flex items-end">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Conversion Rate</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">N/A</h2>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Charts Row - Sales Report, Monthly Target, Sales by Country */}
@@ -747,7 +861,7 @@ export default function SalesDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredSales.map((sale, idx) => (
+                {filteredSales.map((sale: any, idx: number) => (
                   <tr key={idx} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/30">
                     <td className="px-4 py-3">
                       <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600" />
