@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Users, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown, Eye, MoreVertical, Home } from 'lucide-react';
+import { Users, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import { useCheckCustomerEmail, useDebounce } from '../utils/emailDuplicateCheck';
@@ -78,9 +78,8 @@ const CustomSelect = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
-          error ? 'border-red-500' : 'border-gray-300'
-        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${error ? 'border-red-500' : 'border-gray-300'
+          } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
         style={{
           padding: '0.532rem 0.8rem 0.532rem 1.2rem',
           fontSize: '0.875rem',
@@ -98,7 +97,7 @@ const CustomSelect = ({
       </button>
 
       {isOpen && (
-        <div 
+        <div
           className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-auto custom-dropdown-menu"
           style={{
             zIndex: 10000,
@@ -112,18 +111,17 @@ const CustomSelect = ({
           {options.map((option, index) => {
             const isSelected = option.value === value;
             const isHighlighted = index === highlightedIndex;
-            
+
             return (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => handleSelect(option.value)}
                 onMouseEnter={() => setHighlightedIndex(index)}
-                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
-                  isSelected || isHighlighted
+                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${isSelected || isHighlighted
                     ? 'bg-primary-500 text-white'
                     : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                  } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
@@ -144,13 +142,13 @@ const CustomSelect = ({
 };
 
 // Waves effect button component
-const ButtonWithWaves = ({ 
-  children, 
-  onClick, 
+const ButtonWithWaves = ({
+  children,
+  onClick,
   className = '',
-  disabled = false 
-}: { 
-  children: React.ReactNode; 
+  disabled = false
+}: {
+  children: React.ReactNode;
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
@@ -316,211 +314,102 @@ export default function Customers() {
     }, 300);
   };
 
-  const [actionDropdown, setActionDropdown] = useState<number | null>(null);
-  const actionDropdownRef = useRef<HTMLDivElement>(null);
-
   if (isLoading) {
     return <SkeletonPage />;
   }
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (actionDropdownRef.current && !actionDropdownRef.current.contains(event.target as Node)) {
-        setActionDropdown(null);
-      }
-    };
-
-    if (actionDropdown !== null) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [actionDropdown]);
-
-  // Format date helper
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-    } catch {
-      return '-';
-    }
-  };
-
-  // Get status badge styling
-  const getStatusBadge = (isActive: boolean | undefined) => {
-    if (isActive === undefined) {
-      return { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Pending' };
-    }
-    return isActive
-      ? { bg: 'bg-success-subtle', text: 'text-success', label: 'Active' }
-      : { bg: 'bg-danger-subtle', text: 'text-danger', label: 'Inactive' };
-  };
-
   return (
     <div>
-      {/* Page Header with Breadcrumb */}
-      <div className="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
-        <div className="clearfix">
-          <nav aria-label="breadcrumb">
-            <ol className="breadcrumb mb-0">
-              <li className="breadcrumb-item">
-                <a href="/" className="text-gray-600 dark:text-gray-400 hover:text-primary">
-                  <Home className="w-4 h-4 inline" /> Home
-                </a>
-              </li>
-              <li className="breadcrumb-item active" aria-current="page">Customers</li>
-            </ol>
-          </nav>
-        </div>
-        <a
-          href="javascript:void(0);"
-          onClick={(e) => {
-            e.preventDefault();
-            openModal();
-          }}
-          className="btn-link text-primary hover:text-primary-dark transition-colors"
-        >
-          <Plus className="w-4 h-4 inline me-1" /> New Customer
-        </a>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Customers</h1>
+        {(!data?.data || data.data.length === 0) ? null : (
+          <ButtonWithWaves onClick={openModal}>
+            <Plus className="w-5 h-5" />
+            Add Customer
+          </ButtonWithWaves>
+        )}
       </div>
 
-      {/* Card */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card overflow-hidden">
-            <div className="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between border-0 pb-0">
-              <h6 className="card-title mb-0">Customer List</h6>
-              <div className="clearfix d-flex align-items-center gap-2">
-                <div id="dt_CustomerList_Search"></div>
-              </div>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {!data?.data || data.data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Users className="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
-            <div className="card-body px-1 pt-2 pb-2">
-              {!data?.data || data.data.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4">
-                  <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                    <Users className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No customers found</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
-                    Get started by adding your first customer to the system.
-                  </p>
-                  <ButtonWithWaves onClick={openModal}>
-                    <Plus className="w-5 h-5" />
-                    Add Customer
-                  </ButtonWithWaves>
-                </div>
-              ) : (
-                <table className="table table-sm table-row-rounded data-row-checkbox">
-                  <thead className="table-light">
-                    <tr>
-                      <th>
-                        <div className="form-check">
-                          <input className="form-check-input" data-row-checkbox type="checkbox" />
-                        </div>
-                      </th>
-                      <th className="minw-200px">Name & Profile</th>
-                      <th className="minw-150px">Phone</th>
-                      <th className="minw-150px">Email</th>
-                      <th className="minw-150px">Country</th>
-                      <th className="minw-150px">Date</th>
-                      <th className="minw-150px">Status</th>
-                      <th className="minw-100px">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.data.map((customer: any) => {
-                      const statusBadge = getStatusBadge(customer.isActive);
-                      return (
-                        <tr key={customer.id}>
-                          <td>
-                            <div className="form-check p-0 w-auto d-inline-block">
-                              <input className="form-check-input m-0" data-checkbox="" type="checkbox" />
-                            </div>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="avatar avatar-xxs me-2 rounded-circle" style={{ width: '24px', height: '24px', backgroundColor: 'rgba(89, 85, 209, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5955D1', fontWeight: 600, fontSize: '0.625rem' }}>
-                                {customer.name?.charAt(0)?.toUpperCase() || 'C'}
-                              </div>
-                              {customer.name}
-                            </div>
-                          </td>
-                          <td>{customer.phone || '-'}</td>
-                          <td>{customer.email || '-'}</td>
-                          <td>{customer.country || '-'}</td>
-                          <td>{formatDate(customer.createdAt)}</td>
-                          <td>
-                            <span className={`badge badge-lg ${statusBadge.bg} ${statusBadge.text}`}>
-                              {statusBadge.label}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center position-relative">
-                              <button
-                                className="btn btn-subtle-secondary btn-sm btn-shadow btn-icon waves-effect me-1"
-                                type="button"
-                                title="View"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <div className="btn-group position-relative" ref={actionDropdown === customer.id ? actionDropdownRef : null}>
-                                <button
-                                  className="btn btn-subtle-primary btn-sm btn-shadow btn-icon waves-effect dropdown-toggle"
-                                  type="button"
-                                  onClick={() => setActionDropdown(actionDropdown === customer.id ? null : customer.id)}
-                                  aria-expanded={actionDropdown === customer.id}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                                {actionDropdown === customer.id && (
-                                  <ul className="dropdown-menu dropdown-menu-end show" style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.25rem', zIndex: 1000 }}>
-                                    <li>
-                                      <a
-                                        className="dropdown-item"
-                                        href="javascript:void(0);"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          setSelectedCustomer(customer);
-                                          setIsEditModalOpen(true);
-                                          setActionDropdown(null);
-                                        }}
-                                      >
-                                        Edit
-                                      </a>
-                                    </li>
-                                    <li>
-                                      <a
-                                        className="dropdown-item"
-                                        href="javascript:void(0);"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          setSelectedCustomer(customer);
-                                          setIsDeleteModalOpen(true);
-                                          setActionDropdown(null);
-                                        }}
-                                      >
-                                        Delete
-                                      </a>
-                                    </li>
-                                  </ul>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No customers found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+              Get started by adding your first customer to the system.
+            </p>
+            <ButtonWithWaves onClick={openModal}>
+              <Plus className="w-5 h-5" />
+              Add Customer
+            </ButtonWithWaves>
           </div>
-        </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Phone</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Company</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Address</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {data.data.map((customer: any) => (
+                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    {customer.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {customer.email || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {customer.phone || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
+                      {customer.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {customer.companyName || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {customer.address || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {data?.data && data.data.length > 0 && (
@@ -535,15 +424,15 @@ export default function Customers() {
           <nav aria-label="Page navigation">
             <ul className="pagination pagination-rounded pagination-primary">
               <li className="page-item">
-        <button
+                <button
                   type="button"
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
                   className="page-link"
                   aria-label="Previous"
-        >
+                >
                   <ChevronsLeft className="w-3.5 h-3.5" />
-        </button>
+                </button>
               </li>
               {(() => {
                 const totalPages = Math.max(1, Math.ceil((data?.total || 0) / 10));
@@ -580,7 +469,7 @@ export default function Customers() {
                       <li key={`ellipsis-${idx}`} className="page-item">
                         <span className="page-link" style={{ cursor: 'default', pointerEvents: 'none' }}>
                           ...
-        </span>
+                        </span>
                       </li>
                     );
                   }
@@ -598,19 +487,19 @@ export default function Customers() {
                 });
               })()}
               <li className="page-item">
-        <button
+                <button
                   type="button"
-          onClick={() => setPage((p) => p + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                   disabled={!data?.data || data.data.length < 10 || page + 1 >= Math.ceil((data?.total || 0) / 10)}
                   className="page-link"
                   aria-label="Next"
-        >
+                >
                   <ChevronsRight className="w-3.5 h-3.5" />
-        </button>
+                </button>
               </li>
             </ul>
           </nav>
-      </div>
+        </div>
       )}
 
       {/* Add Customer Modal */}
@@ -677,7 +566,7 @@ function AddCustomerModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
-  
+
   // Debounce email for duplicate checking
   const debouncedEmail = useDebounce(formData.email, 500);
   const { data: emailCheckData, isLoading: isCheckingEmail } = useCheckCustomerEmail(
@@ -861,9 +750,8 @@ function AddCustomerModal({
                         type="text"
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                          errors.name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Enter customer name"
                       />
                       {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
@@ -874,9 +762,8 @@ function AddCustomerModal({
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                          errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}
                         placeholder="Enter email"
                       />
                       {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
@@ -1058,7 +945,7 @@ function EditCustomerModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
-  
+
   // Debounce email for duplicate checking
   const debouncedEmail = useDebounce(formData.email, 500);
   const { data: emailCheckData, isLoading: isCheckingEmail } = useCheckCustomerEmail(
@@ -1242,9 +1129,8 @@ function EditCustomerModal({
                         type="text"
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                          errors.name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Enter customer name"
                       />
                       {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
@@ -1255,9 +1141,8 @@ function EditCustomerModal({
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                          errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}
                         placeholder="Enter email"
                       />
                       {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
