@@ -279,70 +279,68 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column - Stats and Charts */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)
-            ) : (
-              <>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$120,540</h2>
-                    </div>
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)
+          ) : (
+            <>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$120,540</h2>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                      <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$84,320</h2>
-                    </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$84,320</h2>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$36,220</h2>
-                    </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">$36,220</h2>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">12</h2>
-                    </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">12</h2>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
+        </div>
 
-          {/* Revenue vs Expenses and Expense Breakdown - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Revenue vs Expenses Chart */}
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+          {/* Revenue vs Expenses Chart */}
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
                 <div className="relative" ref={yearDropdownRef}>
@@ -417,12 +415,10 @@ export default function FinanceDashboard() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Right Column - Monthly Target */}
-        <div className="lg:col-span-1">
-          <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative" style={{
+            {/* Monthly Target */}
+            <div className="lg:col-span-1 flex">
+              <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
             backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
             backgroundPosition: 'center',
             backgroundSize: 'cover'
@@ -433,12 +429,12 @@ export default function FinanceDashboard() {
                 <MoreVertical className="w-4 h-4 text-white" />
               </button>
             </div>
-            <div className="p-4 pt-2 pb-0">
+            <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
               <div className="flex gap-2 items-center mb-3">
                 <h2 className="mb-0 text-white text-2xl font-bold">92%</h2>
                 <span className="text-white text-sm">+15% vs last month</span>
               </div>
-              <div className="mb-5 relative -z-10">
+              <div className="mb-5 relative -z-10 flex-1 flex items-center justify-center">
                 <Chart type="radialBar" height={350} series={monthlyStatusChartConfig.series} options={monthlyStatusChartConfig} />
                 <div className="-mt-10 text-center text-white font-semibold">673 Orders</div>
               </div>
@@ -468,6 +464,7 @@ export default function FinanceDashboard() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Recent Transactions Table */}
