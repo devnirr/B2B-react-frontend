@@ -393,7 +393,6 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's what's happening with your business.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
@@ -1171,124 +1170,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Orders and Low Stock Items */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
-              <button
-                onClick={() => navigate('/orders')}
-                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
-              >
-                View all
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            {recentOrders.length > 0 ? (
-              <div className="space-y-4">
-                {recentOrders.map((order: any) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors"
-                    onClick={() => navigate('/orders')}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {order.orderNumber || `ORD-${order.id}`}
-                        </p>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status || 'PENDING')}`}>
-                          {order.status || 'PENDING'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {order.customer?.name || 'Unknown Customer'}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {formatDate(order.orderDate || order.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : parseFloat(order.totalAmount || 0))}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">No recent orders</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Low Stock Items */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                Low Stock Items
-              </h2>
-              <button
-                onClick={() => navigate('/inventory')}
-                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
-              >
-                View all
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            {(isLoading || lowStockLoading) ? (
-              <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            ) : lowStockItems && lowStockItems.length > 0 ? (
-              <div className="space-y-4">
-                {lowStockItems.map((item: any) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-900/30"
-                  >
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 dark:text-white mb-1">
-                        {item.product?.name || item.productName || 'Unknown Product'}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {item.warehouse?.name || item.warehouseName || 'Unknown Warehouse'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-red-600 dark:text-red-400">
-                        {item.quantity || 0} left
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Low stock</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">All items are well stocked</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

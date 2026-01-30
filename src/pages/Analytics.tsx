@@ -292,7 +292,6 @@ export default function Analytics() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Analytics</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Track your business performance and insights</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">

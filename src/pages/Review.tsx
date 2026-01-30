@@ -301,14 +301,11 @@ export default function Review() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div>
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <nav className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <a href="/dashboard" className="hover:text-primary">Home</a> / Reviews
-          </nav>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reviews</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reviews</h1>
         </div>
       </div>
 
@@ -412,7 +409,7 @@ export default function Review() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
         {/* Review Trends Chart - 6/12 */}
         <div className="lg:col-span-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 pb-0 border-0 flex flex-wrap gap-3 items-center justify-between">
@@ -529,7 +526,7 @@ export default function Review() {
       </div>
 
       {/* Tables Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
         {/* Recent Reviews - 7/12 */}
         <div className="lg:col-span-7 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 pb-0 border-0 flex flex-wrap gap-2 items-center justify-between">

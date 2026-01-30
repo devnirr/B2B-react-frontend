@@ -328,7 +328,6 @@ export default function Products() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Products</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and view all your products</p>
           </div>
           {(!data?.data || data.data.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>

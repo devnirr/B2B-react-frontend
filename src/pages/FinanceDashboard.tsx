@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import api from '../lib/api';
-import { Coins, CreditCard, TrendingUp, Calendar, Search, MoreVertical } from 'lucide-react';
+import { Coins, CreditCard, TrendingUp, Calendar, Search, MoreVertical, ChevronDown } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { Doughnut } from 'react-chartjs-2';
 import {
@@ -231,12 +231,29 @@ export default function FinanceDashboard() {
   ];
 
   const [transactionSearch, setTransactionSearch] = useState('');
+  const [selectedYear, setSelectedYear] = useState('This Year');
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredTransactions = transactions.filter((tx) =>
     tx.name.toLowerCase().includes(transactionSearch.toLowerCase()) ||
     tx.description.toLowerCase().includes(transactionSearch.toLowerCase()) ||
     tx.category.toLowerCase().includes(transactionSearch.toLowerCase())
   );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setIsYearDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { bg: string; text: string }> = {
@@ -253,14 +270,11 @@ export default function FinanceDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div>
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <nav className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <a href="/dashboard" className="hover:text-primary">Home</a> / Finance Dashboard
-          </nav>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
         </div>
       </div>
 
@@ -331,10 +345,45 @@ export default function FinanceDashboard() {
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
-                <select className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option>This Year</option>
-                  <option>Last Year</option>
-                </select>
+                <div className="relative" ref={yearDropdownRef}>
+                  <button
+                    onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-w-[120px] justify-between"
+                  >
+                    <span>{selectedYear}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isYearDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isYearDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-full min-w-[120px] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setSelectedYear('This Year');
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
+                          selectedYear === 'This Year'
+                            ? 'bg-primary text-white font-medium'
+                            : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        This Year
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedYear('Last Year');
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
+                          selectedYear === 'Last Year'
+                            ? 'bg-primary text-white font-medium'
+                            : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        Last Year
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="p-2">
                 <Chart type="line" height={300} series={revenueExpensesChartConfig.series} options={revenueExpensesChartConfig} />
@@ -422,7 +471,7 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Recent Transactions Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="mt-5 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between">
           <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Recent Transactions</h6>
           <div className="relative">

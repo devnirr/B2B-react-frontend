@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Wallet, ShoppingCart, TrendingUp, Target, Search, MoreVertical } from 'lucide-react';
+import { Wallet, ShoppingCart, TrendingUp, Target, Search, MoreVertical, Edit, Trash2, X, AlertTriangle } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
 
@@ -231,7 +231,7 @@ export default function SalesDashboard() {
         shadeIntensity: 0.1,
         gradientToColors: ['#17a2b8'], // Info color
         inverseColors: false,
-        opacityFrom: 0.2,
+        opacityFrom: 0.5,
         opacityTo: 0.06,
         stops: [20, 100],
       },
@@ -377,7 +377,67 @@ export default function SalesDashboard() {
   const [salesSearch, setSalesSearch] = useState('');
   const [topSellingSearch, setTopSellingSearch] = useState('');
   const [topSellingPage, setTopSellingPage] = useState(1);
+  const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   const itemsPerPage = 5;
+
+  // Modal states for Recent Sales
+  const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
+  const [isEditSaleModalShowing, setIsEditSaleModalShowing] = useState(false);
+  const [isDeleteSaleModalOpen, setIsDeleteSaleModalOpen] = useState(false);
+  const [isDeleteSaleModalShowing, setIsDeleteSaleModalShowing] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+
+  // Modal states for Top Selling Items
+  const [isEditTopSellingModalOpen, setIsEditTopSellingModalOpen] = useState(false);
+  const [isEditTopSellingModalShowing, setIsEditTopSellingModalShowing] = useState(false);
+  const [isDeleteTopSellingModalOpen, setIsDeleteTopSellingModalOpen] = useState(false);
+  const [isDeleteTopSellingModalShowing, setIsDeleteTopSellingModalShowing] = useState(false);
+  const [selectedTopSelling, setSelectedTopSelling] = useState<any>(null);
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (isEditSaleModalOpen || isDeleteSaleModalOpen || isEditTopSellingModalOpen || isDeleteTopSellingModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (isEditSaleModalOpen) setIsEditSaleModalShowing(true);
+          if (isDeleteSaleModalOpen) setIsDeleteSaleModalShowing(true);
+          if (isEditTopSellingModalOpen) setIsEditTopSellingModalShowing(true);
+          if (isDeleteTopSellingModalOpen) setIsDeleteTopSellingModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsEditSaleModalShowing(false);
+      setIsDeleteSaleModalShowing(false);
+      setIsEditTopSellingModalShowing(false);
+      setIsDeleteTopSellingModalShowing(false);
+    }
+  }, [isEditSaleModalOpen, isDeleteSaleModalOpen, isEditTopSellingModalOpen, isDeleteTopSellingModalOpen]);
+
+  const closeEditSaleModal = () => {
+    setIsEditSaleModalShowing(false);
+    setTimeout(() => setIsEditSaleModalOpen(false), 150);
+    setSelectedSale(null);
+  };
+
+  const closeDeleteSaleModal = () => {
+    setIsDeleteSaleModalShowing(false);
+    setTimeout(() => setIsDeleteSaleModalOpen(false), 150);
+    setSelectedSale(null);
+  };
+
+  const closeEditTopSellingModal = () => {
+    setIsEditTopSellingModalShowing(false);
+    setTimeout(() => setIsEditTopSellingModalOpen(false), 150);
+    setSelectedTopSelling(null);
+  };
+
+  const closeDeleteTopSellingModal = () => {
+    setIsDeleteTopSellingModalShowing(false);
+    setTimeout(() => setIsDeleteTopSellingModalOpen(false), 150);
+    setSelectedTopSelling(null);
+  };
 
   const filteredSales = recentSales.filter((sale) =>
     sale.id.toLowerCase().includes(salesSearch.toLowerCase()) ||
@@ -413,14 +473,11 @@ export default function SalesDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div>
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <nav className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <a href="/dashboard" className="hover:text-primary">Home</a> / Sales Dashboard
-          </nav>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sales Dashboard</h1>
         </div>
       </div>
 
@@ -496,7 +553,7 @@ export default function SalesDashboard() {
       </div>
 
       {/* Main Charts Row - Sales Report, Monthly Target, Sales by Country */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
         {/* Sales Report Chart - 6/12 on xl, 8/12 on lg */}
         <div className="lg:col-span-8 xl:col-span-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 pb-0 border-0 flex flex-wrap gap-2 items-center justify-between">
@@ -626,7 +683,11 @@ export default function SalesDashboard() {
               ].map((item, idx) => (
                 <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded">
                   <div className="flex items-center mb-1">
-                    <span className="text-xl mr-2">{item.flag}</span>
+                    <div className="w-6 h-6 rounded-full mr-2 flex items-center justify-center overflow-hidden shrink-0">
+                      <span className="text-xl leading-none" style={{ fontSize: '20px', lineHeight: '1', display: 'inline-block' }}>
+                        {item.flag}
+                      </span>
+                    </div>
                     <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">{item.country}</h5>
                   </div>
                   <h5 className="text-lg font-bold text-gray-900 dark:text-white mb-0">
@@ -640,7 +701,7 @@ export default function SalesDashboard() {
       </div>
 
       {/* Second Row - Total Visitors and Recent Sales */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
         {/* Total Visitors - 4/12 on xl, 6/12 on lg */}
         <div className="lg:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 pb-0 border-0 flex items-center justify-between">
@@ -674,7 +735,7 @@ export default function SalesDashboard() {
               />
             </div>
           </div>
-          <div className="p-4 pt-2 pb-2 overflow-x-auto">
+          <div className="p-4 pt-2 pb-2 overflow-x-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
@@ -710,9 +771,44 @@ export default function SalesDashboard() {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{sale.payment}</td>
                     <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
                     <td className="px-4 py-3">
-                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
+                          className="p-1.5 hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors group"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500 group-hover:text-primary" />
+                        </button>
+                        {openDropdown === idx && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenDropdown(null)}
+                            ></div>
+                            <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                              <button
+                                onClick={() => {
+                                  // Handle edit action
+                                  setOpenDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  // Handle delete action
+                                  setOpenDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -723,7 +819,7 @@ export default function SalesDashboard() {
       </div>
 
       {/* Top Selling Items and Sales Growth */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
         {/* Top Selling Items - 8/12 on xl, 7/12 on lg */}
         <div className="lg:col-span-7 xl:col-span-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 pb-0 border-0 flex flex-wrap gap-2 items-center justify-between">
@@ -772,9 +868,46 @@ export default function SalesDashboard() {
                     <td className="px-4 py-3 text-gray-900 dark:text-white font-semibold">{item.totalSale}</td>
                     <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
                     <td className="px-4 py-3">
-                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenDropdown(openDropdown === `top-${idx}` ? null : `top-${idx}`)}
+                          className="p-1.5 hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors group"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500 group-hover:text-primary" />
+                        </button>
+                        {openDropdown === `top-${idx}` && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenDropdown(null)}
+                            ></div>
+                            <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                              <button
+                                onClick={() => {
+                                  setSelectedTopSelling(item);
+                                  setIsEditTopSellingModalOpen(true);
+                                  setOpenDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedTopSelling(item);
+                                  setIsDeleteTopSellingModalOpen(true);
+                                  setOpenDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -860,7 +993,389 @@ export default function SalesDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Edit Sale Modal */}
+      {isEditSaleModalOpen && selectedSale && (
+        <EditSaleModal
+          sale={selectedSale}
+          onClose={closeEditSaleModal}
+          isShowing={isEditSaleModalShowing}
+        />
+      )}
+
+      {/* Delete Sale Modal */}
+      {isDeleteSaleModalOpen && selectedSale && (
+        <DeleteSaleModal
+          sale={selectedSale}
+          onClose={closeDeleteSaleModal}
+          isShowing={isDeleteSaleModalShowing}
+        />
+      )}
+
+      {/* Edit Top Selling Modal */}
+      {isEditTopSellingModalOpen && selectedTopSelling && (
+        <EditTopSellingModal
+          item={selectedTopSelling}
+          onClose={closeEditTopSellingModal}
+          isShowing={isEditTopSellingModalShowing}
+        />
+      )}
+
+      {/* Delete Top Selling Modal */}
+      {isDeleteTopSellingModalOpen && selectedTopSelling && (
+        <DeleteTopSellingModal
+          item={selectedTopSelling}
+          onClose={closeDeleteTopSellingModal}
+          isShowing={isDeleteTopSellingModalShowing}
+        />
+      )}
     </div>
+  );
+}
+
+// Edit Sale Modal Component
+function EditSaleModal({
+  sale,
+  onClose,
+  isShowing,
+}: {
+  sale: any;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editSaleModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '32rem' }}
+        >
+          <div className="modal-content">
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h5 id="editSaleModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Edit Sale
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body">
+              <p className="text-gray-600 dark:text-gray-400">
+                Edit functionality for sale <strong className="text-gray-900 dark:text-white">{sale.id}</strong>
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Customer: {sale.customer} | Product: {sale.product} | Amount: {sale.amount}
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle save action
+                  onClose();
+                }}
+                className="px-5 py-2.5 ml-3 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Delete Sale Modal Component
+function DeleteSaleModal({
+  sale,
+  onClose,
+  isShowing,
+}: {
+  sale: any;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteSaleModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            {/* Modal Body with Icon */}
+            <div className="modal-body text-center py-8 px-6">
+              {/* Warning Icon */}
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h5 id="deleteSaleModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Sale
+              </h5>
+
+              {/* Description */}
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete sale
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{sale.id}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle delete action
+                  onClose();
+                }}
+                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Edit Top Selling Modal Component
+function EditTopSellingModal({
+  item,
+  onClose,
+  isShowing,
+}: {
+  item: any;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editTopSellingModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '32rem' }}
+        >
+          <div className="modal-content">
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h5 id="editTopSellingModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Edit Top Selling Item
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body">
+              <p className="text-gray-600 dark:text-gray-400">
+                Edit functionality for item <strong className="text-gray-900 dark:text-white">{item.id}</strong>
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Product: {item.product} | Stock: {item.stock.toLocaleString()} | Price: {item.price} | Total Sale: {item.totalSale}
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle save action
+                  onClose();
+                }}
+                className="px-5 py-2.5 ml-3 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Delete Top Selling Modal Component
+function DeleteTopSellingModal({
+  item,
+  onClose,
+  isShowing,
+}: {
+  item: any;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteTopSellingModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            {/* Modal Body with Icon */}
+            <div className="modal-body text-center py-8 px-6">
+              {/* Warning Icon */}
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h5 id="deleteTopSellingModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Top Selling Item
+              </h5>
+
+              {/* Description */}
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete item
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{item.product}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Handle delete action
+                  onClose();
+                }}
+                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Item
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

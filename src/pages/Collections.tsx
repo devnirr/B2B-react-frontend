@@ -319,7 +319,6 @@ export default function Collections() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Collections</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and view all your collections</p>
           </div>
           {(!data || data.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
