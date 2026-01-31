@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Wallet, ShoppingCart, TrendingUp, Target, Search, MoreVertical, Edit, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Wallet, ShoppingCart, TrendingUp, Target, Search, Edit, Trash2, X, AlertTriangle } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
 
@@ -377,7 +377,6 @@ export default function SalesDashboard() {
   const [salesSearch, setSalesSearch] = useState('');
   const [topSellingSearch, setTopSellingSearch] = useState('');
   const [topSellingPage, setTopSellingPage] = useState(1);
-  const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   const itemsPerPage = 5;
 
   // Modal states for Recent Sales
@@ -745,7 +744,6 @@ export default function SalesDashboard() {
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Amount</th>
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Payment</th>
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Status</th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -767,46 +765,6 @@ export default function SalesDashboard() {
                     <td className="px-4 py-3 text-gray-900 dark:text-white font-semibold">{sale.amount}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{sale.payment}</td>
                     <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
-                          className="p-1.5 hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors group"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-500 group-hover:text-primary" />
-                        </button>
-                        {openDropdown === idx && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-10"
-                              onClick={() => setOpenDropdown(null)}
-                            ></div>
-                            <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                              <button
-                                onClick={() => {
-                                  // Handle edit action
-                                  setOpenDropdown(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  // Handle delete action
-                                  setOpenDropdown(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -845,7 +803,6 @@ export default function SalesDashboard() {
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Price</th>
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Total Sale</th>
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Status</th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -864,48 +821,6 @@ export default function SalesDashboard() {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.price}</td>
                     <td className="px-4 py-3 text-gray-900 dark:text-white font-semibold">{item.totalSale}</td>
                     <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="relative">
-                        <button
-                          onClick={() => setOpenDropdown(openDropdown === `top-${idx}` ? null : `top-${idx}`)}
-                          className="p-1.5 hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors group"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-500 group-hover:text-primary" />
-                        </button>
-                        {openDropdown === `top-${idx}` && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-10"
-                              onClick={() => setOpenDropdown(null)}
-                            ></div>
-                            <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                              <button
-                                onClick={() => {
-                                  setSelectedTopSelling(item);
-                                  setIsEditTopSellingModalOpen(true);
-                                  setOpenDropdown(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedTopSelling(item);
-                                  setIsDeleteTopSellingModalOpen(true);
-                                  setOpenDropdown(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
