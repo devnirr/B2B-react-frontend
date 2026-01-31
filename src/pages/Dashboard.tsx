@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Calendar, Search, Plus, Trash2, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
-import { SkeletonStatsCard, SkeletonTable } from '../components/Skeleton';
+import { SkeletonTable } from '../components/Skeleton';
 import Chart from 'react-apexcharts';
 import { Doughnut } from 'react-chartjs-2';
 import {
@@ -374,7 +374,7 @@ export default function Dashboard() {
 
   const { startDate, endDate } = getDateRange();
 
-  const { data: salesReport } = useQuery({
+  const { data: salesReport, isLoading: salesReportLoading } = useQuery({
     queryKey: ['analytics', 'sales', startDate, endDate, dateRange],
     queryFn: async () => {
       try {
@@ -391,7 +391,7 @@ export default function Dashboard() {
   });
 
   // Fetch orders for task statistics
-  const { data: ordersData } = useQuery({
+  const { data: ordersData, isLoading: ordersDataLoading } = useQuery({
     queryKey: ['orders', 'task-stats'],
     queryFn: async () => {
       try {
@@ -404,7 +404,7 @@ export default function Dashboard() {
   });
 
   // Fetch reviews statistics
-  const { data: reviewsStats } = useQuery({
+  const { data: reviewsStats, isLoading: reviewsStatsLoading } = useQuery({
     queryKey: ['analytics', 'reviews'],
     queryFn: async () => {
       try {
@@ -415,6 +415,14 @@ export default function Dashboard() {
       }
     },
   });
+
+  // Check if all data is loading
+  const isAllDataLoading = isLoading || 
+    salesReportLoading || 
+    ordersDataLoading || 
+    reviewsStatsLoading || 
+    (customersLoading && !customersData) ||
+    (lowStockLoading && !hasLowStockInDashboard);
 
   // Calculate task statistics from orders
   const calculateTaskStats = () => {
@@ -520,19 +528,120 @@ export default function Dashboard() {
     return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   };
 
-  if (isLoading) {
+  if (isAllDataLoading) {
     return (
       <div>
-        <div className="mb-6 animate-pulse">
-          <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2"></div>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-96"></div>
+        {/* Header Skeleton */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between animate-pulse">
+            <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonStatsCard key={i} />
-          ))}
+
+        {/* Main Content Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column - Main Cards */}
+          <div className="lg:col-span-8 xl:col-span-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1: Total Customers */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                </div>
+                <div className="p-4">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+              {/* Card 2: Active Orders */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                </div>
+                <div className="p-4">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+              {/* Card 3: Tasks Overview */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                    </div>
+                    <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+              {/* Card 4: Active Orders */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                </div>
+                <div className="p-4">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar Cards */}
+          <div className="lg:col-span-4 xl:col-span-3">
+            <div className="grid grid-cols-1 gap-6">
+              {/* Card 5: Revenue */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                </div>
+                <div className="p-4">
+                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-40 mb-4"></div>
+                  <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+              {/* Card 6: Order Sources */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                </div>
+                <div className="p-4">
+                  <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Right - Customer Retention */}
+          <div className="lg:col-span-6 xl:col-span-3">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-40"></div>
+              </div>
+              <div className="p-4">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-4"></div>
+                <div className="space-y-2 mb-4">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                </div>
+                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Bottom Tables Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <SkeletonTable />
           <SkeletonTable />
         </div>

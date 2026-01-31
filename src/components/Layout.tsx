@@ -36,6 +36,14 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface MenuItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  useFlaticon?: boolean;
+  flaticonClass?: string;
+}
+
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,9 +69,9 @@ export default function Layout({ children }: LayoutProps) {
     document.documentElement.classList.toggle('dark', !darkMode);
   };
 
-  const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp },
+  const menuItems: MenuItem[] = [
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, useFlaticon: true, flaticonClass: 'fi fi-rr-house-blank' },
+    { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp, useFlaticon: true, flaticonClass: 'fi fi-rr-percent-100' },
     { path: '/finance', label: 'Finance Dashboard', icon: DollarSign },
     { path: '/review', label: 'Reviews', icon: Star },
     { path: '/products', label: 'Products', icon: Package },
@@ -760,7 +768,11 @@ export default function Layout({ children }: LayoutProps) {
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    {item.useFlaticon && item.flaticonClass ? (
+                      <i className={item.flaticonClass} style={{ fontSize: '20px', width: '20px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></i>
+                    ) : (
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                    )}
                     {sidebarOpen && <span className="text-sm">{item.label}</span>}
                 </Link>
               </li>
