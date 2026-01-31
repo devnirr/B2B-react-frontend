@@ -1684,7 +1684,7 @@ export default function Dashboard() {
                           legend: {
                             show: true,
                             position: 'bottom',
-                            offsetY: 0,
+                            offsetY: 10,
                             labels: {
                               colors: '#696981'
                             },
