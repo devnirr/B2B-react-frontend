@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import api from '../lib/api';
-import { Coins, CreditCard, TrendingUp, Calendar, Search, MoreVertical, ChevronDown, Inbox } from 'lucide-react';
+import { Search, ChevronDown, Inbox } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
 
@@ -443,7 +443,7 @@ export default function FinanceDashboard() {
               ) : (
                 <div className="flex gap-3 items-center">
                   <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    <i className="fi fi-rr-coins text-green-600 dark:text-green-400" style={{ fontSize: '24px' }}></i>
                   </div>
                   <div>
                     <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
@@ -463,7 +463,7 @@ export default function FinanceDashboard() {
                 // Expenses endpoint doesn't exist, so we show 0 or placeholder
                 <div className="flex gap-3 items-center">
                   <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
+                    <i className="fi fi-rr-credit-card text-red-600 dark:text-red-400" style={{ fontSize: '24px' }}></i>
                   </div>
                   <div>
                     <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
@@ -481,8 +481,8 @@ export default function FinanceDashboard() {
                 </div>
               ) : (
                 <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <i className="fi fi-rr-chart-histogram text-purple-600 dark:text-purple-400" style={{ fontSize: '24px' }}></i>
                   </div>
                   <div>
                     <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
@@ -500,8 +500,8 @@ export default function FinanceDashboard() {
                 </div>
               ) : (
                 <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <i className="fi fi-rr-calendar text-orange-600 dark:text-orange-400" style={{ fontSize: '24px' }}></i>
                   </div>
                   <div>
                     <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Wallet, ShoppingCart, Search, Edit, Trash2, X, AlertTriangle, Inbox, Target, BarChart3, ArrowRight } from 'lucide-react';
+import { Search, Edit, Trash2, X, AlertTriangle, Inbox } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
 
@@ -807,7 +807,7 @@ export default function SalesDashboard() {
             <>
               <div className="p-4 pb-0 border-0">
                 <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <Wallet className="w-6 h-6" />
+                  <i className="fi fi-rr-wallet" style={{ fontSize: '24px' }}></i>
                 </div>
               </div>
               <div className="p-4 flex items-end">
@@ -830,7 +830,7 @@ export default function SalesDashboard() {
             <>
               <div className="p-4 pb-0 border-0">
                 <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center">
-                  <ShoppingCart className="w-6 h-6" />
+                  <i className="fi fi-rr-shopping-cart" style={{ fontSize: '24px' }}></i>
                 </div>
               </div>
               <div className="p-4 flex items-end">
@@ -853,7 +853,7 @@ export default function SalesDashboard() {
             <>
               <div className="p-4 pb-0 border-0">
                 <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6" />
+                  <i className="fi fi-rr-chart-histogram" style={{ fontSize: '24px' }}></i>
                 </div>
               </div>
               <div className="p-4 flex items-end">
@@ -883,9 +883,8 @@ export default function SalesDashboard() {
           ) : (
             <>
               <div className="p-4 pb-0 border-0">
-                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center relative">
-                  <Target className="w-6 h-6" />
-                  <ArrowRight className="w-3 h-3 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center">
+                  <i className="fi fi-rr-bullseye-arrow" style={{ fontSize: '24px' }}></i>
                 </div>
               </div>
               <div className="p-4 flex items-end">

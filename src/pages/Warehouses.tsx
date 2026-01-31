@@ -96,7 +96,6 @@ const CustomSelect = ({
             top: '100%',
             left: 0,
             right: 0,
-            backgroundColor: '#fff',
             minWidth: '100%',
             position: 'absolute',
             overflow: 'visible',

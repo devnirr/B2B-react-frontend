@@ -78,7 +78,6 @@ const CustomSelect = ({
           fontSize: '0.875rem',
           fontWeight: 500,
           lineHeight: 1.6,
-          backgroundColor: '#fff',
         }}
       >
         <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
@@ -97,7 +96,6 @@ const CustomSelect = ({
             top: '100%',
             left: 0,
             right: 0,
-            backgroundColor: '#fff',
             minWidth: '100%',
           }}
         >
@@ -119,8 +117,6 @@ const CustomSelect = ({
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
-                  backgroundColor: isSelected || isHighlighted ? '#5955D1' : 'transparent',
-                  color: isSelected || isHighlighted ? '#fff' : (index === highlightedIndex ? '#fff' : '#1C274C'),
                   display: 'block',
                   width: '100%',
                 }}
