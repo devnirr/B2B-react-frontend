@@ -503,79 +503,80 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="p-4 pb-0 flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
-                        {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
-                      </h2>
-                      {customerChangePercent !== 0 && (
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                          customerChangePercent > 0
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
-                          {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
-                        </span>
-                      )}
+                  <div className="p-4 pb-0">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                          {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
+                        </h2>
+                        {customerChangePercent !== 0 && (
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            customerChangePercent > 0
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
-                <div className="w-[150px] h-[120px] -mt-3 -mb-4">
-                  <Chart
-                    type="bar"
-                    height={120}
-                    width={150}
-                    series={[{
-                      name: 'Customers',
-                      data: dashboardStats?.customerTrend || [0, 0, 0, 0, 0, 0]
-                    }]}
-                    options={{
-                      chart: {
-                        toolbar: { show: false },
-                        zoom: { enabled: false },
-                        sparkline: { enabled: false }
-                      },
-                      plotOptions: {
-                        bar: {
-                          horizontal: false,
-                          columnWidth: '60%',
-                          borderRadius: 2
-                        }
-                      },
-                      colors: ['#5955D1'],
-                      dataLabels: { enabled: false },
-                      stroke: { show: true },
-                      xaxis: {
-                        axisBorder: { show: false },
-                        axisTicks: { show: false },
-                        labels: { show: false }
-                      },
-                      yaxis: {
-                        labels: { show: false }
-                      },
-                      grid: {
-                        borderColor: 'transparent',
-                        xaxis: { lines: { show: false } },
-                        yaxis: { lines: { show: true } },
-                        padding: { top: 0, bottom: 0, left: 0, right: 0 }
-                      },
-                      fill: {
-                        type: 'gradient',
-                        gradient: {
-                          shade: 'light',
-                          type: 'vertical',
-                          shadeIntensity: 0.1,
-                          gradientToColors: ['#7008E7'],
-                          inverseColors: false,
-                          opacityFrom: 1,
-                          opacityTo: 0.6,
-                          stops: [20, 100]
-                        }
-                      },
-                      tooltip: { enabled: false },
-                      legend: { show: false }
-                    }}
-                  />
-                </div>
-              </div>
+                    <div className="w-full h-[120px] -mt-2">
+                      <Chart
+                        type="bar"
+                        height={120}
+                        series={[{
+                          name: 'Customers',
+                          data: dashboardStats?.customerTrend || [0, 0, 0, 0, 0, 0]
+                        }]}
+                        options={{
+                          chart: {
+                            toolbar: { show: false },
+                            zoom: { enabled: false },
+                            sparkline: { enabled: false }
+                          },
+                          plotOptions: {
+                            bar: {
+                              horizontal: false,
+                              columnWidth: '60%',
+                              borderRadius: 2
+                            }
+                          },
+                          colors: ['#5955D1'],
+                          dataLabels: { enabled: false },
+                          stroke: { show: true },
+                          xaxis: {
+                            axisBorder: { show: false },
+                            axisTicks: { show: false },
+                            labels: { show: false }
+                          },
+                          yaxis: {
+                            labels: { show: false }
+                          },
+                          grid: {
+                            borderColor: 'transparent',
+                            xaxis: { lines: { show: false } },
+                            yaxis: { lines: { show: true } },
+                            padding: { top: 0, bottom: 0, left: 0, right: 0 }
+                          },
+                          fill: {
+                            type: 'gradient',
+                            gradient: {
+                              shade: 'light',
+                              type: 'vertical',
+                              shadeIntensity: 0.1,
+                              gradientToColors: ['#7008E7'],
+                              inverseColors: false,
+                              opacityFrom: 1,
+                              opacityTo: 0.6,
+                              stops: [20, 100]
+                            }
+                          },
+                          tooltip: { enabled: false },
+                          legend: { show: false }
+                        }}
+                      />
+                    </div>
+                  </div>
               <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">

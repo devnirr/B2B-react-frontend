@@ -740,3 +740,38 @@ body.modal-open {
 .dark .page-link[style*="pointer-events: none"] {
   color: #9ca3af !important;
 }
+
+/* Items Per Page Select Styling - Matching design with purple border and blue selected option */
+.items-per-page-select {
+  min-width: 80px;
+}
+
+.items-per-page-select option {
+  padding: 0.75rem 1rem;
+  background-color: white;
+  color: #1C274C;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.items-per-page-select option:checked,
+.items-per-page-select option[selected] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.items-per-page-select option:hover {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.dark .items-per-page-select option {
+  background-color: rgb(55 65 81);
+  color: white;
+}
+
+.dark .items-per-page-select option:checked,
+.dark .items-per-page-select option[selected] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}

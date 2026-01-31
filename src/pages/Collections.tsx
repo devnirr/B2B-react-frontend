@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Plus, Folder, X, ChevronDown, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Folder, X, ChevronDown, Pencil, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 
@@ -197,6 +197,95 @@ const ButtonWithWaves = ({
   );
 };
 
+// Custom Items Per Page Selector Component
+const ItemsPerPageSelector = ({
+  value,
+  onChange,
+  options = [6, 12, 24, 48],
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  options?: number[];
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (optionValue: number) => {
+    onChange(optionValue);
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={selectRef} className="relative" style={{ zIndex: isOpen ? 1000 : 'auto' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium border-2 border-primary rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 cursor-pointer transition-all hover:border-primary/80 shadow-sm min-w-[80px] justify-between"
+      >
+        <span>{value}</span>
+        <svg
+          className={`w-4 h-4 text-primary transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div 
+          className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+          style={{
+            zIndex: 10001,
+            position: 'absolute',
+            minWidth: '80px',
+            width: '100%',
+            display: 'block',
+            visibility: 'visible',
+            opacity: 1,
+          }}
+        >
+          {options.map((option, index) => {
+            const isSelected = option === value;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => handleSelect(option)}
+                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isSelected
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-blue-600 hover:text-white'
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                }}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Collections() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
@@ -205,6 +294,8 @@ export default function Collections() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
   const queryClient = useQueryClient();
 
   // Handle body scroll lock when modal is open
@@ -226,13 +317,24 @@ export default function Collections() {
     }
   }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['collections'],
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['collections', currentPage, itemsPerPage],
     queryFn: async () => {
-      const response = await api.get('/collections');
+      const skip = (currentPage - 1) * itemsPerPage;
+      const response = await api.get('/collections', {
+        params: {
+          skip,
+          take: itemsPerPage,
+        },
+      });
       return response.data;
     },
   });
+
+  // Handle both paginated response (object with data/total) and array response (backward compatibility)
+  const collections = Array.isArray(data) ? data : (data?.data || []);
+  const totalCollections = Array.isArray(data) ? data.length : (data?.total || 0);
+  const totalPages = Math.ceil(totalCollections / itemsPerPage);
 
   const createCollectionMutation = useMutation({
     mutationFn: async (collectionData: any) => {
@@ -313,6 +415,20 @@ export default function Collections() {
     return <SkeletonPage />;
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-24 h-24 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+          <AlertTriangle className="w-12 h-12 text-red-600 dark:text-red-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error loading collections</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+          {(error as any)?.response?.data?.message || (error as any)?.message || 'Failed to load collections'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -320,7 +436,7 @@ export default function Collections() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Collections</h1>
           </div>
-          {(!data || data.length === 0) ? null : (
+          {(!collections || collections.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
               <Plus className="w-5 h-5" />
           Add Collection
@@ -329,8 +445,8 @@ export default function Collections() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {!data || data.length === 0 ? (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700" style={{ overflow: 'visible' }}>
+        {!collections || collections.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -345,9 +461,10 @@ export default function Collections() {
             </ButtonWithWaves>
           </div>
         ) : (
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.map((collection: any) => (
+          <>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {collections.map((collection: any) => (
                 <div key={collection.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow relative">
                   {/* Header with ID and Action Icons */}
                   <div className="flex items-start justify-between mb-3">
@@ -403,9 +520,103 @@ export default function Collections() {
                     <p className="text-sm text-gray-600 dark:text-gray-400">{collection.id}{collection.id}</p>
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+            
+            {/* Pagination */}
+            {totalCollections > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCollections)} of {totalCollections} entries
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Items per page selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show:</span>
+                    <ItemsPerPageSelector
+                      value={itemsPerPage}
+                      onChange={(newValue) => {
+                        setItemsPerPage(newValue);
+                        // Reset to page 1 when changing items per page
+                        setCurrentPage(1);
+                        // Force refetch by invalidating the query
+                        queryClient.invalidateQueries({ queryKey: ['collections'] });
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Pagination buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      title="First page"
+                    >
+                      &lt;&lt;
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1.5 text-sm border rounded transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-primary text-white border-primary'
+                              : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+                      title="Next page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      title="Last page"
+                    >
+                      &gt;&gt;
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
