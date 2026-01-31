@@ -370,23 +370,50 @@ export default function FinanceDashboard() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>
           </div>
         </div>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
+        <div className="space-6 flex">
+          <div className='mr-5 w-full'>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mt-5">
+              <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mt-5">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+              </div>
+              <div className="p-4">
+                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="lg:col-span-1 flex" style={{ maxWidth: '350px', width: '100%' }}>
+            <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
+              backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
+              backgroundPosition: 'center',
+              backgroundSize: 'cover'
+            }}>
+              <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
+                <div className="h-5 bg-white/30 rounded w-24 animate-pulse"></div>
+              </div>
+              <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
+                <div className="h-8 bg-white/30 rounded w-20 mb-3 animate-pulse"></div>
+                <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '250px' }}>
+                  <div className="h-64 w-64 bg-white/20 rounded-full animate-pulse"></div>
+                </div>
+                <div className="h-16 bg-white/30 rounded mb-0 animate-pulse"></div>
+              </div>
+              <div className="p-4 border-0 pt-3">
+                <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-xl">
+                  <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+              </div>
             </div>
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         </div>
       </div>
@@ -405,7 +432,7 @@ export default function FinanceDashboard() {
       {/* Main Content Grid */}
       <div className="space-6 flex">
         {/* Stats Cards */}
-        <div className='mr-5'>
+        <div className='mr-5 w-full'>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
               {isLoading ? (
@@ -660,6 +687,12 @@ export default function FinanceDashboard() {
             backgroundPosition: 'center',
             backgroundSize: 'cover'
           }}>
+            <img 
+              src="/wind.gif" 
+              alt="Wind animation" 
+              className="absolute top-0 right-0 w-full h-full object-cover opacity-20 pointer-events-none z-0"
+              style={{ mixBlendMode: 'overlay' }}
+            />
             <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
               <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
             </div>

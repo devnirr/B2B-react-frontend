@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Calendar, Search, Plus, Trash2, ChevronLeft, ChevronRight, Inbox, Download } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Calendar, Search, Plus, Trash2, ChevronLeft, ChevronRight, Inbox, Download } from 'lucide-react';
 import { SkeletonTable } from '../components/Skeleton';
 import Chart from 'react-apexcharts';
 import { Doughnut } from 'react-chartjs-2';
@@ -193,7 +193,7 @@ export default function Dashboard() {
       // Convert to CSV format
       let csvContent = 'Annual Report - ' + reportData.reportYear + '\n';
       csvContent += 'Generated on: ' + reportData.reportDate + '\n\n';
-      
+
       csvContent += 'Dashboard Statistics\n';
       csvContent += 'Metric,Value\n';
       csvContent += `Total Customers,${reportData.dashboardStats.totalCustomers}\n`;
@@ -512,10 +512,10 @@ export default function Dashboard() {
   });
 
   // Check if all data is loading
-  const isAllDataLoading = isLoading || 
-    salesReportLoading || 
-    ordersDataLoading || 
-    reviewsStatsLoading || 
+  const isAllDataLoading = isLoading ||
+    salesReportLoading ||
+    ordersDataLoading ||
+    reviewsStatsLoading ||
     (customersLoading && !customersData) ||
     (lowStockLoading && !hasLowStockInDashboard);
 
@@ -808,7 +808,7 @@ export default function Dashboard() {
             {/* Card 1: Total Customers */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Total Customers</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Total Customers</h6>
               </div>
               {(dashboardStats?.totalCustomers || 0) === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -817,7 +817,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="p-4 pb-0">
+                  <div className="px-4 mt-3 pb-0">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
@@ -910,7 +910,7 @@ export default function Dashboard() {
             {/* Card 2: Order Analytics */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Order Analytics</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Order Analytics</h6>
               </div>
               {(dashboardStats?.totalOrders || 0) === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -920,8 +920,8 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="p-4 pt-0">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                    <div className="flex items-center gap-2 mb-3 mt-3">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         {dashboardStats?.totalOrders?.toLocaleString() || '0'}
                       </h2>
                       {orderChangePercent !== 0 && (
@@ -989,7 +989,7 @@ export default function Dashboard() {
                         legend: { show: false }
                       }}
                     />
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-sm text-gray-500 dark:text-gray-400 w-full">
                       Compared to Last Month
                     </div>
                   </div>
@@ -1002,7 +1002,7 @@ export default function Dashboard() {
               <div className="p-4">
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Tasks Overview</h6>
+                    <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Tasks Overview</h6>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
                       Tasks Done <span className="text-primary font-semibold">{taskStats.tasksDone}</span>
                     </span>
@@ -1065,9 +1065,9 @@ export default function Dashboard() {
             </div>
 
             {/* Card 4: Active Orders */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-full justify-between">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Active Orders</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Active Orders</h6>
               </div>
               {(dashboardStats?.totalOrders || 0) === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -1111,7 +1111,7 @@ export default function Dashboard() {
             {/* Card 5: Revenue */}
             <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-2 items-center justify-between">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue</h6>
                 <div className="flex flex-wrap gap-2 items-center">
                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-full p-1">
                     {(['Today', 'Week', 'Month'] as const).map((tab) => (
@@ -1216,14 +1216,14 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="p-4 py-0">
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl mt-3 font-bold text-gray-900 dark:text-white mb-0">
                     <span className="text-gray-600 dark:text-gray-400">$</span>
                     {formatCurrency(periodRevenue).replace('$', '').split('.')[0]}.
                     <span className="text-primary">{formatCurrency(periodRevenue).split('.')[1]}</span>
                   </h2>
                   {salesReport?.revenueChangePercent !== undefined && (
-                    <span className={`text-sm ${salesReport.revenueChangePercent >= 0
+                    <span className={`text-sm mt-3 ${salesReport.revenueChangePercent >= 0
                       ? 'text-green-600 dark:text-green-400'
                       : 'text-red-600 dark:text-red-400'
                       }`}>
@@ -1326,7 +1326,7 @@ export default function Dashboard() {
             {/* Card 6: Order Sources - Using order types from schema */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Order Types</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Order Types</h6>
               </div>
               <div className="p-4 pt-0">
                 {(() => {
@@ -1433,7 +1433,7 @@ export default function Dashboard() {
               </div>
               <div className="p-3 bg-primary/5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Annual report</h6>
-                <button 
+                <button
                   onClick={handleDownloadAnnualReport}
                   className="px-3 py-1.5 text-sm font-semibold text-primary bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
                 >
@@ -1446,7 +1446,7 @@ export default function Dashboard() {
             {/* Card 7: Customer Retention Rate */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Customer Retention Rate</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Customer Retention Rate</h6>
               </div>
               <div className="p-4 pb-0 pt-0">
                 {(() => {
@@ -1500,7 +1500,7 @@ export default function Dashboard() {
                   // Get monthly rating distribution from API
                   const monthlyRatingDistribution = reviewsStats?.monthlyRatingDistribution || [];
                   const ratingDistribution = reviewsStats?.ratingDistribution || {};
-                  
+
                   // Get month labels and data
                   const monthLabels: string[] = [];
                   const seriesData = {
@@ -1517,10 +1517,10 @@ export default function Dashboard() {
                       monthLabels.push(monthData.month);
                       const dist = monthData.distribution || {};
                       const total = Object.values(dist).reduce((sum: number, val: any) => sum + (typeof val === 'number' ? val : 0), 0);
-                      
+
                       // Calculate percentages for each rating
                       const getPercentage = (count: number) => total > 0 ? (count / total) * 100 : 0;
-                      
+
                       seriesData[5].push(getPercentage(dist[5] || 0));
                       seriesData[4].push(getPercentage(dist[4] || 0));
                       seriesData[3].push(getPercentage(dist[3] || 0));
@@ -1537,10 +1537,10 @@ export default function Dashboard() {
                       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
                       monthLabels.push(monthNames[monthDate.getMonth()]);
                     }
-                    
+
                     const totalReviews = reviewsStats?.totalReviews || 0;
                     const getPercentage = (count: number) => totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-                    
+
                     seriesData[5] = Array(6).fill(getPercentage(ratingDistribution[5] || 0));
                     seriesData[4] = Array(6).fill(getPercentage(ratingDistribution[4] || 0));
                     seriesData[3] = Array(6).fill(getPercentage(ratingDistribution[3] || 0));
@@ -1555,7 +1555,7 @@ export default function Dashboard() {
                       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
                       expectedMonths.push(monthNames[monthDate.getMonth()]);
                     }
-                    
+
                     // Fill in missing months with zero data
                     expectedMonths.forEach((monthName, index) => {
                       if (index >= monthLabels.length || monthLabels[index] !== monthName) {
@@ -1577,7 +1577,7 @@ export default function Dashboard() {
                         }
                       }
                     });
-                    
+
                     // Ensure we have exactly 6 months
                     while (monthLabels.length < 6) {
                       const now = new Date();
@@ -1591,7 +1591,7 @@ export default function Dashboard() {
                       seriesData[2].push(0);
                       seriesData[1].push(0);
                     }
-                    
+
                     // Trim to exactly 6 if somehow we have more
                     monthLabels.length = 6;
                     seriesData[5].length = 6;
@@ -1628,7 +1628,7 @@ export default function Dashboard() {
                   const monthlyData = monthlyRatingDistribution;
 
                   return (
-                    <div style={{ height: '295px' }} className="-mt-1">
+                    <div style={{ height: '315px' }} className="-mt-1">
                       <Chart
                         type="bar"
                         height={295}
@@ -1640,7 +1640,7 @@ export default function Dashboard() {
                             stacked: true,
                             stackType: '100%',
                             toolbar: { show: false },
-                            zoom: { enabled: false }
+                            zoom: { enabled: false },
                           },
                           plotOptions: {
                             bar: {
@@ -1656,7 +1656,7 @@ export default function Dashboard() {
                             '#BEBDFF', // 2 points
                             '#DEDDF6'  // 1 point - lightest purple
                           ],
-                          yaxis: { 
+                          yaxis: {
                             show: true,
                             min: 0,
                             max: 100,
@@ -1664,7 +1664,7 @@ export default function Dashboard() {
                               style: {
                                 colors: '#696981',
                                 fontSize: '12px',
-                                fontWeight: 500
+                                fontWeight: 500,
                               },
                               formatter: (val: number) => `${val.toFixed(0)}%`
                             }
@@ -1688,7 +1688,7 @@ export default function Dashboard() {
                             labels: {
                               colors: '#696981'
                             },
-                            markers: { 
+                            markers: {
                               strokeWidth: 0,
                               size: 8
                             },
@@ -1698,8 +1698,8 @@ export default function Dashboard() {
                           grid: {
                             borderColor: 'transparent',
                             xaxis: { lines: { show: false } },
-                            yaxis: { 
-                              lines: { 
+                            yaxis: {
+                              lines: {
                                 show: true
                               }
                             },
@@ -1708,8 +1708,8 @@ export default function Dashboard() {
                           fill: {
                             opacity: 1
                           },
-                          dataLabels: { 
-                            enabled: false 
+                          dataLabels: {
+                            enabled: false
                           },
                           tooltip: {
                             enabled: true,
@@ -1717,7 +1717,7 @@ export default function Dashboard() {
                               formatter: (val: number, { seriesIndex, dataPointIndex }: any) => {
                                 const ratingLabels = ['1 Point', '2 Points', '3 Points', '4 Points', '5 Points'];
                                 const rating = 5 - seriesIndex;
-                                
+
                                 // Get the actual count for this month and rating
                                 let count = 0;
                                 if (monthlyData && monthlyData.length > dataPointIndex && monthlyData[dataPointIndex]) {
@@ -1727,7 +1727,7 @@ export default function Dashboard() {
                                   // Fallback to overall distribution
                                   count = ratingDistribution[rating] || 0;
                                 }
-                                
+
                                 return `${ratingLabels[seriesIndex]}: ${val.toFixed(1)}% (${count.toLocaleString()} reviews)`;
                               }
                             }
@@ -1753,8 +1753,14 @@ export default function Dashboard() {
               backgroundPosition: 'center',
               backgroundSize: 'cover'
             }}>
+              <img
+                src="/wind.gif"
+                alt="Wind animation"
+                className="absolute top-0 right-0 w-full h-full object-cover opacity-20 pointer-events-none z-0"
+                style={{ mixBlendMode: 'overlay' }}
+              />
               <div className="p-4 border-b border-white/10 relative z-10">
-                <h6 className="text-sm font-semibold text-white mb-0">Total Revenue</h6>
+                <h6 className="text-lg font-semibold text-white mb-0">Total Revenue</h6>
               </div>
               {periodRevenue === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 flex-1" style={{ minHeight: '350px' }}>
@@ -1764,7 +1770,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="p-4 pt-0 border-b border-white/10 relative z-10">
-                    <div className="mb-5 -mt-3 relative" style={{ height: '350px' }}>
+                    <div className="mb-5 -mt-3 relative" style={{ height: '250px' }}>
                       <Chart
                         type="radialBar"
                         height={350}
@@ -1927,7 +1933,7 @@ export default function Dashboard() {
             {/* Card 9: Orders By Time */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Orders By Time</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Orders By Time</h6>
               </div>
               {(dashboardStats?.totalOrders || 0) === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12" style={{ height: '250px' }}>
@@ -2019,7 +2025,7 @@ export default function Dashboard() {
         {/* New Customers Card */}
         <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between">
-            <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">New Customers</h6>
+            <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">New Customers</h6>
             <div className="flex flex-wrap gap-2 items-center">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -2162,9 +2168,9 @@ export default function Dashboard() {
         </div>
 
         {/* Task Update Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Task Update</h6>
+            <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Task Update</h6>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/tasks')}
@@ -2189,9 +2195,9 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          <div className="p-2 pt-3 overflow-auto" style={{ maxHeight: '385px' }}>
+          <div className="p-2 pt-3 overflow-auto h-full">
             {tasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col h-full items-center justify-center py-12">
                 <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">No Tasks Found</span>
               </div>
@@ -2225,28 +2231,28 @@ export default function Dashboard() {
             onClick={() => navigate('/products')}
             className="flex flex-col items-center justify-center p-4 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors border border-primary/20"
           >
-            <Package className="w-6 h-6 text-primary mb-2" />
+            <i className="fi fi-rr-box text-2xl text-primary mb-2"></i>
             <span className="text-sm font-medium text-gray-900 dark:text-white">Add Product</span>
           </button>
           <button
             onClick={() => navigate('/orders')}
             className="flex flex-col items-center justify-center p-4 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 rounded-lg transition-colors border border-green-200 dark:border-green-800"
           >
-            <ShoppingCart className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
+            <i className="fi fi-rr-shopping-cart text-2xl text-green-600 dark:text-green-400 mb-2"></i>
             <span className="text-sm font-medium text-gray-900 dark:text-white">New Order</span>
           </button>
           <button
             onClick={() => navigate('/analytics')}
             className="flex flex-col items-center justify-center p-4 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 rounded-lg transition-colors border border-purple-200 dark:border-purple-800"
           >
-            <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
+            <i className="fi fi-rr-chart-histogram text-2xl text-purple-600 dark:text-purple-400 mb-2"></i>
             <span className="text-sm font-medium text-gray-900 dark:text-white">View Analytics</span>
           </button>
           <button
             onClick={() => navigate('/warehouses')}
             className="flex flex-col items-center justify-center p-4 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 rounded-lg transition-colors border border-orange-200 dark:border-orange-800"
           >
-            <Package className="w-6 h-6 text-orange-600 dark:text-orange-400 mb-2" />
+            <i className="fi fi-rr-building text-2xl text-orange-600 dark:text-orange-400 mb-2"></i>
             <span className="text-sm font-medium text-gray-900 dark:text-white">Warehouses</span>
           </button>
         </div>
