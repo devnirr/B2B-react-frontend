@@ -673,10 +673,7 @@ export default function FinanceDashboard() {
             backgroundSize: 'cover'
           }}>
             <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
-              <h6 className="text-sm font-semibold text-black mb-0">Monthly Target</h6>
-              <button className="p-1 hover:bg-white/20 rounded transition-colors">
-                <MoreVertical className="w-4 h-4 text-white" />
-              </button>
+              <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
             </div>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12 flex-1">
@@ -691,7 +688,7 @@ export default function FinanceDashboard() {
             ) : (
               <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
                 <div className="flex gap-2 items-center mb-0">
-                  <h2 className="mb-0 text-black text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
+                  <h2 className="mb-0 text-white text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
                   {(() => {
                     // Calculate last month revenue for comparison
                     const now = new Date();
@@ -708,13 +705,13 @@ export default function FinanceDashboard() {
                       ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
                       : 0;
                     return changePercent !== 0 ? (
-                      <span className="text-black text-sm">
+                      <span className="text-white text-sm">
                         {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(0)}% vs last month
                       </span>
                     ) : null;
                   })()}
                 </div>
-                <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '350px' }}>
+                <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '250px' }}>
                   <Chart 
                     type="radialBar" 
                     height={350} 
@@ -757,10 +754,10 @@ export default function FinanceDashboard() {
                       },
                     }} 
                   />
-                  <div className="absolute bottom-0 left-0 right-0 text-center text-black font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
+                  <div className="absolute bottom-0 left-0 right-0 text-center text-white font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
                 </div>
                 <div className="text-center px-3 mb-0">
-                  <p className="text-black mb-0 text-sm">
+                  <p className="text-white mb-0 text-sm">
                     {todayRevenue > 0 ? (
                       <>You earn <strong className="text-yellow-500">{formatCurrency(todayRevenue)}</strong> today, its higher than last month keep up your good trends!</>
                     ) : (
