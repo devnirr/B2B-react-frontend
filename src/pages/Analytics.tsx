@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import api from '../lib/api';
 import { BarChart3, DollarSign, ShoppingCart, Users, Package, ArrowUp, ArrowDown, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -8,6 +8,23 @@ import { SkeletonStatsCard, SkeletonChart, SkeletonTable } from '../components/S
 export default function Analytics() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'orders' | 'customers'>('revenue');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   // Calculate date range
   const getDateRange = () => {
@@ -227,7 +244,11 @@ export default function Analytics() {
     };
   }, [ordersData, salesReport, prevSalesReport, customersData, startDate, endDate]);
 
-  const COLORS = ['#5955D1', '#4a46b8', '#3d3a9f', '#333085', '#2d2a6f'];
+  const COLORS = [
+    '#5955D1', '#8B5CF6', '#A855F7', '#C084FC', 
+    '#6366F1', '#818CF8', '#A78BFA', '#C4B5FD',
+    '#4F46E5', '#7C3AED', '#9333EA', '#A855F7'
+  ];
 
   if (isLoading) {
     return (
@@ -448,36 +469,66 @@ export default function Analytics() {
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Orders by Status</h3>
           {(!analyticsData?.ordersByStatus || analyticsData.ordersByStatus.length === 0) ? (
-            <div className="flex flex-col items-center justify-center h-[300px]">
+            <div className="flex flex-col items-center justify-center h-[400px]">
               <PieChartIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">No order status data available</p>
+              <p className="text-sm text-gray-500 dark:text-white">No order status data available</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analyticsData.ordersByStatus}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => `${entry.status}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {analyticsData.ordersByStatus.map((_entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="relative">
+              <ResponsiveContainer width="100%" height={400}>
+                <PieChart>
+                  <Pie
+                    data={analyticsData.ordersByStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ status, percent }: any) => {
+                      const percentage = ((percent || 0) * 100).toFixed(0);
+                      return `${status}: ${percentage}%`;
+                    }}
+                    outerRadius={140}
+                    innerRadius={50}
+                    fill="#8884d8"
+                    dataKey="count"
+                    paddingAngle={3}
+                  >
+                    {analyticsData.ordersByStatus.map((_entry: any, index: number) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index % COLORS.length]}
+                        stroke={isDarkMode ? '#1f2937' : '#ffffff'}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                      border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      color: isDarkMode ? '#ffffff' : '#1f2937',
+                    }}
+                    labelStyle={{
+                      color: isDarkMode ? '#ffffff' : '#1f2937',
+                      fontWeight: '600',
+                    }}
+                    itemStyle={{
+                      color: isDarkMode ? '#ffffff' : '#1f2937',
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{
+                      paddingTop: '20px',
+                    }}
+                    formatter={(value: string) => (
+                      <span style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '12px' }}>
+                        {value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
 
