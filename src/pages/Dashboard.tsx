@@ -146,6 +146,100 @@ export default function Dashboard() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  // Handle annual report download
+  const handleDownloadAnnualReport = () => {
+    try {
+      // Collect all dashboard data
+      const reportData: any = {
+        reportDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        reportYear: new Date().getFullYear(),
+        dashboardStats: {
+          totalCustomers: dashboardStats?.totalCustomers || 0,
+          lastMonthCustomers: dashboardStats?.lastMonthCustomers || 0,
+          customerChangePercent: customerChangePercent,
+          totalOrders: dashboardStats?.totalOrders || 0,
+          lastMonthOrders: dashboardStats?.lastMonthOrders || 0,
+          orderChangePercent: orderChangePercent,
+          totalRevenue: salesReport?.totalRevenue || 0,
+          orderCount: salesReport?.orderCount || 0,
+        },
+        orderTypes: (() => {
+          const orderTypes = salesReport?.orders?.reduce((acc: any, order: any) => {
+            const type = order.type || 'B2B';
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+          }, {}) || {};
+          const total = Object.values(orderTypes).reduce((sum: number, val: any) => sum + val, 0) || 1;
+          return Object.entries(orderTypes).map(([type, count]: [string, any]) => ({
+            type,
+            count,
+            percentage: ((count / total) * 100).toFixed(1) + '%'
+          }));
+        })(),
+        taskStats: {
+          total: taskStats.total,
+          completed: taskStats.tasksDone || 0,
+          inProgress: taskStats.inProgress || 0,
+          pending: taskStats.pending || 0,
+        },
+        reviewsStats: {
+          totalReviews: reviewsStats?.totalReviews || 0,
+          avgRating: reviewsStats?.avgRating || 0,
+          positiveRatio: reviewsStats?.positiveRatio || 0,
+        }
+      };
+
+      // Convert to CSV format
+      let csvContent = 'Annual Report - ' + reportData.reportYear + '\n';
+      csvContent += 'Generated on: ' + reportData.reportDate + '\n\n';
+      
+      csvContent += 'Dashboard Statistics\n';
+      csvContent += 'Metric,Value\n';
+      csvContent += `Total Customers,${reportData.dashboardStats.totalCustomers}\n`;
+      csvContent += `Last Month Customers,${reportData.dashboardStats.lastMonthCustomers}\n`;
+      csvContent += `Customer Change,${reportData.dashboardStats.customerChangePercent.toFixed(2)}%\n`;
+      csvContent += `Total Orders,${reportData.dashboardStats.totalOrders}\n`;
+      csvContent += `Last Month Orders,${reportData.dashboardStats.lastMonthOrders}\n`;
+      csvContent += `Order Change,${reportData.dashboardStats.orderChangePercent.toFixed(2)}%\n`;
+      csvContent += `Total Revenue,$${reportData.dashboardStats.totalRevenue.toLocaleString()}\n`;
+      csvContent += `Order Count,${reportData.dashboardStats.orderCount}\n\n`;
+
+      csvContent += 'Order Types Breakdown\n';
+      csvContent += 'Type,Count,Percentage\n';
+      reportData.orderTypes.forEach((item: any) => {
+        csvContent += `${item.type},${item.count},${item.percentage}\n`;
+      });
+      csvContent += '\n';
+
+      csvContent += 'Task Statistics\n';
+      csvContent += 'Status,Count\n';
+      csvContent += `Total,${reportData.taskStats.total}\n`;
+      csvContent += `Completed,${reportData.taskStats.completed}\n`;
+      csvContent += `In Progress,${reportData.taskStats.inProgress}\n`;
+      csvContent += `Pending,${reportData.taskStats.pending}\n\n`;
+
+      csvContent += 'Review Statistics\n';
+      csvContent += 'Metric,Value\n';
+      csvContent += `Total Reviews,${reportData.reviewsStats.totalReviews}\n`;
+      csvContent += `Average Rating,${reportData.reviewsStats.avgRating}\n`;
+      csvContent += `Positive Ratio,${reportData.reviewsStats.positiveRatio}%\n`;
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Annual_Report_${reportData.reportYear}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error generating annual report:', error);
+      alert('Failed to generate annual report. Please try again.');
+    }
+  };
+
   // Fetch dashboard stats
   const { data: dashboardStats, isLoading } = useQuery({
     queryKey: ['dashboard', 'stats'],
@@ -1338,7 +1432,10 @@ export default function Dashboard() {
               </div>
               <div className="p-3 bg-primary/5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Annual report</h6>
-                <button className="px-3 py-1.5 text-sm font-semibold text-primary bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5">
+                <button 
+                  onClick={handleDownloadAnnualReport}
+                  className="px-3 py-1.5 text-sm font-semibold text-primary bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5"
+                >
                   <Download className="w-4 h-4" />
                   <span>Download</span>
                 </button>
