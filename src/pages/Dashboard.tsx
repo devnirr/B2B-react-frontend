@@ -2109,14 +2109,14 @@ export default function Dashboard() {
                 <button
                   onClick={() => setCustomerPage(1)}
                   disabled={customerPage === 1}
-                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white"
                 >
                   &lt;&lt;
                 </button>
                 <button
                   onClick={() => setCustomerPage(p => Math.max(1, p - 1))}
                   disabled={customerPage === 1}
-                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white"
                 >
                   &lt;
                 </button>
@@ -2128,7 +2128,7 @@ export default function Dashboard() {
                       onClick={() => setCustomerPage(pageNum)}
                       className={`px-3 py-1 text-sm border rounded ${customerPage === pageNum
                         ? 'bg-primary text-white border-primary'
-                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white'
                         }`}
                     >
                       {pageNum}
@@ -2138,14 +2138,14 @@ export default function Dashboard() {
                 <button
                   onClick={() => setCustomerPage(p => Math.min(totalPages, p + 1))}
                   disabled={customerPage === totalPages}
-                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white"
                 >
                   &gt;
                 </button>
                 <button
                   onClick={() => setCustomerPage(totalPages)}
                   disabled={customerPage === totalPages}
-                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white"
                 >
                   &gt;&gt;
                 </button>

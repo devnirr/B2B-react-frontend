@@ -399,7 +399,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className={`absolute right-1.5 flex items-center justify-center w-5 h-5 z-10 transition-opacity ${
                   darkMode ? 'opacity-100' : 'opacity-50'
                 }`}>
-                  <Moon className={`w-4 h-4 ${darkMode ? 'text-white' : 'text-gray-600'}`} strokeWidth={2} />
+                  <Moon className={`w-4 h-4 ${darkMode ? 'text-gray-900' : 'text-gray-600'}`} strokeWidth={2} />
                 </div>
                 {/* Toggle Thumb */}
                 <div

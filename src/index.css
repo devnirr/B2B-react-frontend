@@ -668,7 +668,7 @@ body.modal-open {
 .dark .page-link {
   background-color: rgba(89, 85, 209, 0.1);
   border-color: #374151;
-  color: #a5b4fc;
+  color: #ffffff !important;
 }
 
 .page-link:hover:not(:disabled):not(.active):not([style*="pointer-events: none"]) {
@@ -716,7 +716,7 @@ body.modal-open {
 .dark .page-link.disabled {
   background-color: #374151 !important;
   border-color: #4b5563 !important;
-  color: #6b7280 !important;
+  color: #ffffff !important;
 }
 
 .pagination-rounded .page-link {
@@ -738,7 +738,7 @@ body.modal-open {
 }
 
 .dark .page-link[style*="pointer-events: none"] {
-  color: #9ca3af !important;
+  color: #ffffff !important;
 }
 
 /* Items Per Page Select Styling - Matching design with purple border and blue selected option */
