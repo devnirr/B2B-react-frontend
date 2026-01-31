@@ -564,35 +564,110 @@ export default function FinanceDashboard() {
                   <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
                   <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
                 </div>
+              ) : totalRevenue === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-gray-900 dark:text-white">Today</span>
-                    </div>
-                    <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(todayRevenue)}</strong>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-center">
+                    <Chart
+                      type="donut"
+                      height={220}
+                      series={[
+                        todayRevenue,
+                        Math.max(0, currentMonthRevenue - todayRevenue),
+                        Math.max(0, totalRevenue - currentMonthRevenue)
+                      ]}
+                      options={{
+                        chart: {
+                          type: 'donut',
+                          toolbar: { show: false },
+                        },
+                        labels: ['Today', 'This Month (Rest)', 'Previous Months'],
+                        colors: ['#10b981', '#3b82f6', '#8b5cf6'],
+                        dataLabels: {
+                          enabled: true,
+                          formatter: (val: number) => {
+                            return totalRevenue > 0 ? `${val.toFixed(1)}%` : '0%';
+                          },
+                          style: {
+                            colors: isDarkMode ? ['#ffffff'] : ['#1C274C'],
+                            fontSize: '12px',
+                            fontWeight: '600',
+                          },
+                        },
+                        legend: {
+                          show: true,
+                          position: 'bottom',
+                          horizontalAlign: 'center',
+                          fontSize: '12px',
+                          fontFamily: 'var(--bs-body-font-family)',
+                          labels: {
+                            colors: isDarkMode ? '#ffffff' : '#1C274C',
+                          },
+                          markers: {
+                            size: 6,
+                          },
+                        },
+                        tooltip: {
+                          y: {
+                            formatter: (val: number) => formatCurrency(val),
+                          },
+                        },
+                        plotOptions: {
+                          pie: {
+                            donut: {
+                              size: '65%',
+                              labels: {
+                                show: true,
+                                name: {
+                                  show: true,
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                },
+                                value: {
+                                  show: true,
+                                  fontSize: '16px',
+                                  fontWeight: '700',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                  formatter: (val: string) => {
+                                    const numVal = parseFloat(val);
+                                    return formatCurrency(numVal);
+                                  },
+                                },
+                                total: {
+                                  show: true,
+                                  label: 'Total Revenue',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                  formatter: () => formatCurrency(totalRevenue),
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm text-gray-900 dark:text-white">This Month</span>
-                    </div>
-                    <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(currentMonthRevenue)}</strong>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm text-gray-900 dark:text-white">Total Revenue</span>
-                    </div>
-                    <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(totalRevenue)}</strong>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-primary rounded-full"></div>
-                      <span className="text-sm text-gray-900 dark:text-white">Net Profit</span>
-                    </div>
-                    <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(netProfit)}</strong>
+                  <div className="w-full space-y-2 mt-2">
+                    {[
+                      { label: 'Today', value: todayRevenue, color: '#10b981' },
+                      { label: 'This Month', value: currentMonthRevenue, color: '#3b82f6' },
+                      { label: 'Total Revenue', value: totalRevenue, color: '#8b5cf6' },
+                      { label: 'Net Profit', value: netProfit, color: '#5955D1' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                          <span className="text-sm text-gray-900 dark:text-white">{item.label}</span>
+                        </div>
+                        <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(item.value)}</strong>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
