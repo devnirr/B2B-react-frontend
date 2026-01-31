@@ -516,13 +516,10 @@ export default function Analytics() {
                       color: isDarkMode ? '#ffffff' : '#1f2937',
                     }}
                     formatter={(_value: any, _name: any, props: any) => {
-                      return [props.payload.count, 'Orders'];
+                      return [props.payload.count, props.payload.status || ''];
                     }}
-                    labelFormatter={(label: any, payload: any) => {
-                      if (payload && payload.length > 0 && payload[0].payload) {
-                        return payload[0].payload.status || '';
-                      }
-                      return label || '';
+                    labelFormatter={() => {
+                      return '';
                     }}
                   />
                 </PieChart>
