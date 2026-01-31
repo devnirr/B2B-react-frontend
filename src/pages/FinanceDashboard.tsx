@@ -403,385 +403,373 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="space-y-6">
+      <div className="space-6 flex">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-              </div>
-            ) : (
-              <div className="flex gap-3 items-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {!salesReport && isLoading ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-              </div>
-            ) : (
-              // Expenses endpoint doesn't exist, so we show 0 or placeholder
-              <div className="flex gap-3 items-center">
-                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-              </div>
-            ) : (
-              <div className="flex gap-3 items-center">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-              </div>
-            ) : (
-              <div className="flex gap-3 items-center">
-                <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-          {/* Revenue vs Expenses Chart */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
-              <div className="relative" ref={yearDropdownRef}>
-                <button
-                  onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-w-[120px] justify-between"
-                >
-                  <span>{selectedYear}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isYearDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isYearDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-full min-w-[120px] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10 overflow-hidden">
-                    <button
-                      onClick={() => {
-                        setSelectedYear('This Year');
-                        setIsYearDropdownOpen(false);
-                      }}
-                      className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'This Year'
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                        }`}
-                    >
-                      This Year
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedYear('Last Year');
-                        setIsYearDropdownOpen(false);
-                      }}
-                      className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'Last Year'
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                        }`}
-                    >
-                      Last Year
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-              </div>
-            ) : chartData.revenueData.length === 0 || chartData.revenueData.every((val: number) => val === 0) ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-              </div>
-            ) : (
-              <div className="p-2">
-                <Chart type="line" height={300} series={revenueExpensesChartConfig.series} options={revenueExpensesChartConfig} />
-              </div>
-            )}
-          </div>
-
-          {/* Revenue Summary */}
-          <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-4 pb-4">
-              <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue Summary</h6>
-            </div>
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-              </div>
-            ) : totalRevenue === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-center">
-                  <Chart
-                    type="donut"
-                    height={270}
-                    series={[
-                      todayRevenue,
-                      Math.max(0, currentMonthRevenue - todayRevenue),
-                      Math.max(0, totalRevenue - currentMonthRevenue)
-                    ]}
-                    options={{
-                      chart: {
-                        type: 'donut',
-                        toolbar: { show: false },
-                      },
-                      labels: ['Today', 'This Month (Rest)', 'Previous Months'],
-                      colors: ['#10b981', '#3b82f6', '#8b5cf6'],
-                      dataLabels: {
-                        enabled: true,
-                        formatter: (val: number) => {
-                          return totalRevenue > 0 ? `${val.toFixed(1)}%` : '0%';
-                        },
-                        style: {
-                          colors: ['#ffffff', '#ffffff', '#ffffff'],
-                          fontSize: '12px',
-                          fontWeight: '600',
-                        },
-                      },
-                      legend: {
-                        show: true,
-                        position: 'bottom',
-                        horizontalAlign: 'center',
-                        fontSize: '12px',
-                        fontFamily: 'var(--bs-body-font-family)',
-                        labels: {
-                          colors: isDarkMode ? '#ffffff' : '#1C274C',
-                        },
-                        markers: {
-                          size: 6,
-                        },
-                      },
-                      tooltip: {
-                        y: {
-                          formatter: (val: number) => formatCurrency(val),
-                        },
-                      },
-                      plotOptions: {
-                        pie: {
-                          donut: {
-                            size: '65%',
-                            labels: {
-                              show: true,
-                              name: {
-                                show: true,
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                color: isDarkMode ? '#ffffff' : '#1C274C',
-                              },
-                              value: {
-                                show: true,
-                                fontSize: '16px',
-                                fontWeight: '700',
-                                color: isDarkMode ? '#ffffff' : '#1C274C',
-                                formatter: (val: string) => {
-                                  const numVal = parseFloat(val);
-                                  return formatCurrency(numVal);
-                                },
-                              },
-                              total: {
-                                show: true,
-                                label: 'Total Revenue',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                color: isDarkMode ? '#ffffff' : '#1C274C',
-                                formatter: () => formatCurrency(totalRevenue),
-                              },
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-                <div className="w-full space-y-2 mt-2">
-                  {[
-                    { label: 'Today', value: todayRevenue, color: '#10b981' },
-                    { label: 'This Month', value: currentMonthRevenue, color: '#3b82f6' },
-                    { label: 'Total Revenue', value: totalRevenue, color: '#8b5cf6' },
-                    { label: 'Net Profit', value: netProfit, color: '#5955D1' },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-sm text-gray-900 dark:text-white">{item.label}</span>
-                      </div>
-                      <strong className="text-gray-900 dark:text-white font-semibold text-sm">{formatCurrency(item.value)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Monthly Target */}
-          <div className="lg:col-span-1 flex">
-            <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
-              backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
-              backgroundPosition: 'center',
-              backgroundSize: 'cover'
-            }}>
-              <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
-                <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
-              </div>
+        <div className='mr-5'>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 flex-1">
-                  <Inbox className="w-12 h-12 text-white/50 mb-3" />
-                  <span className="text-sm text-white/70">No Data Available</span>
-                </div>
-              ) : totalRevenue === 0 && (salesReport?.orders || []).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 flex-1">
-                  <Inbox className="w-12 h-12 text-white/50 mb-3" />
-                  <span className="text-sm text-white/70">No Data Available</span>
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
                 </div>
               ) : (
-                <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
-                  <div className="flex gap-2 items-center mb-0">
-                    <h2 className="mb-0 text-white text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
-                    {(() => {
-                      // Calculate last month revenue for comparison
-                      const now = new Date();
-                      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-                      const lastMonthRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
-                        const orderDate = new Date(order.orderDate || order.createdAt);
-                        if (orderDate >= lastMonthStart && orderDate <= lastMonthEnd) {
-                          return sum + Number(order.totalAmount || 0);
-                        }
-                        return sum;
-                      }, 0);
-                      const changePercent = lastMonthRevenue > 0
-                        ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
-                        : 0;
-                      return changePercent !== 0 ? (
-                        <span className="text-white text-sm">
-                          {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(0)}% vs last month
-                        </span>
-                      ) : null;
-                    })()}
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '250px' }}>
-                    <Chart
-                      type="radialBar"
-                      height={350}
-                      series={[Math.min(100, Math.max(0, monthlyTargetProgress))]}
-                      options={{
-                        chart: {
-                          type: 'radialBar' as const,
-                          offsetY: 0,
-                          height: 350,
-                          sparkline: { enabled: true },
-                        },
-                        plotOptions: {
-                          radialBar: {
-                            startAngle: -95,
-                            endAngle: 95,
-                            track: {
-                              background: 'rgba(255, 255, 255, 0.3)',
-                              strokeWidth: '100%',
-                              margin: 25,
-                            },
-                            dataLabels: {
-                              name: { show: false },
-                              value: {
-                                show: true,
-                                offsetY: -35,
-                                fontSize: '28px',
-                                fontFamily: 'var(--bs-body-font-family)',
-                                fontWeight: 600,
-                                color: '#FFFFFF',
-                                formatter: () => `${(currentMonthRevenue / 1000).toFixed(0)}K`,
-                              },
-                            },
-                          },
-                        },
-                        grid: {
-                          padding: { top: 0, bottom: 0, left: 0, right: 0 },
-                        },
-                        fill: {
-                          colors: ['#FFFFFF'],
-                        },
-                      }}
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 text-center text-white font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
-                  </div>
-                  <div className="text-center px-3 mb-0">
-                    <p className="text-white mb-5 text-sm">
-                      {todayRevenue > 0 ? (
-                        <>You earn <strong className="text-yellow-500">{formatCurrency(todayRevenue)}</strong> today, its higher than last month keep up your good trends!</>
-                      ) : (
-                        <>No revenue recorded today yet.</>
-                      )}
-                    </p>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
                   </div>
                 </div>
               )}
-              <div className="p-4 border-0 pt-3">
-                <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-xl flex">
-                  <div className="text-center flex-1 py-2">
-                    <h4 className="mb-0 text-gray-900 dark:text-white">${(monthlyTarget / 1000).toFixed(0)}K</h4>
-                    <span className="text-primary text-xs font-semibold block">Target</span>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              {!salesReport && isLoading ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+                </div>
+              ) : (
+                // Expenses endpoint doesn't exist, so we show 0 or placeholder
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
                   </div>
-                  <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
-                  <div className="text-center flex-1 py-2">
-                    <h4 className="mb-0 text-gray-900 dark:text-white">${(currentMonthRevenue / 1000).toFixed(0)}k</h4>
-                    <span className="text-primary text-xs font-semibold block">Revenue</span>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
                   </div>
-                  <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
-                  <div className="text-center flex-1 py-2">
-                    <h4 className="mb-0 text-gray-900 dark:text-white">${(todayRevenue / 1000).toFixed(1)}k</h4>
-                    <span className="text-primary text-xs font-semibold block">Today</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+                </div>
+              ) : (
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+                </div>
+              ) : (
+                <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mt-5">
+            {/* Revenue vs Expenses Chart */}
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
+                <div className="relative" ref={yearDropdownRef}>
+                  <button
+                    onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-w-[120px] justify-between"
+                  >
+                    <span>{selectedYear}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isYearDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isYearDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-full min-w-[120px] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setSelectedYear('This Year');
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'This Year'
+                          ? 'bg-primary text-white font-medium'
+                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                      >
+                        This Year
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedYear('Last Year');
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'Last Year'
+                          ? 'bg-primary text-white font-medium'
+                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                      >
+                        Last Year
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : chartData.revenueData.length === 0 || chartData.revenueData.every((val: number) => val === 0) ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : (
+                <div className="p-2">
+                  <Chart type="line" height={300} series={revenueExpensesChartConfig.series} options={revenueExpensesChartConfig} />
+                </div>
+              )}
+            </div>
+
+            {/* Revenue Summary */}
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="border-b border-gray-200 dark:border-gray-700 mb-4 pb-4">
+                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue Summary</h6>
+              </div>
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : totalRevenue === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 mt-10">
+                  <div className="flex items-center justify-center">
+                    <Chart
+                      type="donut"
+                      height={270}
+                      series={[
+                        todayRevenue,
+                        Math.max(0, currentMonthRevenue - todayRevenue),
+                        Math.max(0, totalRevenue - currentMonthRevenue)
+                      ]}
+                      options={{
+                        chart: {
+                          type: 'donut',
+                          toolbar: { show: false },
+                        },
+                        labels: ['Today', 'This Month (Rest)', 'Previous Months'],
+                        colors: ['#10b981', '#3b82f6', '#8b5cf6'],
+                        dataLabels: {
+                          enabled: true,
+                          formatter: (val: number) => {
+                            return totalRevenue > 0 ? `${val.toFixed(1)}%` : '0%';
+                          },
+                          style: {
+                            colors: ['#ffffff', '#ffffff', '#ffffff'],
+                            fontSize: '12px',
+                            fontWeight: '600',
+                          },
+                        },
+                        legend: {
+                          show: true,
+                          position: 'bottom',
+                          horizontalAlign: 'center',
+                          fontSize: '12px',
+                          fontFamily: 'var(--bs-body-font-family)',
+                          labels: {
+                            colors: isDarkMode ? '#ffffff' : '#1C274C',
+                          },
+                          markers: {
+                            size: 6,
+                          },
+                        },
+                        tooltip: {
+                          y: {
+                            formatter: (val: number) => formatCurrency(val),
+                          },
+                        },
+                        plotOptions: {
+                          pie: {
+                            donut: {
+                              size: '65%',
+                              labels: {
+                                show: true,
+                                name: {
+                                  show: true,
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                },
+                                value: {
+                                  show: true,
+                                  fontSize: '16px',
+                                  fontWeight: '700',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                  formatter: (val: string) => {
+                                    const numVal = parseFloat(val);
+                                    return formatCurrency(numVal);
+                                  },
+                                },
+                                total: {
+                                  show: true,
+                                  label: 'Total Revenue',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: isDarkMode ? '#ffffff' : '#1C274C',
+                                  formatter: () => formatCurrency(totalRevenue),
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+
+          </div>
+        </div>
+        
+        {/* Monthly Target */}
+        <div className="flex" style={{ maxWidth: '350px', width: '100%' }}>
+          <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
+            backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
+            backgroundPosition: 'center',
+            backgroundSize: 'cover'
+          }}>
+            <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
+              <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
+            </div>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 flex-1">
+                <Inbox className="w-12 h-12 text-white/50 mb-3" />
+                <span className="text-sm text-white/70">No Data Available</span>
+              </div>
+            ) : totalRevenue === 0 && (salesReport?.orders || []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 flex-1">
+                <Inbox className="w-12 h-12 text-white/50 mb-3" />
+                <span className="text-sm text-white/70">No Data Available</span>
+              </div>
+            ) : (
+              <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
+                <div className="flex gap-2 items-center mb-0">
+                  <h2 className="mb-0 text-white text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
+                  {(() => {
+                    // Calculate last month revenue for comparison
+                    const now = new Date();
+                    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+                    const lastMonthRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
+                      const orderDate = new Date(order.orderDate || order.createdAt);
+                      if (orderDate >= lastMonthStart && orderDate <= lastMonthEnd) {
+                        return sum + Number(order.totalAmount || 0);
+                      }
+                      return sum;
+                    }, 0);
+                    const changePercent = lastMonthRevenue > 0
+                      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+                      : 0;
+                    return changePercent !== 0 ? (
+                      <span className="text-white text-sm">
+                        {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(0)}% vs last month
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '250px' }}>
+                  <Chart
+                    type="radialBar"
+                    height={350}
+                    series={[Math.min(100, Math.max(0, monthlyTargetProgress))]}
+                    options={{
+                      chart: {
+                        type: 'radialBar' as const,
+                        offsetY: 0,
+                        height: 350,
+                        sparkline: { enabled: true },
+                      },
+                      plotOptions: {
+                        radialBar: {
+                          startAngle: -95,
+                          endAngle: 95,
+                          track: {
+                            background: 'rgba(255, 255, 255, 0.3)',
+                            strokeWidth: '100%',
+                            margin: 25,
+                          },
+                          dataLabels: {
+                            name: { show: false },
+                            value: {
+                              show: true,
+                              offsetY: -35,
+                              fontSize: '28px',
+                              fontFamily: 'var(--bs-body-font-family)',
+                              fontWeight: 600,
+                              color: '#FFFFFF',
+                              formatter: () => `${(currentMonthRevenue / 1000).toFixed(0)}K`,
+                            },
+                          },
+                        },
+                      },
+                      grid: {
+                        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+                      },
+                      fill: {
+                        colors: ['#FFFFFF'],
+                      },
+                    }}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 text-center text-white font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
+                </div>
+                <div className="text-center px-3 mb-0">
+                  <p className="text-white mb-5 text-sm">
+                    {todayRevenue > 0 ? (
+                      <>You earn <strong className="text-yellow-500">{formatCurrency(todayRevenue)}</strong> today, its higher than last month keep up your good trends!</>
+                    ) : (
+                      <>No revenue recorded today yet.</>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="p-4 border-0 pt-3">
+              <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-xl flex">
+                <div className="text-center flex-1 py-2">
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(monthlyTarget / 1000).toFixed(0)}K</h4>
+                  <span className="text-primary text-xs font-semibold block">Target</span>
+                </div>
+                <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
+                <div className="text-center flex-1 py-2">
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(currentMonthRevenue / 1000).toFixed(0)}k</h4>
+                  <span className="text-primary text-xs font-semibold block">Revenue</span>
+                </div>
+                <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
+                <div className="text-center flex-1 py-2">
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(todayRevenue / 1000).toFixed(1)}k</h4>
+                  <span className="text-primary text-xs font-semibold block">Today</span>
                 </div>
               </div>
             </div>
