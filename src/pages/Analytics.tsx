@@ -291,7 +291,7 @@ export default function Analytics() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Analytics</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
@@ -302,7 +302,7 @@ export default function Analytics() {
                   className={`px-4 py-2 text-sm font-medium transition-colors ${
                     dateRange === range
                       ? 'bg-primary-500 text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      : 'text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : range === '90d' ? '90 Days' : '1 Year'}
@@ -334,7 +334,7 @@ export default function Analytics() {
                   {Math.abs(stat.change)}%
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{stat.title}</h3>
+              <h3 className="text-sm font-medium text-gray-600 dark:text-white mb-1">{stat.title}</h3>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
             </div>
           );
@@ -355,7 +355,7 @@ export default function Analytics() {
                   className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
                     selectedMetric === metric
                       ? 'bg-primary-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {metric.charAt(0).toUpperCase() + metric.slice(1)}
