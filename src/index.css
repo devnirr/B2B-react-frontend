@@ -419,8 +419,7 @@ code {
 .modal-body .custom-dropdown-menu {
   position: absolute !important;
   z-index: 10001 !important;
-  overflow: visible !important;
-  max-height: none !important;
+  /* overflow and max-height are set inline to allow per-component customization */
 }
 
 /* Ensure parent containers don't clip dropdowns */

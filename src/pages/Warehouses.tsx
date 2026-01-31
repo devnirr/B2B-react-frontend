@@ -90,7 +90,7 @@ const CustomSelect = ({
 
       {isOpen && (
         <div 
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto custom-dropdown-menu"
           style={{
             zIndex: 10001,
             top: '100%',
@@ -98,7 +98,7 @@ const CustomSelect = ({
             right: 0,
             minWidth: '100%',
             position: 'absolute',
-            overflow: 'visible',
+            maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
           }}
         >
           {options.map((option, index) => {
@@ -244,7 +244,7 @@ const ItemsPerPageSelector = ({
 
       {isOpen && (
         <div 
-          className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+          className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto"
           style={{
             zIndex: 10001,
             position: 'absolute',
@@ -253,6 +253,7 @@ const ItemsPerPageSelector = ({
             display: 'block',
             visibility: 'visible',
             opacity: 1,
+            maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
           }}
         >
           {options.map((option, index) => {

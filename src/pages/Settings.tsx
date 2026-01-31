@@ -88,13 +88,14 @@ const CustomSelect = ({
 
       {isOpen && (
         <div 
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-auto custom-dropdown-menu"
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto custom-dropdown-menu"
           style={{
             zIndex: 10000,
             top: '100%',
             left: 0,
             right: 0,
             minWidth: '100%',
+            maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
           }}
         >
           {options.map((option, index) => {

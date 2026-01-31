@@ -90,13 +90,16 @@ const CustomSelect = ({
 
       {isOpen && (
         <div 
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-auto custom-dropdown-menu"
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
           style={{
             zIndex: 10000,
             top: '100%',
             left: 0,
             right: 0,
             minWidth: '100%',
+            maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}
         >
           {options.map((option, index) => {
@@ -770,13 +773,10 @@ function AddProductModal({
                 <CustomSelect
                   value={formData.collectionId}
                   onChange={(value) => handleChange('collectionId', value)}
-                  options={[
-                    { value: '', label: 'Select collection' },
-                    ...collections.map((collection: any) => ({
-                      value: collection.id.toString(),
-                      label: collection.name,
-                    })),
-                  ]}
+                  options={collections.map((collection: any) => ({
+                    value: collection.id.toString(),
+                    label: collection.name,
+                  }))}
                   placeholder="Select collection"
                   error={!!errors.collectionId}
                 />
@@ -1141,13 +1141,10 @@ function EditProductModal({
                 <CustomSelect
                   value={formData.collectionId}
                   onChange={(value) => handleChange('collectionId', value)}
-                  options={[
-                    { value: '', label: 'Select collection' },
-                    ...collections.map((collection: any) => ({
-                      value: collection.id.toString(),
-                      label: collection.name,
-                    })),
-                  ]}
+                  options={collections.map((collection: any) => ({
+                    value: collection.id.toString(),
+                    label: collection.name,
+                  }))}
                   placeholder="Select collection"
                   error={!!errors.collectionId}
                 />
