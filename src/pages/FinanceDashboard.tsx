@@ -56,6 +56,21 @@ export default function FinanceDashboard() {
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
   const [transactionSearch, setTransactionSearch] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Check for dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   // Get date range based on selected year
   const getDateRange = () => {
@@ -174,7 +189,7 @@ export default function FinanceDashboard() {
       labels: {
         formatter: (value: number) => `${(value / 1000).toFixed(0)}K`,
         style: {
-          colors: 'var(--bs-body-color)',
+          colors: isDarkMode ? '#ffffff' : '#1C274C',
           fontSize: '13px',
           fontFamily: 'var(--bs-body-font-family)',
         },
@@ -186,7 +201,7 @@ export default function FinanceDashboard() {
       axisTicks: { show: false },
       labels: {
         style: {
-          colors: 'var(--bs-body-color)',
+          colors: isDarkMode ? '#ffffff' : '#1C274C',
           fontSize: '13px',
           fontFamily: 'var(--bs-body-font-family)',
         },
@@ -218,7 +233,7 @@ export default function FinanceDashboard() {
       horizontalAlign: 'center' as const,
       markers: { strokeWidth: 0 },
       labels: {
-        colors: 'var(--bs-body-color)',
+        colors: isDarkMode ? '#ffffff' : '#1C274C',
         fontSize: '12px',
         fontWeight: '600',
         fontFamily: 'var(--bs-body-font-family)',
