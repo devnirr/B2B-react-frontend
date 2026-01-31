@@ -91,10 +91,18 @@ export default function Review() {
         },
       },
       grid: {
-        borderColor: 'var(--bs-border-color)',
+        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         strokeDashArray: 5,
-        xaxis: { lines: { show: false } },
-        yaxis: { lines: { show: true } },
+        xaxis: { 
+          lines: { 
+            show: false 
+          } 
+        },
+        yaxis: { 
+          lines: { 
+            show: true,
+          } 
+        },
       },
       tooltip: {
         y: {
@@ -636,9 +644,9 @@ export default function Review() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[300px]">Product</th>
+                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[250px]">Product</th>
                   <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[100px]">Rating</th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[150px]">Total Reviews</th>
+                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[50px]">Total Reviews</th>
                 </tr>
               </thead>
               <tbody>
