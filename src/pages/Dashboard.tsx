@@ -131,6 +131,10 @@ export default function Dashboard() {
     },
   });
 
+  // Calculate percentage change for display
+  const customerChangePercent = dashboardStats?.customerChangePercent || 0;
+  const orderChangePercent = dashboardStats?.orderChangePercent || 0;
+
   // Fetch low stock items directly as fallback if not in dashboard stats
   const hasLowStockInDashboard = dashboardStats?.lowStockItems && Array.isArray(dashboardStats.lowStockItems) && dashboardStats.lowStockItems.length > 0;
   
@@ -504,9 +508,15 @@ export default function Dashboard() {
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
                         {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
                       </h2>
-                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">
-                        +2.57%
-                      </span>
+                      {customerChangePercent !== 0 && (
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          customerChangePercent > 0
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
+                        </span>
+                      )}
                     </div>
                 <div className="w-[150px] h-[120px] -mt-3 -mb-4">
                   <Chart
@@ -515,7 +525,7 @@ export default function Dashboard() {
                     width={150}
                     series={[{
                       name: 'Customers',
-                      data: [120, 350, 450, 300, 120, 250]
+                      data: dashboardStats?.customerTrend || [0, 0, 0, 0, 0, 0]
                     }]}
                     options={{
                       chart: {
@@ -568,7 +578,9 @@ export default function Dashboard() {
               </div>
               <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">Vs last month: 1,195</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+                    Vs last month: {dashboardStats?.lastMonthCustomers?.toLocaleString() || '0'}
+                  </p>
                   <button
                     onClick={() => navigate('/customers')}
                     className="text-primary hover:text-primary-dark transition-colors"
@@ -598,9 +610,15 @@ export default function Dashboard() {
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
                         {dashboardStats?.totalOrders?.toLocaleString() || '0'}
                       </h2>
-                      <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
-                        -2.57%
-                      </span>
+                      {orderChangePercent !== 0 && (
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          orderChangePercent > 0
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
+                        </span>
+                      )}
                     </div>
                   </div>
               <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
@@ -609,7 +627,7 @@ export default function Dashboard() {
                   height={120}
                   series={[{
                     name: 'Orders',
-                    data: [80, 95, 75, 90, 75, 90]
+                    data: dashboardStats?.orderTrend || [0, 0, 0, 0, 0, 0]
                   }]}
                   options={{
                     chart: {
@@ -741,14 +759,22 @@ export default function Dashboard() {
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
                         {dashboardStats?.totalOrders?.toLocaleString() || '0'}
                       </h2>
-                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">
-                        +2.57%
-                      </span>
+                      {orderChangePercent !== 0 && (
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          orderChangePercent > 0
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
+                        </span>
+                      )}
                     </div>
                   </div>
               <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">Vs last month: 1,195</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+                    Vs last month: {dashboardStats?.lastMonthOrders?.toLocaleString() || '0'}
+                  </p>
                   <button
                     onClick={() => navigate('/orders')}
                     className="text-primary hover:text-primary-dark transition-colors"
@@ -877,7 +903,15 @@ export default function Dashboard() {
                     {formatCurrency(periodRevenue).replace('$', '').split('.')[0]}.
                     <span className="text-primary">{formatCurrency(periodRevenue).split('.')[1]}</span>
                   </h2>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">+20% vs last month</span>
+                  {salesReport?.revenueChangePercent !== undefined && (
+                    <span className={`text-sm ${
+                      salesReport.revenueChangePercent >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {salesReport.revenueChangePercent >= 0 ? '+' : ''}{salesReport.revenueChangePercent.toFixed(0)}% vs last month
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="p-4 pt-0">
@@ -893,7 +927,7 @@ export default function Dashboard() {
                       height={280}
                       series={[{
                         name: 'Revenue',
-                        data: [120, 350, 450, 120, 200, 180, 300, 120, 250, 350, 250, 180]
+                        data: salesReport?.monthlyRevenue || Array(12).fill(0)
                       }]}
                       options={{
                         chart: {
@@ -923,10 +957,10 @@ export default function Dashboard() {
                         },
                         yaxis: {
                           min: 0,
-                          max: 500,
+                          max: Math.max(...(salesReport?.monthlyRevenue || [0]), 1) * 1.2,
                           tickAmount: 5,
                           labels: {
-                            formatter: (val: number) => val + 'K',
+                            formatter: (val: number) => (val / 1000).toFixed(0) + 'K',
                             style: {
                               colors: '#696981',
                               fontSize: '13px',
@@ -971,86 +1005,113 @@ export default function Dashboard() {
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="grid grid-cols-1 gap-6">
             
-            {/* Card 6: Order Sources */}
+            {/* Card 6: Order Sources - Using order types from schema */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Order Sources</h6>
+                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Order Types</h6>
               </div>
               <div className="p-4 pt-0">
-                <div style={{ height: '95px' }} className="my-1">
-                  <Chart
-                    type="bar"
-                    height={95}
-                    series={[
-                      { name: 'Website', data: [41.5] },
-                      { name: 'Phone', data: [27] },
-                      { name: 'Email', data: [18] },
-                      { name: 'Referral', data: [10.3] },
-                      { name: 'Other', data: [3.2] }
-                    ]}
-                    options={{
-                      chart: {
-                        type: 'bar',
-                        height: 95,
-                        stacked: true,
-                        stackType: '100%',
-                        toolbar: { show: false }
-                      },
-                      plotOptions: {
-                        bar: {
-                          horizontal: true,
-                          barHeight: '100%',
-                          borderRadius: 0
-                        }
-                      },
-                      dataLabels: { enabled: false },
-                      stroke: {
-                        width: 1,
-                        colors: ['#ffffff']
-                      },
-                      xaxis: {
-                        labels: { show: false },
-                        axisBorder: { show: false },
-                        axisTicks: { show: false }
-                      },
-                      yaxis: { labels: { show: false } },
-                      grid: {
-                        show: false,
-                        padding: { top: -15, bottom: -15, left: -15, right: 0 }
-                      },
-                      legend: { show: false },
-                      fill: {
-                        opacity: 1,
-                        colors: [
-                          'rgba(89, 85, 209, 0.1)',
-                          'rgba(89, 85, 209, 0.25)',
-                          'rgba(89, 85, 209, 0.50)',
-                          'rgba(89, 85, 209, 0.75)',
-                          'rgba(89, 85, 209, 1)'
-                        ]
-                      },
-                      tooltip: {
-                        enabled: true,
-                        y: { formatter: (val: number) => val + '%' }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1 mt-2">
-                  {[
-                    { label: 'Website', value: '41.50%', opacity: 'opacity-10' },
-                    { label: 'Phone', value: '27%', opacity: 'opacity-25' },
-                    { label: 'Email', value: '18%', opacity: 'opacity-50' },
-                    { label: 'Referral', value: '10.30%', opacity: 'opacity-75' },
-                    { label: 'Other', value: '3.20%', opacity: 'opacity-100' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1 text-xs py-1">
-                      <div className={`w-3 h-3 bg-primary ${item.opacity} rounded`}></div>
-                      <span className="text-gray-600 dark:text-gray-400 flex-1">{item.label}</span>
-                      <strong className="text-gray-900 dark:text-white font-semibold">{item.value}</strong>
-                    </div>
-                  ))}
-                </div>
+                {(() => {
+                  // Calculate order types breakdown from sales report
+                  const orderTypes = salesReport?.orders?.reduce((acc: any, order: any) => {
+                    const type = order.type || 'B2B';
+                    acc[type] = (acc[type] || 0) + 1;
+                    return acc;
+                  }, {}) || {};
+                  const total = Object.values(orderTypes).reduce((sum: number, val: any) => sum + val, 0) || 1;
+                  const percentages = Object.entries(orderTypes).map(([type, count]: [string, any]) => ({
+                    type,
+                    count,
+                    percentage: (count / total) * 100
+                  }));
+                  
+                  // Sort by percentage descending
+                  percentages.sort((a, b) => b.percentage - a.percentage);
+                  
+                  const chartData = percentages.map(p => p.percentage);
+                  
+                  return (
+                    <>
+                      <div style={{ height: '95px' }} className="my-1">
+                        {chartData.length > 0 ? (
+                          <Chart
+                            type="bar"
+                            height={95}
+                            series={chartData.map((val, idx) => ({ 
+                              name: percentages[idx].type, 
+                              data: [val] 
+                            }))}
+                            options={{
+                              chart: {
+                                type: 'bar',
+                                height: 95,
+                                stacked: true,
+                                stackType: '100%',
+                                toolbar: { show: false }
+                              },
+                              plotOptions: {
+                                bar: {
+                                  horizontal: true,
+                                  barHeight: '100%',
+                                  borderRadius: 0
+                                }
+                              },
+                              dataLabels: { enabled: false },
+                              stroke: {
+                                width: 1,
+                                colors: ['#ffffff']
+                              },
+                              xaxis: {
+                                labels: { show: false },
+                                axisBorder: { show: false },
+                                axisTicks: { show: false }
+                              },
+                              yaxis: { labels: { show: false } },
+                              grid: {
+                                show: false,
+                                padding: { top: -15, bottom: -15, left: -15, right: 0 }
+                              },
+                              legend: { show: false },
+                              fill: {
+                                opacity: 1,
+                                colors: [
+                                  'rgba(89, 85, 209, 0.1)',
+                                  'rgba(89, 85, 209, 0.25)',
+                                  'rgba(89, 85, 209, 0.50)',
+                                  'rgba(89, 85, 209, 0.75)',
+                                  'rgba(89, 85, 209, 1)'
+                                ]
+                              },
+                              tooltip: {
+                                enabled: true,
+                                y: { formatter: (val: number) => val.toFixed(1) + '%' }
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-gray-400">
+                            No data available
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1 mt-2">
+                        {percentages.map((item, idx) => {
+                          const opacityMap = ['opacity-10', 'opacity-25', 'opacity-50', 'opacity-75', 'opacity-100'];
+                          return (
+                            <div key={idx} className="flex items-center gap-1 text-xs py-1">
+                              <div className={`w-3 h-3 bg-primary ${opacityMap[idx] || 'opacity-100'} rounded`}></div>
+                              <span className="text-gray-600 dark:text-gray-400 flex-1">{item.type}</span>
+                              <strong className="text-gray-900 dark:text-white font-semibold">{item.percentage.toFixed(1)}%</strong>
+                            </div>
+                          );
+                        })}
+                        {percentages.length === 0 && (
+                          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No data available</div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className="p-3 bg-primary/5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Annual report</h6>
@@ -1067,21 +1128,50 @@ export default function Dashboard() {
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Customer Retention Rate</h6>
               </div>
               <div className="p-4 pb-0 pt-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">92%</h2>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">+15% vs last month</span>
-                </div>
+                {(() => {
+                  const retentionData = dashboardStats?.customerRetention || [];
+                  const avgRetention = retentionData.length > 0
+                    ? retentionData.reduce((sum: number, val: number) => sum + val, 0) / retentionData.length
+                    : 0;
+                  const prevRetention = retentionData.length > 1 ? retentionData[retentionData.length - 2] : 0;
+                  const change = prevRetention > 0 ? ((avgRetention - prevRetention) / prevRetention) * 100 : 0;
+                  
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 mb-3">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                          {avgRetention.toFixed(0)}%
+                        </h2>
+                        {change !== 0 && (
+                          <span className={`text-sm ${
+                            change >= 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {change >= 0 ? '+' : ''}{change.toFixed(0)}% vs last month
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className="p-4 pt-1 pb-0">
-                <div style={{ height: '295px' }} className="-mt-1">
-                  <Chart
-                    type="bar"
-                    height={295}
-                    series={[
-                      { name: 'SMEs', data: [40, 80, 70, 20, 20, 25] },
-                      { name: 'Startups', data: [20, 25, 25, 50, 20, 20] },
-                      { name: 'Enterprises', data: [20, 20, 20, 20, 15, 15] }
-                    ]}
+                {(() => {
+                  // Group customers by type for retention chart
+                  const retentionData = dashboardStats?.customerRetention || [];
+                  // Since we don't have customer type breakdown in retention, show overall retention trend
+                  const data = retentionData.length > 0 ? retentionData : [0, 0, 0, 0, 0, 0];
+                  
+                  return (
+                    <div style={{ height: '295px' }} className="-mt-1">
+                      <Chart
+                        type="bar"
+                        height={295}
+                        series={[{
+                          name: 'Retention Rate',
+                          data: data
+                        }]}
                     options={{
                       chart: {
                         type: 'bar',
@@ -1128,13 +1218,15 @@ export default function Dashboard() {
                         yaxis: { lines: { show: true } }
                       },
                       fill: {
-                        colors: ['#5955D1', 'rgba(89, 85, 209, 0.4)', 'rgba(89, 85, 209, 0.1)'],
+                        colors: ['#5955D1'],
                         opacity: 1
                       },
                       dataLabels: { enabled: false }
                     }}
                   />
-                </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1166,7 +1258,16 @@ export default function Dashboard() {
                       <Chart
                         type="radialBar"
                         height={350}
-                        series={[35]}
+                        series={[(() => {
+                          // Calculate completion percentage based on order status
+                          const statusBreakdown = dashboardStats?.orderStatusBreakdown || [];
+                          const completedStatuses = ['FULFILLED', 'DELIVERED', 'SHIPPED'];
+                          const completed = statusBreakdown
+                            .filter((s: any) => completedStatuses.includes(s.status))
+                            .reduce((sum: number, s: any) => sum + s.count, 0);
+                          const total = statusBreakdown.reduce((sum: number, s: any) => sum + s.count, 0) || 1;
+                          return total > 0 ? (completed / total) * 100 : 0;
+                        })()]}
                         options={{
                           chart: {
                             type: 'radialBar',
@@ -1211,28 +1312,46 @@ export default function Dashboard() {
                         {dashboardStats?.totalOrders || 673} Orders
                       </div>
                     </div>
-                    <div className="px-4 mb-3 flex items-start justify-between">
-                      <div className="flex items-start gap-2">
-                        <div className="py-1">
-                          <div className="w-3 h-3 bg-white rounded"></div>
+                    {(() => {
+                      // Calculate shipments and pickups from orders
+                      const orders = salesReport?.orders || [];
+                      const shipments = orders.filter((o: any) => 
+                        ['SHIPPED', 'IN_TRANSIT', 'DELIVERED'].includes(o.status)
+                      ).length;
+                      const pickups = orders.filter((o: any) => 
+                        ['PICKED', 'PACKED'].includes(o.status)
+                      ).length;
+                      const shippedRevenue = orders
+                        .filter((o: any) => ['SHIPPED', 'IN_TRANSIT', 'DELIVERED'].includes(o.status))
+                        .reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
+                      
+                      return (
+                        <div className="px-4 mb-3 flex items-start justify-between">
+                          <div className="flex items-start gap-2">
+                            <div className="py-1">
+                              <div className="w-3 h-3 bg-white rounded"></div>
+                            </div>
+                            <div>
+                              <h3 className="mb-0 text-white font-bold text-lg">
+                                {formatCurrency(shippedRevenue).split('.')[0]}
+                              </h3>
+                              <p className="text-white/50 mb-0 text-sm">{pickups} Pickups</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <div className="p-1">
+                              <div className="w-3 h-3 bg-white/50 rounded"></div>
+                            </div>
+                            <div>
+                              <h3 className="mb-0 text-white font-bold text-lg">
+                                {formatCurrency(shippedRevenue).split('.')[0]}
+                              </h3>
+                              <p className="text-white/50 mb-0 text-sm">{shipments} Shipments</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="mb-0 text-white font-bold text-lg">
-                            {formatCurrency(periodRevenue * 0.5).split('.')[0]}m
-                          </h3>
-                          <p className="text-white/50 mb-0 text-sm">245 Pickups</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="p-1">
-                          <div className="w-3 h-3 bg-white/50 rounded"></div>
-                        </div>
-                        <div>
-                          <h3 className="mb-0 text-white font-bold text-lg">$65,823</h3>
-                          <p className="text-white/50 mb-0 text-sm">120 Shipments</p>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                   <div className="p-4 border-0">
                     <h6 className="text-sm font-semibold text-white mb-3">Orders Status</h6>
@@ -1247,21 +1366,49 @@ export default function Dashboard() {
                         <div className="h-2 bg-white/25 rounded"></div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      {[
-                        { label: 'Paid', value: '70%', opacity: 'opacity-100' },
-                        { label: 'Cancelled', value: '25%', opacity: 'opacity-50' },
-                        { label: 'Refunded', value: '5%', opacity: 'opacity-25' }
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 bg-white ${item.opacity} rounded`}></div>
-                            <h6 className="font-light text-white mb-0 text-sm">{item.label}</h6>
-                          </div>
-                          <strong className="text-white font-semibold">{item.value}</strong>
+                    {(() => {
+                      const statusBreakdown = dashboardStats?.orderStatusBreakdown || [];
+                      const total = statusBreakdown.reduce((sum: number, s: any) => sum + s.count, 0) || 1;
+                      
+                      // Map statuses to display labels
+                      const statusMap: Record<string, string> = {
+                        'FULFILLED': 'Fulfilled',
+                        'DELIVERED': 'Delivered',
+                        'SHIPPED': 'Shipped',
+                        'CANCELLED': 'Cancelled',
+                        'RETURNED': 'Returned',
+                        'PENDING': 'Pending',
+                        'PROCESSING': 'Processing',
+                      };
+                      
+                      // Get top 3 statuses
+                      const topStatuses = statusBreakdown
+                        .sort((a: any, b: any) => b.count - a.count)
+                        .slice(0, 3);
+                      
+                      const opacityMap = ['opacity-100', 'opacity-50', 'opacity-25'];
+                      
+                      return (
+                        <div className="space-y-2">
+                          {topStatuses.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 bg-white ${opacityMap[idx] || 'opacity-25'} rounded`}></div>
+                                <h6 className="font-light text-white mb-0 text-sm">
+                                  {statusMap[item.status] || item.status}
+                                </h6>
+                              </div>
+                              <strong className="text-white font-semibold">
+                                {((item.count / total) * 100).toFixed(0)}%
+                              </strong>
+                            </div>
+                          ))}
+                          {topStatuses.length === 0 && (
+                            <div className="text-center text-sm text-white/50 py-2">No data available</div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </>
               )}
@@ -1279,17 +1426,20 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="p-4 p-0">
-                  <div style={{ height: '250px' }} className="-mt-3 -mb-1">
-                    <Chart
-                      type="heatmap"
-                      height={250}
-                      series={[
-                        { name: '8am', data: [10, 12, 8, 15, 5, 7, 9] },
-                        { name: '10am', data: [20, 25, 18, 30, 12, 15, 10] },
-                        { name: '12pm', data: [30, 28, 22, 50, 25, 20, 18] },
-                        { name: '2pm', data: [15, 18, 12, 22, 28, 25, 14] },
-                        { name: '4pm', data: [10, 14, 9, 18, 20, 15, 12] }
-                      ]}
+                  {(() => {
+                    const ordersByTime = dashboardStats?.ordersByTime;
+                    const timeSlots = ordersByTime?.timeSlots || ['8am', '10am', '12pm', '2pm', '4pm'];
+                    const data = ordersByTime?.data || [];
+                    
+                    return (
+                      <div style={{ height: '250px' }} className="-mt-3 -mb-1">
+                        <Chart
+                          type="heatmap"
+                          height={250}
+                          series={timeSlots.map((slot: string, idx: number) => ({
+                            name: slot,
+                            data: data[idx] || [0, 0, 0, 0, 0, 0, 0]
+                          }))}
                       options={{
                         chart: {
                           height: 250,
@@ -1329,7 +1479,7 @@ export default function Dashboard() {
                           }
                         },
                         xaxis: {
-                          categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                          categories: ordersByTime?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                           axisBorder: { show: false },
                           axisTicks: { show: false },
                           labels: {
@@ -1343,7 +1493,9 @@ export default function Dashboard() {
                         legend: { show: false }
                       }}
                     />
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

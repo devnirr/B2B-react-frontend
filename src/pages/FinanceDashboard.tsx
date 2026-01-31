@@ -147,7 +147,7 @@ export default function FinanceDashboard() {
       },
       {
         name: 'Expenses',
-        data: new Array(chartData.revenueData.length || 1).fill(0), // Expenses would need separate endpoint
+        data: new Array(chartData.revenueData.length || 1).fill(0), // Expenses not available in current schema
       },
     ],
     chart: {
@@ -257,9 +257,8 @@ export default function FinanceDashboard() {
     },
   };
 
-  // Monthly Status Chart
+  // Monthly Status Chart - will be configured dynamically
   const monthlyStatusChartConfig = {
-    series: [92],
     chart: {
       type: 'radialBar' as const,
       offsetY: 0,
@@ -284,7 +283,7 @@ export default function FinanceDashboard() {
             fontFamily: 'var(--bs-body-font-family)',
             fontWeight: 600,
             color: '#000000',
-            formatter: () => '75K',
+            formatter: () => '',
           },
         },
       },
@@ -362,12 +361,61 @@ export default function FinanceDashboard() {
   };
 
   // Calculate stats from real data
-  const totalRevenue = salesReport?.totalRevenue || 0;
+  // Calculate total revenue from orders if totalRevenue is not available
+  const calculateTotalRevenue = () => {
+    if (salesReport?.totalRevenue) {
+      return salesReport.totalRevenue;
+    }
+    // Calculate from orders if totalRevenue is not provided
+    const orders = salesReport?.orders || [];
+    return orders.reduce((sum: number, order: any) => {
+      return sum + (Number(order.totalAmount || 0));
+    }, 0);
+  };
+  
+  const totalRevenue = calculateTotalRevenue();
   const totalExpenses = 0; // Expenses would need a separate endpoint
   const netProfit = totalRevenue - totalExpenses;
   const pendingInvoices = (salesReport?.orders || []).filter((o: any) => 
     ['pending', 'processing'].includes((o.status || '').toLowerCase())
   ).length;
+  
+  // Calculate today's revenue
+  const todayRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
+    const orderDate = new Date(order.orderDate || order.createdAt);
+    const today = new Date();
+    if (
+      orderDate.getDate() === today.getDate() &&
+      orderDate.getMonth() === today.getMonth() &&
+      orderDate.getFullYear() === today.getFullYear()
+    ) {
+      return sum + (Number(order.totalAmount || 0));
+    }
+    return sum;
+  }, 0);
+  
+  // Calculate monthly target progress
+  // Use current month's revenue as target baseline, or set a reasonable target
+  const currentMonthRevenue = (() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return (salesReport?.orders || []).reduce((sum: number, order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      if (orderDate >= monthStart) {
+        return sum + Number(order.totalAmount || 0);
+      }
+      return sum;
+    }, 0);
+  })();
+  
+  // Set target as 1.5x of current month revenue, or 75000 if no revenue
+  const monthlyTarget = currentMonthRevenue > 0 ? currentMonthRevenue * 1.5 : 75000;
+  const monthlyTargetProgress = monthlyTarget > 0 ? (currentMonthRevenue / monthlyTarget) * 100 : 0;
+  const monthlyTargetOrders = (salesReport?.orders || []).filter((o: any) => {
+    const orderDate = new Date(o.orderDate || o.createdAt);
+    const now = new Date();
+    return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
+  }).length;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -428,7 +476,7 @@ export default function FinanceDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {totalRevenue === 0 ? (
+            {isLoading ? (
               <div className="flex flex-col items-center justify-center py-4">
                 <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
@@ -447,12 +495,13 @@ export default function FinanceDashboard() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {totalExpenses === 0 ? (
+            {!salesReport && isLoading ? (
               <div className="flex flex-col items-center justify-center py-4">
                 <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
               </div>
             ) : (
+              // Expenses endpoint doesn't exist, so we show 0 or placeholder
               <div className="flex gap-3 items-center">
                 <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                   <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -466,7 +515,27 @@ export default function FinanceDashboard() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {netProfit === 0 ? (
+            {!salesReport && isLoading ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              </div>
+            ) : (
+              // Expenses endpoint doesn't exist, so we show 0 or placeholder
+              <div className="flex gap-3 items-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            {isLoading ? (
               <div className="flex flex-col items-center justify-center py-4">
                 <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
@@ -485,7 +554,7 @@ export default function FinanceDashboard() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {pendingInvoices === 0 ? (
+            {isLoading ? (
               <div className="flex flex-col items-center justify-center py-4">
                 <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
@@ -550,7 +619,12 @@ export default function FinanceDashboard() {
                   )}
                 </div>
               </div>
-              {chartData.revenueData.length === 0 || chartData.revenueData.every((val: number) => val === 0) ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : chartData.revenueData.length === 0 || chartData.revenueData.every((val: number) => val === 0) ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
                   <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
@@ -567,7 +641,12 @@ export default function FinanceDashboard() {
               <div className="border-b border-gray-200 dark:border-gray-700 mb-4 pb-4">
                 <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Expense Breakdown</h6>
               </div>
-              {expenseChartData.datasets[0].data.every((val: number) => val === 0) ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
+                </div>
+              ) : expenseChartData.datasets[0].data.every((val: number) => val === 0) ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
                   <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
@@ -610,7 +689,12 @@ export default function FinanceDashboard() {
                 <MoreVertical className="w-4 h-4 text-white" />
               </button>
             </div>
-            {totalRevenue === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 flex-1">
+                <Inbox className="w-12 h-12 text-white/50 mb-3" />
+                <span className="text-sm text-white/70">No Data Available</span>
+              </div>
+            ) : totalRevenue === 0 && (salesReport?.orders || []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 flex-1">
                 <Inbox className="w-12 h-12 text-white/50 mb-3" />
                 <span className="text-sm text-white/70">No Data Available</span>
@@ -618,16 +702,46 @@ export default function FinanceDashboard() {
             ) : (
               <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
                 <div className="flex gap-2 items-center mb-3">
-                  <h2 className="mb-0 text-white text-2xl font-bold">92%</h2>
-                  <span className="text-white text-sm">+15% vs last month</span>
+                  <h2 className="mb-0 text-white text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
+                  {salesReport?.revenueChangePercent !== undefined && (
+                    <span className={`text-white text-sm ${
+                      salesReport.revenueChangePercent >= 0 ? 'text-green-200' : 'text-red-200'
+                    }`}>
+                      {salesReport.revenueChangePercent >= 0 ? '+' : ''}{salesReport.revenueChangePercent.toFixed(0)}% vs last month
+                    </span>
+                  )}
                 </div>
                 <div className="mb-5 relative -z-10 flex-1 flex items-center justify-center">
-                  <Chart type="radialBar" height={350} series={monthlyStatusChartConfig.series} options={monthlyStatusChartConfig} />
-                  <div className="-mt-10 text-center text-white font-semibold">673 Orders</div>
+                  <Chart 
+                    type="radialBar" 
+                    height={350} 
+                    series={[Math.min(100, Math.max(0, monthlyTargetProgress))]} 
+                    options={{
+                      ...monthlyStatusChartConfig,
+                      plotOptions: {
+                        ...monthlyStatusChartConfig.plotOptions,
+                        radialBar: {
+                          ...monthlyStatusChartConfig.plotOptions.radialBar,
+                          dataLabels: {
+                            ...monthlyStatusChartConfig.plotOptions.radialBar.dataLabels,
+                            value: {
+                              ...monthlyStatusChartConfig.plotOptions.radialBar.dataLabels.value,
+                              formatter: () => `${(currentMonthRevenue / 1000).toFixed(0)}K`,
+                            },
+                          },
+                        },
+                      },
+                    }} 
+                  />
+                  <div className="-mt-10 text-center text-white font-semibold">{monthlyTargetOrders} Orders</div>
                 </div>
                 <div className="text-center px-3 mb-4">
                   <p className="text-white mb-0 text-sm">
-                    You earn <strong className="text-yellow-300">$7540</strong> today, its higher than last month keep up your good trends!
+                    {todayRevenue > 0 ? (
+                      <>You earn <strong className="text-yellow-300">{formatCurrency(todayRevenue)}</strong> today{todayRevenue > 0 ? ', keep up your good trends!' : '.'}</>
+                    ) : (
+                      <>No revenue recorded today yet.</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -635,17 +749,17 @@ export default function FinanceDashboard() {
             <div className="p-4 border-t border-white/10 pt-3">
               <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-lg flex">
                 <div className="text-center flex-1 py-2">
-                  <h4 className="mb-0 text-gray-900 dark:text-white">$75K</h4>
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(monthlyTarget / 1000).toFixed(0)}K</h4>
                   <span className="text-primary text-xs font-semibold block">Target</span>
                 </div>
                 <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
                 <div className="text-center flex-1 py-2">
-                  <h4 className="mb-0 text-gray-900 dark:text-white">$15k</h4>
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(currentMonthRevenue / 1000).toFixed(0)}k</h4>
                   <span className="text-primary text-xs font-semibold block">Revenue</span>
                 </div>
                 <div className="w-px bg-gray-300 dark:bg-gray-600 opacity-50"></div>
                 <div className="text-center flex-1 py-2">
-                  <h4 className="mb-0 text-gray-900 dark:text-white">$8.5k</h4>
+                  <h4 className="mb-0 text-gray-900 dark:text-white">${(todayRevenue / 1000).toFixed(1)}k</h4>
                   <span className="text-primary text-xs font-semibold block">Today</span>
                 </div>
               </div>
@@ -683,25 +797,36 @@ export default function FinanceDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredTransactions.map((tx: any, idx: number) => (
-                <tr key={idx} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-xs">
-                        {tx.name.charAt(0)}
-                      </div>
-                      <span className="text-gray-900 dark:text-white">{tx.name}</span>
+              {filteredTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">No Transactions Found</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.date}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.description}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.category}</td>
-                  <td className={`px-4 py-3 font-bold ${tx.amount.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {tx.amount}
-                  </td>
-                  <td className="px-4 py-3">{getStatusBadge(tx.status)}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredTransactions.map((tx: any, idx: number) => (
+                  <tr key={idx} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-xs">
+                          {tx.name.charAt(0)}
+                        </div>
+                        <span className="text-gray-900 dark:text-white">{tx.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.date}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.description}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tx.category}</td>
+                    <td className={`px-4 py-3 font-bold ${tx.amount.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {tx.amount}
+                    </td>
+                    <td className="px-4 py-3">{getStatusBadge(tx.status)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
