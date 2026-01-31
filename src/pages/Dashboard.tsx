@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, MoreVertical, Calendar, Search, Plus, Trash2 } from 'lucide-react';
+import { Package, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, MoreVertical, Calendar, Search, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SkeletonStatsCard, SkeletonTable } from '../components/Skeleton';
 import Chart from 'react-apexcharts';
 import { Doughnut } from 'react-chartjs-2';
@@ -45,6 +45,73 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerPage, setCustomerPage] = useState(1);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    };
+
+    if (isCalendarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCalendarOpen]);
+
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const handleDateSelect = (day: number) => {
+    const selected = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+    setSelectedDate(selected);
+    setIsCalendarOpen(false);
+  };
+
+  const isToday = (day: number) => {
+    const today = new Date();
+    return (
+      day === today.getDate() &&
+      calendarDate.getMonth() === today.getMonth() &&
+      calendarDate.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const isSelected = (day: number) => {
+    if (!selectedDate) return false;
+    return (
+      day === selectedDate.getDate() &&
+      calendarDate.getMonth() === selectedDate.getMonth() &&
+      calendarDate.getFullYear() === selectedDate.getFullYear()
+    );
+  };
+
   const [tasks, setTasks] = useState<Task[]>([
     { id: '1', text: 'Review monthly sales report', completed: false, time: '04:25PM' },
     { id: '2', text: 'Follow up with new customers', completed: true, time: '04:25PM', color: 'blue' },
@@ -698,9 +765,91 @@ export default function Dashboard() {
                       </button>
                     ))}
                   </div>
-                  <button className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                    <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </button>
+                  <div className="relative" ref={calendarRef}>
+                    <button 
+                      onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                      className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    </button>
+                    {isCalendarOpen && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                        {/* Calendar Header */}
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary/10 to-purple-500/10">
+                          <div className="flex items-center justify-between mb-3">
+                            <button
+                              onClick={() => navigateMonth('prev')}
+                              className="p-1.5 hover:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors"
+                            >
+                              <ChevronLeft className="w-5 h-5 text-primary dark:text-primary-300" />
+                            </button>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h3>
+                            <button
+                              onClick={() => navigateMonth('next')}
+                              className="p-1.5 hover:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors"
+                            >
+                              <ChevronRight className="w-5 h-5 text-primary dark:text-primary-300" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Calendar Days */}
+                        <div className="p-4">
+                          {/* Day names */}
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                              <div
+                                key={day}
+                                className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 py-2"
+                              >
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Calendar grid */}
+                          <div className="grid grid-cols-7 gap-1">
+                            {Array.from({ length: getFirstDayOfMonth(calendarDate) }).map((_, index) => (
+                              <div key={`empty-${index}`} className="aspect-square"></div>
+                            ))}
+                            {Array.from({ length: getDaysInMonth(calendarDate) }, (_, i) => i + 1).map((day) => (
+                              <button
+                                key={day}
+                                onClick={() => handleDateSelect(day)}
+                                className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${
+                                  isSelected(day)
+                                    ? 'bg-primary text-white shadow-lg scale-110'
+                                    : isToday(day)
+                                    ? 'bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-300 font-bold border-2 border-primary'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Calendar Footer */}
+                        {selectedDate && (
+                          <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                              Selected: <span className="font-semibold text-gray-900 dark:text-white">
+                                {selectedDate.toLocaleDateString('en-US', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="p-4 py-0">
