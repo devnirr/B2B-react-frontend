@@ -1480,10 +1480,10 @@ export default function Dashboard() {
                             const count = reviewsStats.ratingDistribution[rating] || 0;
                             return (
                               <div key={rating} className="flex items-center justify-between">
-                                <span className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
                                   {count.toLocaleString()} reviews with {rating} {rating === 1 ? 'point' : 'points'}
                                 </span>
-                                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {totalReviews > 0 ? ((count / totalReviews) * 100).toFixed(1) : 0}%
                                 </span>
                               </div>

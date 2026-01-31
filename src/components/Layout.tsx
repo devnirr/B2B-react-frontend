@@ -706,25 +706,25 @@ export default function Layout({ children }: LayoutProps) {
                       <Link
                         to="/profile"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <User className="w-4 h-4" />
+                        <User className="w-4 h-4 text-gray-900 dark:text-white" />
                         View Profile
                       </Link>
                       <Link
                         to="/tasks"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-4 h-4 text-gray-900 dark:text-white" />
                         My Task
                       </Link>
                       <Link
                         to="/settings"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <Settings className="w-4 h-4" />
+                        <Settings className="w-4 h-4 text-gray-900 dark:text-white" />
                         Account Settings
                       </Link>
                       <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
