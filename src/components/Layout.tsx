@@ -423,9 +423,9 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                 title="Documents & Tasks"
               >
-                <FileText className="w-5 h-5 text-gray-700 dark:text-white" />
+                <i className="fi fi-rr-file text-xl text-gray-700 dark:text-white"></i>
                 {unreadDocumentsCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                  <span className="absolute top-0 right-0 w-3 h-3 bg-primary-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                 )}
               </button>
 
@@ -510,9 +510,9 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                 title="Notifications"
               >
-                <Bell className="w-5 h-5 text-gray-700 dark:text-white" />
+                <i className="fi fi-rr-bell text-xl text-gray-700 dark:text-white"></i>
                 {unreadNotificationsCount > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                 )}
               </button>
 
@@ -597,7 +597,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 title="Calendar & Events"
               >
-                <Calendar className="w-5 h-5 text-gray-700 dark:text-white" />
+                <i className="fi fi-rr-calendar text-xl text-gray-700 dark:text-white"></i>
               </button>
 
               {calendarDropdownOpen && (

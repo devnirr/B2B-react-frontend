@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import api from '../lib/api';
-import { BarChart3, DollarSign, ShoppingCart, Users, Package, ArrowUp, ArrowDown, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart3, Package, ArrowUp, ArrowDown, TrendingUp, PieChart as PieChartIcon, ShoppingCart } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { SkeletonStatsCard, SkeletonChart, SkeletonTable } from '../components/Skeleton';
 
@@ -276,7 +276,7 @@ export default function Analytics() {
       title: 'Total Revenue',
       value: `$${analyticsData?.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`,
       change: analyticsData?.revenueGrowth || 0,
-      icon: DollarSign,
+      flaticonClass: 'fi fi-rr-dollar',
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
     },
@@ -284,7 +284,7 @@ export default function Analytics() {
       title: 'Total Orders',
       value: analyticsData?.orderCount?.toLocaleString() || '0',
       change: analyticsData?.orderGrowth || 0,
-      icon: ShoppingCart,
+      flaticonClass: 'fi fi-rr-shopping-cart',
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     },
@@ -292,7 +292,7 @@ export default function Analytics() {
       title: 'Total Customers',
       value: analyticsData?.customerCount?.toLocaleString() || '0',
       change: analyticsData?.customerGrowth || 0,
-      icon: Users,
+      flaticonClass: 'fi fi-rr-users',
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     },
@@ -300,7 +300,7 @@ export default function Analytics() {
       title: 'Average Order Value',
       value: `$${analyticsData?.averageOrderValue?.toFixed(2) || '0.00'}`,
       change: 5.2,
-      icon: Package,
+      flaticonClass: 'fi fi-rr-box',
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     },
@@ -337,7 +337,6 @@ export default function Analytics() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {stats.map((stat, index) => {
-          const Icon = stat.icon;
           const isPositive = stat.change >= 0;
           return (
             <div
@@ -346,13 +345,13 @@ export default function Analytics() {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 ${stat.color}`} />
+                  <i className={`${stat.flaticonClass} text-2xl ${stat.color}`}></i>
                 </div>
                 <div className={`flex items-center gap-1 text-sm font-medium ${
                   isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {isPositive ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  {Math.abs(stat.change)}%
+                  {Math.abs(stat.change).toFixed(2)}%
                 </div>
               </div>
               <h3 className="text-sm font-medium text-gray-600 dark:text-white mb-1">{stat.title}</h3>
