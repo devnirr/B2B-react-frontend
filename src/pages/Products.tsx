@@ -327,7 +327,7 @@ export default function Products() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Products</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Products</h1>
           </div>
           {(!data?.data || data.data.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
@@ -357,30 +357,30 @@ export default function Products() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Collection</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sizes</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Colors</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Collection</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Sizes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Colors</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data.data.map((product: any) => (
                 <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-black">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                   {product.sku}
                 </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                   {product.name}
                 </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                   {product.collection?.name || '-'}
                 </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                   {product.sizes?.join(', ') || '-'}
                 </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                   {product.colors?.join(', ') || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -416,7 +416,7 @@ export default function Products() {
 
       {data?.data && data.data.length > 0 && (
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-gray-600 dark:text-white">
             Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
             <span className="font-medium text-gray-900 dark:text-white">
               {Math.min((page + 1) * 10, data?.total || 0)}

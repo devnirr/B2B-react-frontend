@@ -434,7 +434,7 @@ export default function Collections() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-black">Collections</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Collections</h1>
           </div>
           {(!collections || collections.length === 0) ? null : (
             <ButtonWithWaves onClick={openModal}>
@@ -494,7 +494,7 @@ export default function Collections() {
                   </div>
                   
                   {/* Season and Drop Information */}
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  <p className="text-sm text-gray-700 dark:text-white mb-3">
                     {collection.season ? `Season: ${collection.season}` : 'Season: -'}
                     {collection.season || collection.drop ? ' • ' : ''}
                     {collection.drop ? `Drop: ${collection.drop}` : collection.season ? 'Drop: -' : ''}
@@ -510,14 +510,14 @@ export default function Collections() {
               }`}>
                 {collection.lifecycle}
               </span>
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-sm text-gray-700 dark:text-white">
                 {collection._count?.products || 0} products
               </span>
                   </div>
                   
                   {/* Collection Identifier at Bottom */}
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{collection.id}{collection.id}</p>
+                    <p className="text-sm text-gray-600 dark:text-white">{collection.id}{collection.id}</p>
                   </div>
                 </div>
                 ))}
@@ -528,7 +528,7 @@ export default function Collections() {
             {totalCollections > 0 && (
               <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm text-gray-600 dark:text-white">
                     Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCollections)} of {totalCollections} entries
                   </span>
                 </div>
@@ -536,7 +536,7 @@ export default function Collections() {
                 <div className="flex items-center gap-2">
                   {/* Items per page selector */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show:</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-white">Show:</span>
                     <ItemsPerPageSelector
                       value={itemsPerPage}
                       onChange={(newValue) => {
@@ -554,7 +554,7 @@ export default function Collections() {
                     <button
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                       title="First page"
                     >
                       &lt;&lt;
@@ -562,10 +562,10 @@ export default function Collections() {
                     <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
                       title="Previous page"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4 text-gray-900 dark:text-white" />
                     </button>
                     
                     {/* Page numbers */}
@@ -588,7 +588,7 @@ export default function Collections() {
                           className={`px-3 py-1.5 text-sm border rounded transition-colors ${
                             currentPage === pageNum
                               ? 'bg-primary text-white border-primary'
-                              : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                              : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
                           }`}
                         >
                           {pageNum}
@@ -599,15 +599,15 @@ export default function Collections() {
                     <button
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
                       title="Next page"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4 text-gray-900 dark:text-white" />
                     </button>
                     <button
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                       title="Last page"
                     >
                       &gt;&gt;

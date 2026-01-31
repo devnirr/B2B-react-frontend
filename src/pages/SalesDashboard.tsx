@@ -324,7 +324,7 @@ export default function SalesDashboard() {
             fontSize: '28px',
             fontFamily: 'var(--bs-body-font-family)',
             fontWeight: 600,
-            color: 'var(--bs-dark)',
+            color: isDarkMode ? '#ffffff' : '#1C274C',
             formatter: () => `${Math.min(100, monthlyTargetProgress).toFixed(1)}%`,
           },
         },

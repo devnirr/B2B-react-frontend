@@ -446,7 +446,7 @@ export default function FinanceDashboard() {
                     <Coins className="w-6 h-6 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
                   </div>
                 </div>
@@ -466,7 +466,7 @@ export default function FinanceDashboard() {
                     <CreditCard className="w-6 h-6 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
                   </div>
                 </div>
@@ -485,7 +485,7 @@ export default function FinanceDashboard() {
                     <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
                   </div>
                 </div>
@@ -504,7 +504,7 @@ export default function FinanceDashboard() {
                     <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
                   </div>
                 </div>
@@ -517,7 +517,7 @@ export default function FinanceDashboard() {
             {/* Revenue vs Expenses Chart */}
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
                 <div className="relative" ref={yearDropdownRef}>
                   <button
                     onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
@@ -576,7 +576,7 @@ export default function FinanceDashboard() {
             {/* Revenue Summary */}
             <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="border-b border-gray-200 dark:border-gray-700 mb-4 pb-4">
-                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Revenue Summary</h6>
+                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue Summary</h6>
               </div>
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
@@ -694,7 +694,7 @@ export default function FinanceDashboard() {
               style={{ mixBlendMode: 'overlay' }}
             />
             <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
-              <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
+              <h6 className="text-lg font-semibold text-white mb-0">Monthly Target</h6>
             </div>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12 flex-1">
@@ -813,7 +813,7 @@ export default function FinanceDashboard() {
       {/* Recent Transactions Table */}
       <div className="mt-5 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between">
-          <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Recent Transactions</h6>
+          <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Recent Transactions</h6>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
