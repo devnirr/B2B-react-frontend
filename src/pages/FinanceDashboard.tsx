@@ -195,44 +195,6 @@ export default function FinanceDashboard() {
     },
   };
 
-  // Monthly Status Chart - will be configured dynamically
-  const monthlyStatusChartConfig = {
-    chart: {
-      type: 'radialBar' as const,
-      offsetY: 0,
-      height: 350,
-      sparkline: { enabled: true },
-    },
-    plotOptions: {
-      radialBar: {
-        startAngle: -95,
-        endAngle: 95,
-        track: {
-          background: 'rgba(255, 255, 255, 0.3)',
-          strokeWidth: '100%',
-          margin: 25,
-        },
-        dataLabels: {
-          name: { show: false },
-          value: {
-            show: true,
-            offsetY: -35,
-            fontSize: '28px',
-            fontFamily: 'var(--bs-body-font-family)',
-            fontWeight: 600,
-            color: '#000000',
-            formatter: () => '',
-          },
-        },
-      },
-    },
-    grid: {
-      padding: { top: 0, bottom: 0, left: 0, right: 0 },
-    },
-    fill: {
-      colors: ['#FFFFFF'],
-    },
-  };
 
   // Transform orders to transactions format
   const transactions = (salesReport?.orders || []).slice(0, 10).map((order: any) => {
@@ -314,9 +276,44 @@ export default function FinanceDashboard() {
   const totalRevenue = calculateTotalRevenue();
   const totalExpenses = 0; // Expenses would need a separate endpoint
   const netProfit = totalRevenue - totalExpenses;
-  const pendingInvoices = (salesReport?.orders || []).filter((o: any) => 
-    ['pending', 'processing'].includes((o.status || '').toLowerCase())
-  ).length;
+  const pendingInvoices = (salesReport?.orders || []).filter((order: any) => {
+    const status = (order.status || '').toUpperCase();
+    return ['PENDING', 'DRAFT', 'CONFIRMED'].includes(status);
+  }).length;
+
+  // Calculate order status breakdown for Sales Status
+  const calculateSalesStatus = () => {
+    const orders = salesReport?.orders || [];
+    const statusCounts: Record<string, number> = {
+      paid: 0,
+      cancelled: 0,
+      refunded: 0,
+    };
+
+    orders.forEach((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      if (['FULFILLED', 'DELIVERED', 'SHIPPED', 'COMPLETED', 'PAID'].includes(status)) {
+        statusCounts.paid++;
+      } else if (['CANCELLED', 'CANCELED'].includes(status)) {
+        statusCounts.cancelled++;
+      } else if (['RETURNED', 'REFUNDED'].includes(status)) {
+        statusCounts.refunded++;
+      } else {
+        // Default to paid for other statuses
+        statusCounts.paid++;
+      }
+    });
+
+    const total = orders.length || 1;
+    return {
+      paid: Math.round((statusCounts.paid / total) * 100),
+      cancelled: Math.round((statusCounts.cancelled / total) * 100),
+      refunded: Math.round((statusCounts.refunded / total) * 100),
+      totalOrders: orders.length,
+    };
+  };
+
+  const salesStatus = calculateSalesStatus();
   
   // Calculate today's revenue
   const todayRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
@@ -349,11 +346,6 @@ export default function FinanceDashboard() {
   // Set target as 1.5x of current month revenue, or 75000 if no revenue
   const monthlyTarget = currentMonthRevenue > 0 ? currentMonthRevenue * 1.5 : 75000;
   const monthlyTargetProgress = monthlyTarget > 0 ? (currentMonthRevenue / monthlyTarget) * 100 : 0;
-  const monthlyTargetOrders = (salesReport?.orders || []).filter((o: any) => {
-    const orderDate = new Date(o.orderDate || o.createdAt);
-    const now = new Date();
-    return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
-  }).length;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -680,8 +672,8 @@ export default function FinanceDashboard() {
             backgroundPosition: 'center',
             backgroundSize: 'cover'
           }}>
-            <div className="p-4 border-b border-white/10 flex items-center justify-between relative z-10">
-              <h6 className="text-sm font-semibold text-white mb-0">Monthly Target</h6>
+            <div className="p-4 pb-0 border-0 flex items-center justify-between relative z-10">
+              <h6 className="text-sm font-semibold text-black mb-0">Monthly Target</h6>
               <button className="p-1 hover:bg-white/20 rounded transition-colors">
                 <MoreVertical className="w-4 h-4 text-white" />
               </button>
@@ -698,44 +690,79 @@ export default function FinanceDashboard() {
               </div>
             ) : (
               <div className="p-4 pt-2 pb-0 flex-1 flex flex-col">
-                <div className="flex gap-2 items-center mb-3">
-                  <h2 className="mb-0 text-white text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
-                  {salesReport?.revenueChangePercent !== undefined && (
-                    <span className={`text-white text-sm ${
-                      salesReport.revenueChangePercent >= 0 ? 'text-green-200' : 'text-red-200'
-                    }`}>
-                      {salesReport.revenueChangePercent >= 0 ? '+' : ''}{salesReport.revenueChangePercent.toFixed(0)}% vs last month
-                    </span>
-                  )}
+                <div className="flex gap-2 items-center mb-0">
+                  <h2 className="mb-0 text-black text-2xl font-bold">{Math.min(100, monthlyTargetProgress).toFixed(0)}%</h2>
+                  {(() => {
+                    // Calculate last month revenue for comparison
+                    const now = new Date();
+                    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+                    const lastMonthRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
+                      const orderDate = new Date(order.orderDate || order.createdAt);
+                      if (orderDate >= lastMonthStart && orderDate <= lastMonthEnd) {
+                        return sum + Number(order.totalAmount || 0);
+                      }
+                      return sum;
+                    }, 0);
+                    const changePercent = lastMonthRevenue > 0 
+                      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+                      : 0;
+                    return changePercent !== 0 ? (
+                      <span className="text-black text-sm">
+                        {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(0)}% vs last month
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
-                <div className="mb-5 relative -z-10 flex-1 flex items-center justify-center">
+                <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '350px' }}>
                   <Chart 
                     type="radialBar" 
                     height={350} 
                     series={[Math.min(100, Math.max(0, monthlyTargetProgress))]} 
                     options={{
-                      ...monthlyStatusChartConfig,
+                      chart: {
+                        type: 'radialBar' as const,
+                        offsetY: 0,
+                        height: 350,
+                        sparkline: { enabled: true },
+                      },
                       plotOptions: {
-                        ...monthlyStatusChartConfig.plotOptions,
                         radialBar: {
-                          ...monthlyStatusChartConfig.plotOptions.radialBar,
+                          startAngle: -95,
+                          endAngle: 95,
+                          track: {
+                            background: 'rgba(255, 255, 255, 0.3)',
+                            strokeWidth: '100%',
+                            margin: 25,
+                          },
                           dataLabels: {
-                            ...monthlyStatusChartConfig.plotOptions.radialBar.dataLabels,
+                            name: { show: false },
                             value: {
-                              ...monthlyStatusChartConfig.plotOptions.radialBar.dataLabels.value,
+                              show: true,
+                              offsetY: -35,
+                              fontSize: '28px',
+                              fontFamily: 'var(--bs-body-font-family)',
+                              fontWeight: 600,
+                              color: '#FFFFFF',
                               formatter: () => `${(currentMonthRevenue / 1000).toFixed(0)}K`,
                             },
                           },
                         },
                       },
+                      grid: {
+                        padding: { top: 0, bottom: 0, left: 0, right: 0 },
+                      },
+                      fill: {
+                        colors: ['#FFFFFF'],
+                      },
                     }} 
                   />
-                  <div className="-mt-10 text-center text-white font-semibold">{monthlyTargetOrders} Orders</div>
+                  <div className="absolute bottom-0 left-0 right-0 text-center text-black font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
                 </div>
-                <div className="text-center px-3 mb-4">
-                  <p className="text-white mb-0 text-sm">
+                <div className="text-center px-3 mb-0">
+                  <p className="text-black mb-0 text-sm">
                     {todayRevenue > 0 ? (
-                      <>You earn <strong className="text-yellow-300">{formatCurrency(todayRevenue)}</strong> today{todayRevenue > 0 ? ', keep up your good trends!' : '.'}</>
+                      <>You earn <strong className="text-yellow-500">{formatCurrency(todayRevenue)}</strong> today, its higher than last month keep up your good trends!</>
                     ) : (
                       <>No revenue recorded today yet.</>
                     )}
@@ -743,8 +770,8 @@ export default function FinanceDashboard() {
                 </div>
               </div>
             )}
-            <div className="p-4 border-t border-white/10 pt-3">
-              <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-lg flex">
+            <div className="p-4 border-0 pt-3">
+              <div className="bg-white dark:bg-gray-800 py-3 px-3 rounded-xl flex">
                 <div className="text-center flex-1 py-2">
                   <h4 className="mb-0 text-gray-900 dark:text-white">${(monthlyTarget / 1000).toFixed(0)}K</h4>
                   <span className="text-primary text-xs font-semibold block">Target</span>
@@ -831,4 +858,5 @@ export default function FinanceDashboard() {
     </div>
   );
 }
+
 

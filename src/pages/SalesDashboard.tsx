@@ -224,9 +224,9 @@ export default function SalesDashboard() {
     };
   };
 
-  // Monthly Target Chart
-  const monthlyTargetChartConfig = {
-    series: [75],
+  // Monthly Target Chart - will be configured dynamically with real data
+  const getMonthlyTargetChartConfig = () => ({
+    series: [Math.min(100, Math.max(0, monthlyTargetProgress))],
     chart: {
       type: 'radialBar' as const,
       offsetY: 0,
@@ -251,7 +251,7 @@ export default function SalesDashboard() {
             fontFamily: 'var(--bs-body-font-family)',
             fontWeight: 600,
             color: 'var(--bs-dark)',
-            formatter: () => '75.7%',
+            formatter: () => `${Math.min(100, monthlyTargetProgress).toFixed(1)}%`,
           },
         },
       },
@@ -262,7 +262,7 @@ export default function SalesDashboard() {
     fill: {
       colors: ['#5955D1'],
     },
-  };
+  });
 
   // Sales Growth Chart
   const salesGrowthChartConfig = {
@@ -622,6 +622,65 @@ export default function SalesDashboard() {
   
   const conversionRate = calculateConversionRate();
 
+  // Calculate monthly target progress
+  const currentMonthRevenue = (() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return (salesReport?.orders || []).reduce((sum: number, order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      if (orderDate >= monthStart) {
+        return sum + Number(order.totalAmount || 0);
+      }
+      return sum;
+    }, 0);
+  })();
+
+  const monthlyTarget = currentMonthRevenue > 0 ? currentMonthRevenue * 1.5 : 75000;
+  const monthlyTargetProgress = monthlyTarget > 0 ? (currentMonthRevenue / monthlyTarget) * 100 : 0;
+
+  // Calculate current month orders count
+  const currentMonthOrders = (() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return (salesReport?.orders || []).filter((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      return orderDate >= monthStart;
+    }).length;
+  })();
+
+  // Calculate order status breakdown for Sales Status
+  const calculateSalesStatus = () => {
+    const orders = salesReport?.orders || [];
+    const statusCounts: Record<string, number> = {
+      paid: 0,
+      cancelled: 0,
+      refunded: 0,
+    };
+
+    orders.forEach((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      if (['FULFILLED', 'DELIVERED', 'SHIPPED', 'COMPLETED', 'PAID'].includes(status)) {
+        statusCounts.paid++;
+      } else if (['CANCELLED', 'CANCELED'].includes(status)) {
+        statusCounts.cancelled++;
+      } else if (['RETURNED', 'REFUNDED'].includes(status)) {
+        statusCounts.refunded++;
+      } else {
+        // Default to paid for other statuses
+        statusCounts.paid++;
+      }
+    });
+
+    const total = orders.length || 1;
+    return {
+      paid: Math.round((statusCounts.paid / total) * 100),
+      cancelled: Math.round((statusCounts.cancelled / total) * 100),
+      refunded: Math.round((statusCounts.refunded / total) * 100),
+    };
+  };
+
+  const salesStatus = calculateSalesStatus();
+
   if (isLoading) {
     return (
       <div>
@@ -843,35 +902,35 @@ export default function SalesDashboard() {
           </div>
           <div className="p-4 pt-0 border-b border-gray-200 dark:border-gray-700">
             <div className="mb-0 -mt-2">
-              <Chart type="radialBar" height={350} series={monthlyTargetChartConfig.series} options={monthlyTargetChartConfig} />
-              <div className="-mt-10 text-center text-gray-900 dark:text-white font-semibold">32,500 Sales</div>
+              <Chart type="radialBar" height={350} series={getMonthlyTargetChartConfig().series} options={getMonthlyTargetChartConfig()} />
+              <div className="-mt-10 text-center text-gray-900 dark:text-white font-semibold">{currentMonthOrders.toLocaleString()} Sales</div>
             </div>
           </div>
           <div className="p-4 border-0">
             <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Sales Status</h6>
             <div className="flex gap-0 mb-4 bg-transparent">
-              <div className="bg-transparent" style={{ width: '75%' }}>
+              <div className="bg-transparent" style={{ width: `${salesStatus.paid}%` }}>
                 <div className="h-2 bg-primary rounded"></div>
               </div>
-              <div className="bg-transparent" style={{ width: '20%' }}>
+              <div className="bg-transparent" style={{ width: `${salesStatus.cancelled}%` }}>
                 <div className="h-2 bg-primary/75 rounded"></div>
               </div>
-              <div className="bg-transparent" style={{ width: '3%' }}>
+              <div className="bg-transparent" style={{ width: `${salesStatus.refunded}%` }}>
                 <div className="h-2 bg-primary/50 rounded"></div>
               </div>
             </div>
             <div className="space-y-1">
               {[
-                { label: 'Paid', value: '75%', opacity: 'opacity-100' },
-                { label: 'Cancelled', value: '22%', opacity: 'opacity-75' },
-                { label: 'Refunded', value: '3%', opacity: 'opacity-50' },
+                { label: 'Paid', value: salesStatus.paid, opacity: 'opacity-100' },
+                { label: 'Cancelled', value: salesStatus.cancelled, opacity: 'opacity-75' },
+                { label: 'Refunded', value: salesStatus.refunded, opacity: 'opacity-50' },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between py-1">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 bg-primary ${item.opacity} rounded`}></div>
                     <span className="text-sm text-gray-900 dark:text-white">{item.label}</span>
                   </div>
-                  <strong className="text-gray-900 dark:text-white font-semibold text-sm">{item.value}</strong>
+                  <strong className="text-gray-900 dark:text-white font-semibold text-sm">{item.value}%</strong>
                 </div>
               ))}
             </div>
