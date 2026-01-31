@@ -558,6 +558,7 @@ export default function Dashboard() {
   // Check if all data is loading
   const isAllDataLoading = isLoading ||
     salesReportLoading ||
+    revenueReportLoading ||
     ordersDataLoading ||
     reviewsStatsLoading ||
     (customersLoading && !customersData) ||
@@ -627,9 +628,41 @@ export default function Dashboard() {
 
   // Calculate revenue for the period
   const periodRevenue = salesReport?.totalRevenue || 0;
-  
+
   // Calculate revenue for the Revenue card based on its own time range
   const revenuePeriodRevenue = revenueReport?.totalRevenue || 0;
+
+  // Format date display based on time range
+  const getRevenueDateDisplay = () => {
+    const now = new Date();
+
+    switch (revenueTimeRange) {
+      case 'today':
+        // Display: "15 Jan 2024"
+        return now.toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+      case 'week':
+        // Display: "Week 2 Jan 2024"
+        // Calculate week number of the month (1-5)
+        // Week 1 starts from the 1st of the month
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const daysSinceFirstDay = now.getDate() - 1;
+        const weekNumber = Math.floor(daysSinceFirstDay / 7) + 1;
+        const monthYear = now.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric'
+        });
+        return `Week ${weekNumber} ${monthYear}`;
+      case 'month':
+        // Display: "2024"
+        return now.getFullYear().toString();
+      default:
+        return '';
+    }
+  };
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -826,22 +859,6 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-              {(['7d', '30d', '90d', 'all'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${dateRange === range
-                    ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                >
-                  {range === 'all' ? 'All Time' : range.toUpperCase()}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -1158,7 +1175,9 @@ export default function Dashboard() {
             {/* Card 5: Revenue */}
             <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-2 items-center justify-between">
-                <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue</h6>
+                <div>
+                  <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue</h6>
+                </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-full p-1">
                     {(['Today', 'Week', 'Month'] as const).map((tab) => (
@@ -1262,7 +1281,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 py-0">
+              <div className="p-4 py-0 flex w-full justify-between">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl mt-3 font-bold text-gray-900 dark:text-white mb-0">
                     <span className="text-gray-600 dark:text-gray-400">$</span>
@@ -1278,6 +1297,7 @@ export default function Dashboard() {
                     </span>
                   )}
                 </div>
+                <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-3">{getRevenueDateDisplay()}</p>
               </div>
               <div className="p-4 pt-0">
                 {revenuePeriodRevenue === 0 ? (
