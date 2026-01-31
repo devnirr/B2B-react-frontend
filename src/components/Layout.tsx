@@ -73,14 +73,14 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, useFlaticon: true, flaticonClass: 'fi fi-rr-house-blank' },
     { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp, useFlaticon: true, flaticonClass: 'fi fi-rr-percent-100' },
     { path: '/finance', label: 'Finance Dashboard', icon: DollarSign, useFlaticon: true, flaticonClass: 'fi fi-rr-growth-chart-invest' },
-    { path: '/review', label: 'Reviews', icon: Star },
-    { path: '/products', label: 'Products', icon: Package },
-    { path: '/collections', label: 'Collections', icon: Layers },
-    { path: '/inventory', label: 'Inventory', icon: Warehouse },
-    { path: '/warehouses', label: 'Warehouses', icon: Building2 },
-    { path: '/orders', label: 'Orders', icon: ShoppingCart },
-    { path: '/customers', label: 'Customers', icon: Users },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/review', label: 'Reviews', icon: Star, useFlaticon: true, flaticonClass: 'fi fi-rr-star' },
+    { path: '/products', label: 'Products', icon: Package, useFlaticon: true, flaticonClass: 'fi fi-rr-box' },
+    { path: '/collections', label: 'Collections', icon: Layers, useFlaticon: true, flaticonClass: 'fi fi-rr-layers' },
+    { path: '/inventory', label: 'Inventory', icon: Warehouse, useFlaticon: true, flaticonClass: 'fi fi-rr-warehouse-alt' },
+    { path: '/warehouses', label: 'Warehouses', icon: Building2, useFlaticon: true, flaticonClass: 'fi fi-rr-building' },
+    { path: '/orders', label: 'Orders', icon: ShoppingCart, useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-cart' },
+    { path: '/customers', label: 'Customers', icon: Users, useFlaticon: true, flaticonClass: 'fi fi-rr-users' },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3, useFlaticon: true, flaticonClass: 'fi fi-rr-chart-histogram' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
