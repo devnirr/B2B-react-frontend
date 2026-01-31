@@ -393,13 +393,13 @@ export default function Layout({ children }: LayoutProps) {
                 <div className={`absolute left-1.5 flex items-center justify-center w-5 h-5 z-10 transition-opacity ${
                   darkMode ? 'opacity-50' : 'opacity-100'
                 }`}>
-                  <Sun className={`w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-800'}`} strokeWidth={2} />
+                  <Sun className={`w-4 h-4 ${darkMode ? 'text-white' : 'text-gray-800'}`} strokeWidth={2} />
                 </div>
                 {/* Moon Icon - Right */}
                 <div className={`absolute right-1.5 flex items-center justify-center w-5 h-5 z-10 transition-opacity ${
                   darkMode ? 'opacity-100' : 'opacity-50'
                 }`}>
-                  <Moon className={`w-4 h-4 ${darkMode ? 'text-gray-200' : 'text-gray-600'}`} strokeWidth={2} />
+                  <Moon className={`w-4 h-4 ${darkMode ? 'text-white' : 'text-gray-600'}`} strokeWidth={2} />
                 </div>
                 {/* Toggle Thumb */}
                 <div
@@ -423,7 +423,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                 title="Documents & Tasks"
               >
-                <FileText className="w-5 h-5" />
+                <FileText className="w-5 h-5 text-gray-700 dark:text-white" />
                 {unreadDocumentsCount > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                 )}
@@ -510,7 +510,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                 title="Notifications"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-5 h-5 text-gray-700 dark:text-white" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                 )}
@@ -597,7 +597,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 title="Calendar & Events"
               >
-                <Calendar className="w-5 h-5" />
+                <Calendar className="w-5 h-5 text-gray-700 dark:text-white" />
               </button>
 
               {calendarDropdownOpen && (
@@ -664,10 +664,10 @@ export default function Layout({ children }: LayoutProps) {
                 className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="hidden lg:block text-right mr-2">
-                  <div className="text-sm font-semibold text-gray-900 dark:text-black">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
                     {user?.firstName} {user?.lastName}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <div className="text-xs text-gray-500 dark:text-white flex items-center gap-1">
                     <ChevronDown className="w-3 h-3" />
                     {user?.role || 'User'}
                   </div>
@@ -693,7 +693,7 @@ export default function Layout({ children }: LayoutProps) {
                           {user?.firstName?.[0] || 'U'}{user?.lastName?.[0] || ''}
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 dark:text-black">
+                          <div className="font-semibold text-gray-900 dark:text-white">
                             {user?.firstName} {user?.lastName}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">

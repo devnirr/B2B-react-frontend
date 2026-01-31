@@ -787,7 +787,7 @@ export default function Dashboard() {
                   onClick={() => setDateRange(range)}
                   className={`px-4 py-2 text-sm font-medium transition-colors ${dateRange === range
                     ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                 >
                   {range === 'all' ? 'All Time' : range.toUpperCase()}
