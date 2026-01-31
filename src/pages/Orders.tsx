@@ -792,7 +792,7 @@ function AddOrderModal({
                     {formData.orderLines.map((line: any, index: number) => (
                       <div key={index} className="mb-4">
                         <div className="grid grid-cols-12 gap-2 mb-1">
-                          <div className="col-span-6">
+                          <div className="col-span-5">
                             <CustomSelect
                               options={productOptions}
                               value={line.productId}
@@ -833,14 +833,15 @@ function AddOrderModal({
                               <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.unitPrice`]}</p>
                             )}
                           </div>
-                          <div className="col-span-1">
+                          <div className="col-span-1 flex items-center">
                             {formData.orderLines.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => removeOrderLine(index)}
-                                className="w-full h-full flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                className="w-full h-full min-h-[42px] flex items-center justify-center text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors"
+                                title="Remove line"
                               >
-                                <X className="w-4 h-4" />
+                                <X className="w-5 h-5" />
                               </button>
                             )}
                           </div>
@@ -850,7 +851,7 @@ function AddOrderModal({
                     <button
                       type="button"
                       onClick={addOrderLine}
-                      className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
+                      className="mt-2 px-4 py-2 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 dark:border-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors font-medium"
                     >
                       + Add Line
                     </button>
@@ -1222,10 +1223,10 @@ function EditOrderModal({
                               <button
                                 type="button"
                                 onClick={() => removeOrderLine(index)}
-                                className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                className="w-full h-full min-h-[42px] flex items-center justify-center text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors"
                                 title="Remove line"
                               >
-                                <X className="w-4 h-4" />
+                                <X className="w-5 h-5" />
                               </button>
                             )}
                           </div>
@@ -1235,9 +1236,9 @@ function EditOrderModal({
                     <button
                       type="button"
                       onClick={addOrderLine}
-                      className="mt-2 px-4 py-2 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 dark:border-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                      className="mt-2 px-4 py-2 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 border border-primary-300 dark:border-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors font-medium"
                     >
-                      + Add Order Line
+                      + Add Line
                     </button>
                     {errors.orderLines && (
                       <p className="mt-1 text-sm text-red-500">{errors.orderLines}</p>
