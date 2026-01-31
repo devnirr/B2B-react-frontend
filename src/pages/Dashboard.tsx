@@ -32,6 +32,38 @@ import { CSS } from '@dnd-kit/utilities';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+// Custom plugin to add center text to doughnut chart (without "Sources" label)
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart: any) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+
+    const centerX = (chartArea.left + chartArea.right) / 2;
+    const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+    // Calculate total
+    const dataset = chart.data.datasets[0];
+    const total = dataset.data.reduce((acc: number, val: number) => acc + val, 0);
+
+    // Check if dark mode
+    const isDark = document.documentElement.classList.contains('dark');
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Total value only (no "Sources" label)
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = isDark ? '#fff' : '#000';
+    ctx.fillText(total.toString(), centerX, centerY);
+
+    ctx.restore();
+  },
+};
+
+ChartJS.register(centerTextPlugin);
+
 interface Task {
   id: string;
   text: string;
@@ -112,15 +144,7 @@ export default function Dashboard() {
     );
   };
 
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', text: 'Review monthly sales report', completed: false, time: '04:25PM' },
-    { id: '2', text: 'Follow up with new customers', completed: true, time: '04:25PM', color: 'blue' },
-    { id: '3', text: 'Update product inventory levels', completed: false, time: '04:25PM' },
-    { id: '4', text: 'Prepare quarterly business review', completed: false, time: '04:25PM' },
-    { id: '5', text: 'Contact suppliers for pricing', completed: true, time: '04:25PM', color: 'purple' },
-    { id: '6', text: 'Process pending orders', completed: true, time: '04:25PM', color: 'green' },
-    { id: '7', text: 'Schedule team meeting', completed: true, time: '04:25PM', color: 'orange' },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   // Fetch dashboard stats
   const { data: dashboardStats, isLoading } = useQuery({
@@ -137,7 +161,7 @@ export default function Dashboard() {
 
   // Fetch low stock items directly as fallback if not in dashboard stats
   const hasLowStockInDashboard = dashboardStats?.lowStockItems && Array.isArray(dashboardStats.lowStockItems) && dashboardStats.lowStockItems.length > 0;
-  
+
   const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
     queryKey: ['inventory', 'low-stock'],
     queryFn: async () => {
@@ -184,7 +208,7 @@ export default function Dashboard() {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - created.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
       if (diffHours < 12) return '1st Half Day';
@@ -196,7 +220,7 @@ export default function Dashboard() {
 
   // Task management functions
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(task => 
+    setTasks(tasks.map(task =>
       task.id === id ? { ...task, completed: !task.completed } : task
     ));
   };
@@ -247,20 +271,20 @@ export default function Dashboard() {
       opacity: isDragging ? 0.5 : 1,
     };
 
-    const bgColorClass = task.completed 
-      ? task.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/10' 
+    const bgColorClass = task.completed
+      ? task.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/10'
         : task.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/10'
-        : task.color === 'green' ? 'bg-green-50 dark:bg-green-900/10'
-        : task.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10'
-        : 'bg-gray-50/50 dark:bg-gray-900/30'
+          : task.color === 'green' ? 'bg-green-50 dark:bg-green-900/10'
+            : task.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10'
+              : 'bg-gray-50/50 dark:bg-gray-900/30'
       : 'bg-gray-50/50 dark:bg-gray-900/30';
-    
+
     const checkboxColorClass = task.completed
       ? task.color === 'blue' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
         : task.color === 'purple' ? 'text-purple-600 dark:text-purple-400 border-purple-600 dark:border-purple-400'
-        : task.color === 'green' ? 'text-green-600 dark:text-green-400 border-green-600 dark:border-green-400'
-        : task.color === 'orange' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400'
-        : 'text-primary border-primary'
+          : task.color === 'green' ? 'text-green-600 dark:text-green-400 border-green-600 dark:border-green-400'
+            : task.color === 'orange' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400'
+              : 'text-primary border-primary'
       : 'text-gray-400 border-gray-300 dark:border-gray-600';
 
     return (
@@ -269,7 +293,7 @@ export default function Dashboard() {
         style={style}
         className={`flex items-center gap-2 px-3 py-2 rounded-md mb-1 ${bgColorClass} ${isDragging ? 'shadow-lg' : ''}`}
       >
-        <span 
+        <span
           className="sortable-handle cursor-move flex-shrink-0 touch-none"
           {...attributes}
           {...listeners}
@@ -291,11 +315,10 @@ export default function Dashboard() {
           style={{ accentColor: task.completed && task.color ? undefined : 'currentColor' }}
         />
         <span
-          className={`flex-1 text-sm ${
-            task.completed
-              ? 'line-through text-gray-500 dark:text-gray-400'
-              : 'text-gray-900 dark:text-white'
-          }`}
+          className={`flex-1 text-sm ${task.completed
+            ? 'line-through text-gray-500 dark:text-gray-400'
+            : 'text-gray-900 dark:text-white'
+            }`}
         >
           {task.text}
         </span>
@@ -327,10 +350,10 @@ export default function Dashboard() {
   // Fetch sales report for the selected date range
   const getDateRange = () => {
     if (dateRange === 'all') return { startDate: undefined, endDate: undefined };
-    
+
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (dateRange) {
       case '7d':
         startDate.setDate(endDate.getDate() - 7);
@@ -342,10 +365,10 @@ export default function Dashboard() {
         startDate.setDate(endDate.getDate() - 90);
         break;
     }
-    
-    return { 
-      startDate: startDate.toISOString().split('T')[0], 
-      endDate: endDate.toISOString().split('T')[0] 
+
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
     };
   };
 
@@ -366,6 +389,81 @@ export default function Dashboard() {
       }
     },
   });
+
+  // Fetch orders for task statistics
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'task-stats'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Calculate task statistics from orders
+  const calculateTaskStats = () => {
+    const orders = ordersData || [];
+    const now = new Date();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    // Filter orders for this month and last month
+    const thisMonthOrders = orders.filter((order: any) => {
+      const orderDate = new Date(order.createdAt || order.orderDate);
+      return orderDate >= new Date(now.getFullYear(), now.getMonth(), 1);
+    });
+
+    const lastMonthOrders = orders.filter((order: any) => {
+      const orderDate = new Date(order.createdAt || order.orderDate);
+      return orderDate >= lastMonthStart && orderDate <= lastMonthEnd;
+    });
+
+    // Categorize orders as tasks (current month)
+    const followUps = orders.filter((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      return ['PENDING', 'CONFIRMED'].includes(status);
+    }).length;
+
+    const inProgress = orders.filter((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      return ['PROCESSING', 'PARTIALLY_FULFILLED', 'SHIPPED', 'IN_TRANSIT'].includes(status);
+    }).length;
+
+    const pending = orders.filter((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      return ['DRAFT'].includes(status);
+    }).length;
+
+    const completed = orders.filter((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      return ['FULFILLED', 'DELIVERED'].includes(status);
+    }).length;
+
+    // Calculate last month's completed tasks
+    const lastMonthCompleted = lastMonthOrders.filter((order: any) => {
+      const status = (order.status || '').toUpperCase();
+      return ['FULFILLED', 'DELIVERED'].includes(status);
+    }).length;
+
+    const total = orders.length;
+    const tasksDone = completed;
+    const progressPercent = total > 0 ? (tasksDone / total) * 100 : 0;
+
+    return {
+      followUps,
+      inProgress,
+      pending,
+      tasksDone,
+      total,
+      progressPercent,
+      lastMonthTasksDone: lastMonthCompleted,
+    };
+  };
+
+  const taskStats = calculateTaskStats();
 
   // Calculate revenue for the period
   const periodRevenue = salesReport?.totalRevenue || 0;
@@ -435,7 +533,7 @@ export default function Dashboard() {
   // Check if dashboard stats has lowStockItems and it's an array with items
   const dashboardLowStock = dashboardStats?.lowStockItems;
   const lowStockItems = (Array.isArray(dashboardLowStock) && dashboardLowStock.length > 0)
-    ? dashboardLowStock 
+    ? dashboardLowStock
     : (Array.isArray(lowStockData) && lowStockData.length > 0 ? lowStockData : []);
 
   // If dashboard stats failed to load, show error state
@@ -471,11 +569,10 @@ export default function Dashboard() {
                 <button
                   key={range}
                   onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    dateRange === range
-                      ? 'bg-primary text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${dateRange === range
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
                 >
                   {range === 'all' ? 'All Time' : range.toUpperCase()}
                 </button>
@@ -490,7 +587,7 @@ export default function Dashboard() {
         {/* Left Column - Main Cards (Cards 1-5) */}
         <div className="lg:col-span-8 xl:col-span-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* Card 1: Total Customers */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -510,11 +607,10 @@ export default function Dashboard() {
                           {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
                         </h2>
                         {customerChangePercent !== 0 && (
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                            customerChangePercent > 0
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${customerChangePercent > 0
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
                             {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
                           </span>
                         )}
@@ -577,19 +673,19 @@ export default function Dashboard() {
                       />
                     </div>
                   </div>
-              <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
-                    Vs last month: {dashboardStats?.lastMonthCustomers?.toLocaleString() || '0'}
-                  </p>
-                  <button
-                    onClick={() => navigate('/customers')}
-                    className="text-primary hover:text-primary-dark transition-colors"
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+                  <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+                        Vs last month: {dashboardStats?.lastMonthCustomers?.toLocaleString() || '0'}
+                      </p>
+                      <button
+                        onClick={() => navigate('/customers')}
+                        className="text-primary hover:text-primary-dark transition-colors"
+                      >
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -612,75 +708,74 @@ export default function Dashboard() {
                         {dashboardStats?.totalOrders?.toLocaleString() || '0'}
                       </h2>
                       {orderChangePercent !== 0 && (
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                          orderChangePercent > 0
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
                           {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
                         </span>
                       )}
                     </div>
                   </div>
-              <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
-                <Chart
-                  type="area"
-                  height={120}
-                  series={[{
-                    name: 'Orders',
-                    data: dashboardStats?.orderTrend || [0, 0, 0, 0, 0, 0]
-                  }]}
-                  options={{
-                    chart: {
-                      toolbar: { show: false },
-                      zoom: { enabled: false },
-                      sparkline: { enabled: false }
-                    },
-                    stroke: {
-                      curve: 'smooth',
-                      width: 2,
-                      colors: ['#5955D1']
-                    },
-                    fill: {
-                      type: 'solid',
-                      colors: ['rgba(89, 85, 209, 0.1)'],
-                      opacity: 1
-                    },
-                    dataLabels: { enabled: false },
-                    markers: {
-                      size: 0,
-                      colors: ['#FFFFFF'],
-                      strokeColors: '#5955D1',
-                      strokeWidth: 3,
-                      hover: { size: 6 }
-                    },
-                    xaxis: {
-                      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                      labels: { show: false },
-                      axisBorder: { show: false },
-                      axisTicks: { show: false }
-                    },
-                    grid: {
-                      show: false,
-                      padding: { top: 0, right: 0, bottom: 20, left: 0 }
-                    },
-                    yaxis: {
-                      min: 0,
-                      max: 100,
-                      labels: { show: false }
-                    },
-                    tooltip: {
-                      enabled: true,
-                      theme: 'dark',
-                      y: { formatter: (val: number) => val + '%' }
-                    },
-                    legend: { show: false }
-                  }}
-                />
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
-                  Compared to Last Month
-                </div>
-              </div>
+                  <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
+                    <Chart
+                      type="area"
+                      height={120}
+                      series={[{
+                        name: 'Orders',
+                        data: dashboardStats?.orderTrend || [0, 0, 0, 0, 0, 0]
+                      }]}
+                      options={{
+                        chart: {
+                          toolbar: { show: false },
+                          zoom: { enabled: false },
+                          sparkline: { enabled: false }
+                        },
+                        stroke: {
+                          curve: 'smooth',
+                          width: 2,
+                          colors: ['#5955D1']
+                        },
+                        fill: {
+                          type: 'solid',
+                          colors: ['rgba(89, 85, 209, 0.1)'],
+                          opacity: 1
+                        },
+                        dataLabels: { enabled: false },
+                        markers: {
+                          size: 0,
+                          colors: ['#FFFFFF'],
+                          strokeColors: '#5955D1',
+                          strokeWidth: 3,
+                          hover: { size: 6 }
+                        },
+                        xaxis: {
+                          categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                          labels: { show: false },
+                          axisBorder: { show: false },
+                          axisTicks: { show: false }
+                        },
+                        grid: {
+                          show: false,
+                          padding: { top: 0, right: 0, bottom: 20, left: 0 }
+                        },
+                        yaxis: {
+                          min: 0,
+                          max: 100,
+                          labels: { show: false }
+                        },
+                        tooltip: {
+                          enabled: true,
+                          theme: 'dark',
+                          y: { formatter: (val: number) => val + '%' }
+                        },
+                        legend: { show: false }
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
+                      Compared to Last Month
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -692,11 +787,14 @@ export default function Dashboard() {
                   <div className="flex justify-between items-center mb-2">
                     <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">Tasks Overview</h6>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      Tasks Done <span className="text-primary font-semibold">25</span>
+                      Tasks Done <span className="text-primary font-semibold">{taskStats.tasksDone}</span>
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, taskStats.progressPercent)}%` }}
+                    ></div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -715,29 +813,35 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="w-24 h-24">
-                    <Doughnut
-                      data={{
-                        labels: ['Follow-ups', 'In Progress', 'Pending'],
-                        datasets: [{
-                          data: [5, 6, 4],
-                          backgroundColor: ['#5955D1', '#ACAAE8', '#DEDDF6'],
-                          borderWidth: 3,
-                          borderColor: '#fff',
-                          hoverBorderColor: '#fff',
-                          borderRadius: 3,
-                          spacing: 0,
-                          hoverOffset: 5
-                        }]
-                      }}
-                      options={{
-                        cutout: '70%',
-                        plugins: {
-                          legend: { display: false },
-                          tooltip: { enabled: false }
-                        },
-                        maintainAspectRatio: false
-                      }}
-                    />
+                    {taskStats.total > 0 ? (
+                      <Doughnut
+                        data={{
+                          labels: ['Follow-ups', 'In Progress', 'Pending'],
+                          datasets: [{
+                            data: [taskStats.followUps, taskStats.inProgress, taskStats.pending],
+                            backgroundColor: ['#5955D1', '#ACAAE8', '#DEDDF6'],
+                            borderWidth: 3,
+                            borderColor: '#fff',
+                            hoverBorderColor: '#fff',
+                            borderRadius: 3,
+                            spacing: 0,
+                            hoverOffset: 5
+                          }]
+                        }}
+                        options={{
+                          cutout: '70%',
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                          },
+                          maintainAspectRatio: false
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-xs text-gray-400">No Data</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -761,29 +865,28 @@ export default function Dashboard() {
                         {dashboardStats?.totalOrders?.toLocaleString() || '0'}
                       </h2>
                       {orderChangePercent !== 0 && (
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                          orderChangePercent > 0
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
                           {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
                         </span>
                       )}
                     </div>
                   </div>
-              <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
-                    Vs last month: {dashboardStats?.lastMonthOrders?.toLocaleString() || '0'}
-                  </p>
-                  <button
-                    onClick={() => navigate('/orders')}
-                    className="text-primary hover:text-primary-dark transition-colors"
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+                  <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
+                        Vs last month: {dashboardStats?.lastMonthOrders?.toLocaleString() || '0'}
+                      </p>
+                      <button
+                        onClick={() => navigate('/orders')}
+                        className="text-primary hover:text-primary-dark transition-colors"
+                      >
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -798,20 +901,19 @@ export default function Dashboard() {
                       <button
                         key={tab}
                         onClick={() => setDateRange(tab === 'Today' ? '7d' : tab === 'Week' ? '30d' : '90d')}
-                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                          (tab === 'Month' && dateRange === '90d') || 
-                          (tab === 'Week' && dateRange === '30d') || 
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${(tab === 'Month' && dateRange === '90d') ||
+                          (tab === 'Week' && dateRange === '30d') ||
                           (tab === 'Today' && dateRange === '7d')
-                            ? 'bg-primary text-white'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
+                          ? 'bg-primary text-white'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
                       >
                         {tab}
                       </button>
                     ))}
                   </div>
                   <div className="relative" ref={calendarRef}>
-                    <button 
+                    <button
                       onClick={() => setIsCalendarOpen(!isCalendarOpen)}
                       className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
@@ -863,13 +965,12 @@ export default function Dashboard() {
                               <button
                                 key={day}
                                 onClick={() => handleDateSelect(day)}
-                                className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${
-                                  isSelected(day)
-                                    ? 'bg-primary text-white shadow-lg scale-110'
-                                    : isToday(day)
+                                className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isSelected(day)
+                                  ? 'bg-primary text-white shadow-lg scale-110'
+                                  : isToday(day)
                                     ? 'bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-300 font-bold border-2 border-primary'
                                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                }`}
+                                  }`}
                               >
                                 {day}
                               </button>
@@ -882,11 +983,11 @@ export default function Dashboard() {
                           <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                             <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
                               Selected: <span className="font-semibold text-gray-900 dark:text-white">
-                                {selectedDate.toLocaleDateString('en-US', { 
-                                  weekday: 'long', 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' 
+                                {selectedDate.toLocaleDateString('en-US', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
                                 })}
                               </span>
                             </p>
@@ -905,11 +1006,10 @@ export default function Dashboard() {
                     <span className="text-primary">{formatCurrency(periodRevenue).split('.')[1]}</span>
                   </h2>
                   {salesReport?.revenueChangePercent !== undefined && (
-                    <span className={`text-sm ${
-                      salesReport.revenueChangePercent >= 0
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
+                    <span className={`text-sm ${salesReport.revenueChangePercent >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                      }`}>
                       {salesReport.revenueChangePercent >= 0 ? '+' : ''}{salesReport.revenueChangePercent.toFixed(0)}% vs last month
                     </span>
                   )}
@@ -1005,7 +1105,7 @@ export default function Dashboard() {
         {/* Right Column - Side Cards (Cards 6-7) */}
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="grid grid-cols-1 gap-6">
-            
+
             {/* Card 6: Order Sources - Using order types from schema */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -1025,12 +1125,12 @@ export default function Dashboard() {
                     count,
                     percentage: (count / total) * 100
                   }));
-                  
+
                   // Sort by percentage descending
                   percentages.sort((a, b) => b.percentage - a.percentage);
-                  
+
                   const chartData = percentages.map(p => p.percentage);
-                  
+
                   return (
                     <>
                       <div style={{ height: '95px' }} className="my-1">
@@ -1038,9 +1138,9 @@ export default function Dashboard() {
                           <Chart
                             type="bar"
                             height={95}
-                            series={chartData.map((val, idx) => ({ 
-                              name: percentages[idx].type, 
-                              data: [val] 
+                            series={chartData.map((val, idx) => ({
+                              name: percentages[idx].type,
+                              data: [val]
                             }))}
                             options={{
                               chart: {
@@ -1136,7 +1236,7 @@ export default function Dashboard() {
                     : 0;
                   const prevRetention = retentionData.length > 1 ? retentionData[retentionData.length - 2] : 0;
                   const change = prevRetention > 0 ? ((avgRetention - prevRetention) / prevRetention) * 100 : 0;
-                  
+
                   return (
                     <>
                       <div className="flex items-center gap-2 mb-3">
@@ -1144,11 +1244,10 @@ export default function Dashboard() {
                           {avgRetention.toFixed(0)}%
                         </h2>
                         {change !== 0 && (
-                          <span className={`text-sm ${
-                            change >= 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }`}>
+                          <span className={`text-sm ${change >= 0
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                            }`}>
                             {change >= 0 ? '+' : ''}{change.toFixed(0)}% vs last month
                           </span>
                         )}
@@ -1163,7 +1262,7 @@ export default function Dashboard() {
                   const retentionData = dashboardStats?.customerRetention || [];
                   // Since we don't have customer type breakdown in retention, show overall retention trend
                   const data = retentionData.length > 0 ? retentionData : [0, 0, 0, 0, 0, 0];
-                  
+
                   return (
                     <div style={{ height: '295px' }} className="-mt-1">
                       <Chart
@@ -1173,58 +1272,58 @@ export default function Dashboard() {
                           name: 'Retention Rate',
                           data: data
                         }]}
-                    options={{
-                      chart: {
-                        type: 'bar',
-                        height: 295,
-                        stacked: true,
-                        toolbar: { show: false },
-                        zoom: { enabled: false }
-                      },
-                      plotOptions: {
-                        bar: {
-                          horizontal: false,
-                          colors: {
-                            backgroundBarColors: ['rgba(89, 85, 209, 0.03)'],
-                            backgroundBarOpacity: 1
-                          }
-                        }
-                      },
-                      yaxis: { show: false },
-                      xaxis: {
-                        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                        axisTicks: { show: false },
-                        axisBorder: { show: false },
-                        labels: {
-                          style: {
-                            colors: '#696981',
-                            fontSize: '13px',
+                        options={{
+                          chart: {
+                            type: 'bar',
+                            height: 295,
+                            stacked: true,
+                            toolbar: { show: false },
+                            zoom: { enabled: false }
+                          },
+                          plotOptions: {
+                            bar: {
+                              horizontal: false,
+                              colors: {
+                                backgroundBarColors: ['rgba(89, 85, 209, 0.03)'],
+                                backgroundBarOpacity: 1
+                              }
+                            }
+                          },
+                          yaxis: { show: false },
+                          xaxis: {
+                            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                            axisTicks: { show: false },
+                            axisBorder: { show: false },
+                            labels: {
+                              style: {
+                                colors: '#696981',
+                                fontSize: '13px',
+                                fontWeight: 500
+                              }
+                            }
+                          },
+                          legend: {
+                            position: 'bottom',
+                            offsetY: 0,
+                            labels: {
+                              colors: '#696981'
+                            },
+                            markers: { strokeWidth: 0 },
+                            fontSize: '12px',
                             fontWeight: 500
-                          }
-                        }
-                      },
-                      legend: {
-                        position: 'bottom',
-                        offsetY: 0,
-                        labels: {
-                          colors: '#696981'
-                        },
-                        markers: { strokeWidth: 0 },
-                        fontSize: '12px',
-                        fontWeight: 500
-                      },
-                      grid: {
-                        borderColor: 'transparent',
-                        xaxis: { lines: { show: false } },
-                        yaxis: { lines: { show: true } }
-                      },
-                      fill: {
-                        colors: ['#5955D1'],
-                        opacity: 1
-                      },
-                      dataLabels: { enabled: false }
-                    }}
-                  />
+                          },
+                          grid: {
+                            borderColor: 'transparent',
+                            xaxis: { lines: { show: false } },
+                            yaxis: { lines: { show: true } }
+                          },
+                          fill: {
+                            colors: ['#5955D1'],
+                            opacity: 1
+                          },
+                          dataLabels: { enabled: false }
+                        }}
+                      />
                     </div>
                   );
                 })()}
@@ -1237,7 +1336,7 @@ export default function Dashboard() {
         {/* Right Column 2 - Additional Cards (Cards 8-9) */}
         <div className="lg:col-span-6 xl:col-span-3">
           <div className="grid grid-cols-1 gap-6">
-            
+
             {/* Card 8: Total Revenue with Order Status */}
             <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative" style={{
               backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
@@ -1316,16 +1415,16 @@ export default function Dashboard() {
                     {(() => {
                       // Calculate shipments and pickups from orders
                       const orders = salesReport?.orders || [];
-                      const shipments = orders.filter((o: any) => 
+                      const shipments = orders.filter((o: any) =>
                         ['SHIPPED', 'IN_TRANSIT', 'DELIVERED'].includes(o.status)
                       ).length;
-                      const pickups = orders.filter((o: any) => 
+                      const pickups = orders.filter((o: any) =>
                         ['PICKED', 'PACKED'].includes(o.status)
                       ).length;
                       const shippedRevenue = orders
                         .filter((o: any) => ['SHIPPED', 'IN_TRANSIT', 'DELIVERED'].includes(o.status))
                         .reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
-                      
+
                       return (
                         <div className="px-4 mb-3 flex items-start justify-between">
                           <div className="flex items-start gap-2">
@@ -1370,7 +1469,7 @@ export default function Dashboard() {
                     {(() => {
                       const statusBreakdown = dashboardStats?.orderStatusBreakdown || [];
                       const total = statusBreakdown.reduce((sum: number, s: any) => sum + s.count, 0) || 1;
-                      
+
                       // Map statuses to display labels
                       const statusMap: Record<string, string> = {
                         'FULFILLED': 'Fulfilled',
@@ -1381,14 +1480,14 @@ export default function Dashboard() {
                         'PENDING': 'Pending',
                         'PROCESSING': 'Processing',
                       };
-                      
+
                       // Get top 3 statuses
                       const topStatuses = statusBreakdown
                         .sort((a: any, b: any) => b.count - a.count)
                         .slice(0, 3);
-                      
+
                       const opacityMap = ['opacity-100', 'opacity-50', 'opacity-25'];
-                      
+
                       return (
                         <div className="space-y-2">
                           {topStatuses.map((item: any, idx: number) => (
@@ -1431,7 +1530,7 @@ export default function Dashboard() {
                     const ordersByTime = dashboardStats?.ordersByTime;
                     const timeSlots = ordersByTime?.timeSlots || ['8am', '10am', '12pm', '2pm', '4pm'];
                     const data = ordersByTime?.data || [];
-                    
+
                     return (
                       <div style={{ height: '250px' }} className="-mt-3 -mb-1">
                         <Chart
@@ -1441,59 +1540,59 @@ export default function Dashboard() {
                             name: slot,
                             data: data[idx] || [0, 0, 0, 0, 0, 0, 0]
                           }))}
-                      options={{
-                        chart: {
-                          height: 250,
-                          type: 'heatmap',
-                          toolbar: { show: false }
-                        },
-                        stroke: {
-                          width: 2,
-                          colors: ['var(--bs-body-bg)']
-                        },
-                        dataLabels: { enabled: false },
-                        plotOptions: {
-                          heatmap: {
-                            shadeIntensity: 0.95,
-                            radius: 6,
-                            distributed: false,
-                            colorScale: {
-                              ranges: [
-                                { from: 0, to: 10, color: '#E0E7FF' },
-                                { from: 11, to: 25, color: '#A5B4FC' },
-                                { from: 26, to: 50, color: '#6366F1' }
-                              ]
-                            }
-                          }
-                        },
-                        grid: { show: false },
-                        yaxis: {
-                          min: 0,
-                          max: 500,
-                          tickAmount: 5,
-                          labels: {
-                            style: {
-                              colors: '#696981',
-                              fontSize: '13px',
-                              fontWeight: 500
-                            }
-                          }
-                        },
-                        xaxis: {
-                          categories: ordersByTime?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                          axisBorder: { show: false },
-                          axisTicks: { show: false },
-                          labels: {
-                            style: {
-                              colors: '#696981',
-                              fontSize: '13px',
-                              fontWeight: 500
-                            }
-                          }
-                        },
-                        legend: { show: false }
-                      }}
-                    />
+                          options={{
+                            chart: {
+                              height: 250,
+                              type: 'heatmap',
+                              toolbar: { show: false }
+                            },
+                            stroke: {
+                              width: 2,
+                              colors: ['var(--bs-body-bg)']
+                            },
+                            dataLabels: { enabled: false },
+                            plotOptions: {
+                              heatmap: {
+                                shadeIntensity: 0.95,
+                                radius: 6,
+                                distributed: false,
+                                colorScale: {
+                                  ranges: [
+                                    { from: 0, to: 10, color: '#E0E7FF' },
+                                    { from: 11, to: 25, color: '#A5B4FC' },
+                                    { from: 26, to: 50, color: '#6366F1' }
+                                  ]
+                                }
+                              }
+                            },
+                            grid: { show: false },
+                            yaxis: {
+                              min: 0,
+                              max: 500,
+                              tickAmount: 5,
+                              labels: {
+                                style: {
+                                  colors: '#696981',
+                                  fontSize: '13px',
+                                  fontWeight: 500
+                                }
+                              }
+                            },
+                            xaxis: {
+                              categories: ordersByTime?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                              axisBorder: { show: false },
+                              axisTicks: { show: false },
+                              labels: {
+                                style: {
+                                  colors: '#696981',
+                                  fontSize: '13px',
+                                  fontWeight: 500
+                                }
+                              }
+                            },
+                            legend: { show: false }
+                          }}
+                        />
                       </div>
                     );
                   })()}
@@ -1551,7 +1650,6 @@ export default function Dashboard() {
                       <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[150px]">Email</th>
                       <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold min-w-[125px]">Days</th>
                       <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold">Status</th>
-                      <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300 font-semibold">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1574,15 +1672,12 @@ export default function Dashboard() {
                           {customer.createdAt ? getDaysSince(customer.createdAt) : 'N/A'}
                         </td>
                         <td className="px-3 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            customer.isActive 
-                              ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300' 
-                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.isActive
+                            ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            }`}>
                             {customer.isActive ? 'Active' : 'Pending'}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
                         </td>
                       </tr>
                     ))}
@@ -1622,11 +1717,10 @@ export default function Dashboard() {
                     <button
                       key={pageNum}
                       onClick={() => setCustomerPage(pageNum)}
-                      className={`px-3 py-1 text-sm border rounded ${
-                        customerPage === pageNum
-                          ? 'bg-primary text-white border-primary'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
+                      className={`px-3 py-1 text-sm border rounded ${customerPage === pageNum
+                        ? 'bg-primary text-white border-primary'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
                     >
                       {pageNum}
                     </button>
