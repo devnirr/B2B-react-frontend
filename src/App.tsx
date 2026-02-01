@@ -21,6 +21,29 @@ import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Calendar from './pages/Calendar';
 import Documents from './pages/Documents';
+import Alerts from './pages/Alerts';
+import Exceptions from './pages/Exceptions';
+import KPIReports from './pages/KPIReports';
+import BOM from './pages/BOM';
+import Costing from './pages/Costing';
+import Drops from './pages/Drops';
+import Pricing from './pages/Pricing';
+import Retailers from './pages/Retailers';
+import Returns from './pages/Returns';
+import Wholesale from './pages/Wholesale';
+import LaunchPlanning from './pages/LaunchPlanning';
+import RetailerEnablement from './pages/RetailerEnablement';
+import ContentReadiness from './pages/ContentReadiness';
+import Fulfillment from './pages/Fulfillment';
+import Receiving from './pages/Receiving';
+import Purchasing from './pages/Purchasing';
+import Replenishment from './pages/Replenishment';
+import Forecast from './pages/Forecast';
+import Users from './pages/Users';
+import Roles from './pages/Roles';
+import Integrations from './pages/Integrations';
+import AuditLog from './pages/AuditLog';
+import Rules from './pages/Rules';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -231,6 +254,242 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Documents />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Dashboard / KPIs Routes */}
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Alerts />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exceptions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Exceptions />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kpi-reports"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <KPIReports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Product Routes */}
+          <Route
+            path="/bom"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BOM />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/costing"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Costing />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/drops"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Drops />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pricing"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Pricing />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Sales Routes */}
+          <Route
+            path="/retailers"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Retailers />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/returns"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Returns />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wholesale"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Wholesale />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Marketing Routes */}
+          <Route
+            path="/launch-planning"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LaunchPlanning />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/retailer-enablement"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RetailerEnablement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content-readiness"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ContentReadiness />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Operations Routes */}
+          <Route
+            path="/fulfillment"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Fulfillment />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receiving"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Receiving />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/purchasing"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Purchasing />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/replenishment"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Replenishment />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forecast"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Forecast />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Admin Routes */}
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Users />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Roles />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/integrations"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Integrations />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-log"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AuditLog />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rules"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Rules />
                 </Layout>
               </ProtectedRoute>
             }
