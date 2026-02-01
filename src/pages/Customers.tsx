@@ -7,6 +7,7 @@ import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import { useCheckCustomerEmail, useDebounce } from '../utils/emailDuplicateCheck';
 import PhoneInput from '../components/PhoneInput';
+import Breadcrumb from '../components/Breadcrumb';
 
 const CustomerType = {
   RETAILER: 'RETAILER',
@@ -319,6 +320,7 @@ export default function Customers() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Customers" />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customers</h1>
         {(!data?.data || data.data.length === 0) ? null : (

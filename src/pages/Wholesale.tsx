@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ShoppingBag, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Wholesale() {
   const [wholesaleOrders] = useState([
@@ -9,7 +10,8 @@ export default function Wholesale() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Wholesale (B2B)" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Wholesale (B2B)</h1>

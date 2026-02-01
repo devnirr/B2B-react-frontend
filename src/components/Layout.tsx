@@ -888,7 +888,7 @@ export default function Layout({ children }: LayoutProps) {
       <main
         className={`transition-all duration-300 bg-gray-50 dark:bg-gray-900 ${sidebarOpen ? 'ml-[368px]' : 'ml-[100px]'}`}
       >
-        <div className="p-6 px-20">{children}</div>
+        <div className="p-6 px-10">{children}</div>
       </main>
     </div>
   );

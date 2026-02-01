@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Exceptions() {
   const [exceptions] = useState([
@@ -9,11 +10,8 @@ export default function Exceptions() {
   ]);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Exceptions</h1>
-        <p className="text-gray-600 dark:text-gray-400">View and manage system exceptions</p>
-      </div>
+    <div>
+      <Breadcrumb currentPage="Exceptions" />
 
       <div className="space-y-4">
         {exceptions.map((exception) => (

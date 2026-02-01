@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calendar, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Drops() {
   const [drops] = useState([
@@ -9,7 +10,8 @@ export default function Drops() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Drops" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Drops</h1>

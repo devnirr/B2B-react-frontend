@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { Search, ChevronDown, Inbox } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function FinanceDashboard() {
   const [selectedYear, setSelectedYear] = useState('This Year');
@@ -365,6 +366,7 @@ export default function FinanceDashboard() {
   if (isLoading) {
     return (
       <div>
+        <Breadcrumb currentPage="Finance Dashboard" />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Finance Dashboard</h1>

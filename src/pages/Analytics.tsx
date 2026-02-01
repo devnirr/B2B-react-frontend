@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { BarChart3, Package, ArrowUp, ArrowDown, TrendingUp, PieChart as PieChartIcon, ShoppingCart } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { SkeletonStatsCard, SkeletonChart, SkeletonTable } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Analytics() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
@@ -309,6 +310,7 @@ export default function Analytics() {
   return (
     <div>
       {/* Header */}
+      <Breadcrumb currentPage="Analytics" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

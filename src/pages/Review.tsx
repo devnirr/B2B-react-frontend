@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { Star, Search } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Review() {
   const [reviewTimeRange, setReviewTimeRange] = useState<'today' | 'week' | 'month'>('month');
@@ -280,6 +281,7 @@ export default function Review() {
   return (
     <div>
       {/* Page Header */}
+      <Breadcrumb currentPage="Review" />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reviews</h1>

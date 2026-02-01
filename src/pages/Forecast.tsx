@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TrendingUp, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Forecast() {
   const [forecasts] = useState([
@@ -9,12 +10,9 @@ export default function Forecast() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Forecast" />
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Forecast</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage demand forecasting and planning</p>
-        </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
           <Plus className="w-5 h-5" />
           New Forecast

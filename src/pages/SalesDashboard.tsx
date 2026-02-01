@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { Search, Edit, Trash2, X, AlertTriangle, Inbox } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonStatsCard } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function SalesDashboard() {
   const [salesTimeRange, setSalesTimeRange] = useState<'today' | 'week' | 'month'>('month');
@@ -758,6 +759,7 @@ export default function SalesDashboard() {
   if (isLoading) {
     return (
       <div>
+        <Breadcrumb currentPage="Sales Dashboard" />
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Sales Dashboard</h1>

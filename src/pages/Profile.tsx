@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/authStore';
+import Breadcrumb from '../components/Breadcrumb';
 import { User, Mail, Shield } from 'lucide-react';
 
 export default function Profile() {
@@ -6,6 +7,7 @@ export default function Profile() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Profile" />
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-black">My Profile</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">View and manage your profile information</p>

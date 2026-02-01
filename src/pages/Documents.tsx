@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { FileText, Download, Eye, Plus, Search } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface Document {
   id: number;
@@ -96,6 +97,7 @@ export default function Documents() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Documents" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

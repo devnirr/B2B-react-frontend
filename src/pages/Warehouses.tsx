@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { Warehouse, Plus, X, Pencil, Trash2, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 // Custom Select Component
 const CustomSelect = ({
@@ -324,6 +325,7 @@ export default function Warehouses() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Warehouses" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

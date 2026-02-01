@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Building2, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Retailers() {
   const [retailers] = useState([
@@ -9,7 +10,8 @@ export default function Retailers() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Retailers" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Retailers</h1>

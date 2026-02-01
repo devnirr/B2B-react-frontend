@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { ShoppingCart, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 // Custom Select Component
 const CustomSelect = ({
@@ -430,6 +431,7 @@ export default function Orders() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Orders" />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Orders</h1>
         {(!data?.data || data.data.length === 0) ? null : (

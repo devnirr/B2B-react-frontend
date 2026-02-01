@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { Bell, AlertCircle, CheckCircle2, Info, Check } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface Notification {
   id: number | string;
@@ -200,6 +201,7 @@ export default function Notifications() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Notifications" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

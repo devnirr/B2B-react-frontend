@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Rocket, Plus, Search, Calendar } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function LaunchPlanning() {
   const [launches] = useState([
@@ -9,7 +10,8 @@ export default function LaunchPlanning() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Launch Planning" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Launch Planning</h1>

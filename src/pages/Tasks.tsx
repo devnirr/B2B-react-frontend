@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { CheckCircle2, Circle, Clock, Plus, Filter } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface Task {
   id: number;
@@ -40,7 +41,7 @@ export default function Tasks() {
     else if (amount < 1000) priority = 'low';
 
     const dueDate = order.requiredDate || order.orderDate || order.createdAt;
-    
+
     return {
       id: order.id,
       title: `Process Order ${order.orderNumber || `#${order.id}`}`,
@@ -89,59 +90,51 @@ export default function Tasks() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-black">My Tasks</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your assigned tasks and to-dos</p>
+      <Breadcrumb currentPage="My Tasks" />
+      <div className='flex justify-between items-center mb-6'>
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+          >
+            All ({tasks.length})
+          </button>
+          <button
+            onClick={() => setFilter('pending')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'pending'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+          >
+            Pending ({tasks.filter(t => t.status === 'pending').length})
+          </button>
+          <button
+            onClick={() => setFilter('in-progress')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'in-progress'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+          >
+            In Progress ({tasks.filter(t => t.status === 'in-progress').length})
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'completed'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+          >
+            Completed ({tasks.filter(t => t.status === 'completed').length})
+          </button>
         </div>
         <button className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2">
           <Plus className="w-4 h-4" />
           New Task
-        </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="mb-6 flex items-center gap-2">
-        <Filter className="w-4 h-4 text-gray-400" />
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-primary-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-        >
-          All ({tasks.length})
-        </button>
-        <button
-          onClick={() => setFilter('pending')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === 'pending'
-              ? 'bg-primary-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-        >
-          Pending ({tasks.filter(t => t.status === 'pending').length})
-        </button>
-        <button
-          onClick={() => setFilter('in-progress')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === 'in-progress'
-              ? 'bg-primary-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-        >
-          In Progress ({tasks.filter(t => t.status === 'in-progress').length})
-        </button>
-        <button
-          onClick={() => setFilter('completed')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === 'completed'
-              ? 'bg-primary-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-        >
-          Completed ({tasks.filter(t => t.status === 'completed').length})
         </button>
       </div>
 

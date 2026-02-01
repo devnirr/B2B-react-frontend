@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { Calendar as CalendarIcon, Clock, MapPin, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface CalendarEvent {
   id: number;
@@ -115,6 +116,7 @@ export default function Calendar() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Calendar" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

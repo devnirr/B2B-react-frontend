@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Alerts() {
   const [alerts] = useState([
@@ -36,11 +37,8 @@ export default function Alerts() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Alerts</h1>
-        <p className="text-gray-600 dark:text-gray-400">Manage and monitor system alerts</p>
-      </div>
+    <div>
+      <Breadcrumb currentPage="Alerts" />
 
       <div className="space-y-4">
         {alerts.map((alert) => (

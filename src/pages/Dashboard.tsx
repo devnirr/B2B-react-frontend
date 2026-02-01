@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import Breadcrumb from '../components/Breadcrumb';
 import { AlertTriangle, ArrowRight, Calendar, Search, Plus, Trash2, ChevronLeft, ChevronRight, Inbox, Download } from 'lucide-react';
 import { SkeletonTable } from '../components/Skeleton';
 import Chart from 'react-apexcharts';
@@ -875,7 +876,7 @@ export default function Dashboard() {
 
   return (
     <div>
-
+      <Breadcrumb currentPage="Dashboard" />
       {/* Dashboard Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
         {/* Left Column - Main Cards (Cards 1-5) */}

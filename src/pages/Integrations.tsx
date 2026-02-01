@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link2, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Integrations() {
   const [integrations] = useState([
@@ -9,7 +10,8 @@ export default function Integrations() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Integrations" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Integrations</h1>

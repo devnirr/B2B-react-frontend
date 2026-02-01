@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { Plus, Folder, X, ChevronDown, Pencil, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 // Custom Select Component with beautiful dropdown
 const CustomSelect = ({
@@ -428,6 +429,7 @@ export default function Collections() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Collections" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

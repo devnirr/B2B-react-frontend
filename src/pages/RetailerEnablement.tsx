@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Handshake, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function RetailerEnablement() {
   const [programs] = useState([
@@ -9,7 +10,8 @@ export default function RetailerEnablement() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Retailer Enablement" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Retailer Enablement</h1>

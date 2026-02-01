@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { Package, Plus, X, ChevronDown, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 
 // Custom Select Component with beautiful dropdown
 const CustomSelect = ({
@@ -379,6 +380,7 @@ export default function Products() {
 
   return (
     <div>
+      <Breadcrumb currentPage="Products" />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

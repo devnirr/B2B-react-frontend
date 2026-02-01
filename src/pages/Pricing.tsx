@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Tag, Plus, Search } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Pricing() {
   const [pricing] = useState([
@@ -9,7 +10,8 @@ export default function Pricing() {
   ]);
 
   return (
-    <div className="p-6">
+    <div>
+      <Breadcrumb currentPage="Pricing" />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Pricing</h1>
