@@ -6,13 +6,8 @@ import api from '../lib/api';
 import {
   LayoutDashboard,
   Package,
-  Layers,
   Warehouse,
-  Building2,
   ShoppingCart,
-  Users,
-  BarChart3,
-  Menu,
   Search,
   Bell,
   Sun,
@@ -20,7 +15,6 @@ import {
   LogOut,
   User,
   Settings,
-  X,
   Calendar,
   ChevronDown,
   FileText,
@@ -28,28 +22,35 @@ import {
   AlertCircle,
   Info,
   TrendingUp,
-  DollarSign,
-  Star,
 } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-interface MenuItem {
-  path: string;
+interface NavbarItem {
+  id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   useFlaticon?: boolean;
   flaticonClass?: string;
 }
 
+interface SidebarItem {
+  path: string;
+  label: string;
+  useFlaticon?: boolean;
+  flaticonClass?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}
+
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedNavbarItem, setSelectedNavbarItem] = useState<string>('dashboard');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [documentsDropdownOpen, setDocumentsDropdownOpen] = useState(false);
   const [notificationsDropdownOpen, setNotificationsDropdownOpen] = useState(false);
@@ -69,19 +70,84 @@ export default function Layout({ children }: LayoutProps) {
     document.documentElement.classList.toggle('dark', !darkMode);
   };
 
-  const menuItems: MenuItem[] = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, useFlaticon: true, flaticonClass: 'fi fi-rr-house-blank' },
-    { path: '/sales', label: 'Sales Dashboard', icon: TrendingUp, useFlaticon: true, flaticonClass: 'fi fi-rr-percent-100' },
-    { path: '/finance', label: 'Finance Dashboard', icon: DollarSign, useFlaticon: true, flaticonClass: 'fi fi-rr-growth-chart-invest' },
-    { path: '/review', label: 'Reviews', icon: Star, useFlaticon: true, flaticonClass: 'fi fi-rr-star' },
-    { path: '/products', label: 'Products', icon: Package, useFlaticon: true, flaticonClass: 'fi fi-rr-box' },
-    { path: '/collections', label: 'Collections', icon: Layers, useFlaticon: true, flaticonClass: 'fi fi-rr-layers' },
-    { path: '/inventory', label: 'Inventory', icon: Warehouse, useFlaticon: true, flaticonClass: 'fi fi-rr-warehouse-alt' },
-    { path: '/warehouses', label: 'Warehouses', icon: Building2, useFlaticon: true, flaticonClass: 'fi fi-rr-building' },
-    { path: '/orders', label: 'Orders', icon: ShoppingCart, useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-cart' },
-    { path: '/customers', label: 'Customers', icon: Users, useFlaticon: true, flaticonClass: 'fi fi-rr-users' },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3, useFlaticon: true, flaticonClass: 'fi fi-rr-chart-histogram' },
+  // Navbar items (main categories)
+  const navbarItems: NavbarItem[] = [
+    { id: 'dashboard', label: 'DASHBOARD / KPIs', icon: LayoutDashboard, useFlaticon: true, flaticonClass: 'fi fi-rr-house-blank' },
+    { id: 'product', label: 'PRODUCT', icon: Package, useFlaticon: true, flaticonClass: 'fi fi-rr-box' },
+    { id: 'sales', label: 'SALES', icon: ShoppingCart, useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-cart' },
+    { id: 'marketing', label: 'MARKETING', icon: TrendingUp, useFlaticon: true, flaticonClass: 'fi fi-rr-chart-histogram' },
+    { id: 'operations', label: 'OPERATIONS', icon: Warehouse, useFlaticon: true, flaticonClass: 'fi fi-rr-warehouse-alt' },
+    { id: 'admin', label: 'ADMIN', icon: Settings, useFlaticon: true, flaticonClass: 'fi fi-rr-settings' },
   ];
+
+  // Sidebar items mapping for each navbar category
+  const sidebarItemsMap: Record<string, SidebarItem[]> = {
+    dashboard: [
+      { path: '/dashboard', label: 'Overview', useFlaticon: true, flaticonClass: 'fi fi-rr-house-blank' },
+      { path: '/alerts', label: 'Alerts', useFlaticon: true, flaticonClass: 'fi fi-rr-bell' },
+      { path: '/exceptions', label: 'Exceptions', useFlaticon: true, flaticonClass: 'fi fi-rr-exclamation-triangle' },
+      { path: '/tasks', label: 'My Tasks', useFlaticon: true, flaticonClass: 'fi fi-rr-clipboard-list' },
+      { path: '/kpi-reports', label: 'KPI Reports', useFlaticon: true, flaticonClass: 'fi fi-rr-chart-histogram' },
+    ],
+    product: [
+      { path: '/products', label: 'Catalog', useFlaticon: true, flaticonClass: 'fi fi-rr-box' },
+      { path: '/bom', label: 'BOM', useFlaticon: true, flaticonClass: 'fi fi-rr-list' },
+      { path: '/costing', label: 'Costing', useFlaticon: true, flaticonClass: 'fi fi-rr-dollar' },
+      { path: '/collections', label: 'Collections', useFlaticon: true, flaticonClass: 'fi fi-rr-layers' },
+      { path: '/drops', label: 'Drops', useFlaticon: true, flaticonClass: 'fi fi-rr-calendar' },
+      { path: '/pricing', label: 'Pricing', useFlaticon: true, flaticonClass: 'fi fi-rr-tag' },
+      { path: '/documents', label: 'Assets (DAM)', useFlaticon: true, flaticonClass: 'fi fi-rr-file' },
+    ],
+    sales: [
+      { path: '/orders', label: 'Orders', useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-cart' },
+      { path: '/customers', label: 'Customers', useFlaticon: true, flaticonClass: 'fi fi-rr-users' },
+      { path: '/retailers', label: 'Retailers', useFlaticon: true, flaticonClass: 'fi fi-rr-store' },
+      { path: '/returns', label: 'Returns (RMA)', useFlaticon: true, flaticonClass: 'fi fi-rr-arrow-left' },
+      { path: '/wholesale', label: 'Wholesale (B2B)', useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-bag' },
+    ],
+    marketing: [
+      { path: '/launch-planning', label: 'Launch Planning', useFlaticon: true, flaticonClass: 'fi fi-rr-rocket' },
+      { path: '/retailer-enablement', label: 'Retailer Enablement', useFlaticon: true, flaticonClass: 'fi fi-rr-handshake' },
+      { path: '/content-readiness', label: 'Content Readiness', useFlaticon: true, flaticonClass: 'fi fi-rr-check-circle' },
+    ],
+    operations: [
+      { path: '/inventory', label: 'Inventory', useFlaticon: true, flaticonClass: 'fi fi-rr-warehouse-alt' },
+      { path: '/fulfillment', label: 'Fulfillment', useFlaticon: true, flaticonClass: 'fi fi-rr-truck' },
+      { path: '/warehouses', label: 'Warehouses', useFlaticon: true, flaticonClass: 'fi fi-rr-building' },
+      { path: '/receiving', label: 'Receiving', useFlaticon: true, flaticonClass: 'fi fi-rr-inbox' },
+      { path: '/purchasing', label: 'Purchasing', useFlaticon: true, flaticonClass: 'fi fi-rr-shopping-bag' },
+      { path: '/replenishment', label: 'Replenishment', useFlaticon: true, flaticonClass: 'fi fi-rr-refresh' },
+      { path: '/forecast', label: 'Forecast', useFlaticon: true, flaticonClass: 'fi fi-rr-chart-line-up' },
+    ],
+    admin: [
+      { path: '/users', label: 'Users', useFlaticon: true, flaticonClass: 'fi fi-rr-users' },
+      { path: '/roles', label: 'Roles', useFlaticon: true, flaticonClass: 'fi fi-rr-user-shield' },
+      { path: '/integrations', label: 'Integrations', useFlaticon: true, flaticonClass: 'fi fi-rr-link' },
+      { path: '/audit-log', label: 'Audit Log', useFlaticon: true, flaticonClass: 'fi fi-rr-file-text' },
+      { path: '/rules', label: 'Rules', useFlaticon: true, flaticonClass: 'fi fi-rr-list-check' },
+      { path: '/settings', label: 'Settings', useFlaticon: true, flaticonClass: 'fi fi-rr-settings' },
+    ],
+  };
+
+  // Determine active navbar item based on current route
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/dashboard') || path.startsWith('/alerts') || path.startsWith('/exceptions') || path.startsWith('/tasks') || path.startsWith('/kpi-reports')) {
+      setSelectedNavbarItem('dashboard');
+    } else if (path.startsWith('/products') || path.startsWith('/bom') || path.startsWith('/costing') || path.startsWith('/collections') || path.startsWith('/drops') || path.startsWith('/pricing') || path.startsWith('/documents')) {
+      setSelectedNavbarItem('product');
+    } else if (path.startsWith('/orders') || path.startsWith('/customers') || path.startsWith('/retailers') || path.startsWith('/returns') || path.startsWith('/wholesale')) {
+      setSelectedNavbarItem('sales');
+    } else if (path.startsWith('/launch-planning') || path.startsWith('/retailer-enablement') || path.startsWith('/content-readiness')) {
+      setSelectedNavbarItem('marketing');
+    } else if (path.startsWith('/inventory') || path.startsWith('/fulfillment') || path.startsWith('/warehouses') || path.startsWith('/receiving') || path.startsWith('/purchasing') || path.startsWith('/replenishment') || path.startsWith('/forecast')) {
+      setSelectedNavbarItem('operations');
+    } else if (path.startsWith('/users') || path.startsWith('/roles') || path.startsWith('/integrations') || path.startsWith('/audit-log') || path.startsWith('/rules') || path.startsWith('/settings')) {
+      setSelectedNavbarItem('admin');
+    }
+  }, [location.pathname]);
+
+  const currentSidebarItems = sidebarItemsMap[selectedNavbarItem] || [];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -329,7 +395,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Icon-only Navbar (Left Side) */}
       <aside className="fixed left-0 top-0 bottom-0 w-[368px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 flex">
         {/* Logo at top */}
-        <div className='w-[88px] border-r h-full flex flex-col w-full'>
+        <div className='w-[88px] border-r h-full flex flex-col'>
           <div className='h-full flex flex-col'>
             <div className="h-20 flex items-center justify-center border-gray-200 dark:border-gray-700">
               <div className="w-10 h-10 rounded-lg bg-primary-600 dark:bg-primary-500 flex items-center justify-center">
@@ -340,12 +406,12 @@ export default function Layout({ children }: LayoutProps) {
             {/* Icon Navigation */}
             <nav className="flex-1 overflow-y-auto py-3 px-4">
               <ul className="flex flex-col gap-1">
-                {menuItems.map((item) => {
-                  const active = isActive(item.path);
+                {navbarItems.map((item) => {
+                  const active = selectedNavbarItem === item.id;
                   return (
-                    <li key={item.path} className="flex">
-                      <Link
-                        to={item.path}
+                    <li key={item.id} className="flex">
+                      <button
+                        onClick={() => setSelectedNavbarItem(item.id)}
                         className={`w-full flex items-center justify-center p-3.5 rounded-lg transition-all ${active
                           ? 'bg-gray-100 dark:bg-gray-700 text-primary-600 dark:text-primary-400'
                           : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -357,7 +423,7 @@ export default function Layout({ children }: LayoutProps) {
                         ) : (
                           <item.icon className="w-[24px] h-[24px]" />
                         )}
-                      </Link>
+                      </button>
                     </li>
                   );
                 })}
@@ -394,9 +460,15 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4">
+              {sidebarOpen && (
+                <div className="px-5 mb-4">
+                  <h2 className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">
+                    {navbarItems.find(item => item.id === selectedNavbarItem)?.label || 'DASHBOARD / KPIs'}
+                  </h2>
+                </div>
+              )}
               <ul className={`space-y-1 ${sidebarOpen ? 'px-2' : 'px-0'}`}>
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
+                {currentSidebarItems.map((item) => {
                   const active = isActive(item.path);
                   return (
                     <li key={item.path}>
@@ -409,10 +481,10 @@ export default function Layout({ children }: LayoutProps) {
                           }`}
                       >
                         {item.useFlaticon && item.flaticonClass ? (
-                          <i className={item.flaticonClass} style={{ fontSize: '26px', width: '24px', height: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></i>
-                        ) : (
-                          <Icon className="w-5 h-5 flex-shrink-0" />
-                        )}
+                          <i className={item.flaticonClass} style={{ fontSize: '18px', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></i>
+                        ) : item.icon ? (
+                          <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                        ) : null}
                         {sidebarOpen && <span className="text-lg">{item.label}</span>}
                       </Link>
                     </li>
