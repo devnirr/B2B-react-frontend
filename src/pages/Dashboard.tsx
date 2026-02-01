@@ -257,7 +257,7 @@ export default function Dashboard() {
 
   // Fetch low stock items directly as fallback if not in dashboard stats
   const hasLowStockInDashboard = dashboardStats?.lowStockItems && Array.isArray(dashboardStats.lowStockItems) && dashboardStats.lowStockItems.length > 0;
-
+  
   const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
     queryKey: ['inventory', 'low-stock'],
     queryFn: async () => {
@@ -304,7 +304,7 @@ export default function Dashboard() {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - created.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
+    
     if (diffDays === 0) {
       const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
       if (diffHours < 12) return '1st Half Day';
@@ -316,7 +316,7 @@ export default function Dashboard() {
 
   // Task management functions
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(task =>
+    setTasks(tasks.map(task => 
       task.id === id ? { ...task, completed: !task.completed } : task
     ));
   };
@@ -367,20 +367,20 @@ export default function Dashboard() {
       opacity: isDragging ? 0.5 : 1,
     };
 
-    const bgColorClass = task.completed
-      ? task.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/10'
+    const bgColorClass = task.completed 
+      ? task.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/10' 
         : task.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/10'
-          : task.color === 'green' ? 'bg-green-50 dark:bg-green-900/10'
-            : task.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10'
-              : 'bg-gray-50/50 dark:bg-gray-900/30'
+        : task.color === 'green' ? 'bg-green-50 dark:bg-green-900/10'
+        : task.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10'
+        : 'bg-gray-50/50 dark:bg-gray-900/30'
       : 'bg-gray-50/50 dark:bg-gray-900/30';
-
+    
     const checkboxColorClass = task.completed
       ? task.color === 'blue' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
         : task.color === 'purple' ? 'text-purple-600 dark:text-purple-400 border-purple-600 dark:border-purple-400'
-          : task.color === 'green' ? 'text-green-600 dark:text-green-400 border-green-600 dark:border-green-400'
-            : task.color === 'orange' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400'
-              : 'text-primary border-primary'
+        : task.color === 'green' ? 'text-green-600 dark:text-green-400 border-green-600 dark:border-green-400'
+        : task.color === 'orange' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400'
+        : 'text-primary border-primary'
       : 'text-gray-400 border-gray-300 dark:border-gray-600';
 
     return (
@@ -389,7 +389,7 @@ export default function Dashboard() {
         style={style}
         className={`flex items-center gap-2 px-3 py-2 rounded-md mb-1 ${bgColorClass} ${isDragging ? 'shadow-lg' : ''}`}
       >
-        <span
+        <span 
           className="sortable-handle cursor-move flex-shrink-0 touch-none"
           {...attributes}
           {...listeners}
@@ -412,9 +412,9 @@ export default function Dashboard() {
         />
         <span
           className={`flex-1 text-sm ${task.completed
-            ? 'line-through text-gray-500 dark:text-gray-400'
-            : 'text-gray-900 dark:text-white'
-            }`}
+              ? 'line-through text-gray-500 dark:text-gray-400'
+              : 'text-gray-900 dark:text-white'
+          }`}
         >
           {task.text}
         </span>
@@ -446,10 +446,10 @@ export default function Dashboard() {
   // Fetch sales report for the selected date range
   const getDateRange = () => {
     if (dateRange === 'all') return { startDate: undefined, endDate: undefined };
-
+    
     const endDate = new Date();
     const startDate = new Date();
-
+    
     switch (dateRange) {
       case '7d':
         startDate.setDate(endDate.getDate() - 7);
@@ -461,10 +461,10 @@ export default function Dashboard() {
         startDate.setDate(endDate.getDate() - 90);
         break;
     }
-
-    return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
+    
+    return { 
+      startDate: startDate.toISOString().split('T')[0], 
+      endDate: endDate.toISOString().split('T')[0] 
     };
   };
 
@@ -727,8 +727,8 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
               <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-            </div>
-          </div>
+        </div>
+        </div>
         </div>
 
         {/* Main Content Grid Skeleton */}
@@ -844,7 +844,7 @@ export default function Dashboard() {
   // Check if dashboard stats has lowStockItems and it's an array with items
   const dashboardLowStock = dashboardStats?.lowStockItems;
   const lowStockItems = (Array.isArray(dashboardLowStock) && dashboardLowStock.length > 0)
-    ? dashboardLowStock
+    ? dashboardLowStock 
     : (Array.isArray(lowStockData) && lowStockData.length > 0 ? lowStockData : []);
 
   // If dashboard stats failed to load, show error state
@@ -882,7 +882,7 @@ export default function Dashboard() {
         {/* Left Column - Main Cards (Cards 1-5) */}
         <div className="lg:col-span-8 xl:col-span-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+            
             {/* Card 1: Total Customers */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -897,90 +897,90 @@ export default function Dashboard() {
                 <>
                   <div className="px-4 mt-3 pb-0">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
-                          {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
-                        </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                        {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
+                      </h2>
                         {customerChangePercent !== 0 && (
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${customerChangePercent > 0
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                             }`}>
                             {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
-                          </span>
+                      </span>
                         )}
-                      </div>
+                    </div>
                     </div>
                     <div className="w-full h-[120px] -mt-2">
-                      <Chart
-                        type="bar"
-                        height={120}
-                        series={[{
-                          name: 'Customers',
+                  <Chart
+                    type="bar"
+                    height={120}
+                    series={[{
+                      name: 'Customers',
                           data: dashboardStats?.customerTrend || [0, 0, 0, 0, 0, 0]
-                        }]}
-                        options={{
-                          chart: {
-                            toolbar: { show: false },
-                            zoom: { enabled: false },
-                            sparkline: { enabled: false }
-                          },
-                          plotOptions: {
-                            bar: {
-                              horizontal: false,
-                              columnWidth: '60%',
-                              borderRadius: 2
-                            }
-                          },
-                          colors: ['#5955D1'],
-                          dataLabels: { enabled: false },
-                          stroke: { show: true },
-                          xaxis: {
-                            axisBorder: { show: false },
-                            axisTicks: { show: false },
-                            labels: { show: false }
-                          },
-                          yaxis: {
-                            labels: { show: false }
-                          },
-                          grid: {
-                            borderColor: 'transparent',
-                            xaxis: { lines: { show: false } },
-                            yaxis: { lines: { show: true } },
-                            padding: { top: 0, bottom: 0, left: 0, right: 0 }
-                          },
-                          fill: {
-                            type: 'gradient',
-                            gradient: {
-                              shade: 'light',
-                              type: 'vertical',
-                              shadeIntensity: 0.1,
-                              gradientToColors: ['#7008E7'],
-                              inverseColors: false,
-                              opacityFrom: 1,
-                              opacityTo: 0.6,
-                              stops: [20, 100]
-                            }
-                          },
-                          tooltip: { enabled: false },
-                          legend: { show: false }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
+                    }]}
+                    options={{
+                      chart: {
+                        toolbar: { show: false },
+                        zoom: { enabled: false },
+                        sparkline: { enabled: false }
+                      },
+                      plotOptions: {
+                        bar: {
+                          horizontal: false,
+                          columnWidth: '60%',
+                          borderRadius: 2
+                        }
+                      },
+                      colors: ['#5955D1'],
+                      dataLabels: { enabled: false },
+                      stroke: { show: true },
+                      xaxis: {
+                        axisBorder: { show: false },
+                        axisTicks: { show: false },
+                        labels: { show: false }
+                      },
+                      yaxis: {
+                        labels: { show: false }
+                      },
+                      grid: {
+                        borderColor: 'transparent',
+                        xaxis: { lines: { show: false } },
+                        yaxis: { lines: { show: true } },
+                        padding: { top: 0, bottom: 0, left: 0, right: 0 }
+                      },
+                      fill: {
+                        type: 'gradient',
+                        gradient: {
+                          shade: 'light',
+                          type: 'vertical',
+                          shadeIntensity: 0.1,
+                          gradientToColors: ['#7008E7'],
+                          inverseColors: false,
+                          opacityFrom: 1,
+                          opacityTo: 0.6,
+                          stops: [20, 100]
+                        }
+                      },
+                      tooltip: { enabled: false },
+                      legend: { show: false }
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
                         Vs last month: {dashboardStats?.lastMonthCustomers?.toLocaleString() || '0'}
                       </p>
-                      <button
-                        onClick={() => navigate('/customers')}
-                        className="text-primary hover:text-primary-dark transition-colors"
-                      >
-                        <ArrowRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => navigate('/customers')}
+                    className="text-primary hover:text-primary-dark transition-colors"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
                 </>
               )}
             </div>
@@ -1008,69 +1008,69 @@ export default function Dashboard() {
                           : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                           }`}>
                           {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
-                        </span>
+                      </span>
                       )}
                     </div>
                   </div>
-                  <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
-                    <Chart
-                      type="area"
-                      height={120}
-                      series={[{
-                        name: 'Orders',
+              <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
+                <Chart
+                  type="area"
+                  height={120}
+                  series={[{
+                    name: 'Orders',
                         data: dashboardStats?.orderTrend || [0, 0, 0, 0, 0, 0]
-                      }]}
-                      options={{
-                        chart: {
-                          toolbar: { show: false },
-                          zoom: { enabled: false },
-                          sparkline: { enabled: false }
-                        },
-                        stroke: {
-                          curve: 'smooth',
-                          width: 2,
-                          colors: ['#5955D1']
-                        },
-                        fill: {
-                          type: 'solid',
-                          colors: ['rgba(89, 85, 209, 0.1)'],
-                          opacity: 1
-                        },
-                        dataLabels: { enabled: false },
-                        markers: {
-                          size: 0,
-                          colors: ['#FFFFFF'],
-                          strokeColors: '#5955D1',
-                          strokeWidth: 3,
-                          hover: { size: 6 }
-                        },
-                        xaxis: {
+                  }]}
+                  options={{
+                    chart: {
+                      toolbar: { show: false },
+                      zoom: { enabled: false },
+                      sparkline: { enabled: false }
+                    },
+                    stroke: {
+                      curve: 'smooth',
+                      width: 2,
+                      colors: ['#5955D1']
+                    },
+                    fill: {
+                      type: 'solid',
+                      colors: ['rgba(89, 85, 209, 0.1)'],
+                      opacity: 1
+                    },
+                    dataLabels: { enabled: false },
+                    markers: {
+                      size: 0,
+                      colors: ['#FFFFFF'],
+                      strokeColors: '#5955D1',
+                      strokeWidth: 3,
+                      hover: { size: 6 }
+                    },
+                    xaxis: {
                           categories: dashboardStats?.orderTrendLabels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                          labels: { show: false },
-                          axisBorder: { show: false },
-                          axisTicks: { show: false }
-                        },
-                        grid: {
-                          show: false,
-                          padding: { top: 0, right: 0, bottom: 20, left: 0 }
-                        },
-                        yaxis: {
-                          min: 0,
+                      labels: { show: false },
+                      axisBorder: { show: false },
+                      axisTicks: { show: false }
+                    },
+                    grid: {
+                      show: false,
+                      padding: { top: 0, right: 0, bottom: 20, left: 0 }
+                    },
+                    yaxis: {
+                      min: 0,
                           max: Math.max(...(dashboardStats?.orderTrend || [0]), 1) * 1.2,
-                          labels: { show: false }
-                        },
-                        tooltip: {
-                          enabled: true,
-                          theme: 'dark',
+                      labels: { show: false }
+                    },
+                    tooltip: {
+                      enabled: true,
+                      theme: 'dark',
                           y: { formatter: (val: number) => val.toLocaleString() + ' orders' }
-                        },
-                        legend: { show: false }
-                      }}
-                    />
+                    },
+                    legend: { show: false }
+                  }}
+                />
                     <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center text-sm text-gray-500 dark:text-gray-400 w-full">
-                      Compared to Last Month
-                    </div>
-                  </div>
+                  Compared to Last Month
+                </div>
+              </div>
                 </>
               )}
             </div>
@@ -1109,29 +1109,29 @@ export default function Dashboard() {
                   </div>
                   <div className="w-24 h-24">
                     {taskStats.total > 0 ? (
-                      <Doughnut
-                        data={{
-                          labels: ['Follow-ups', 'In Progress', 'Pending'],
-                          datasets: [{
+                    <Doughnut
+                      data={{
+                        labels: ['Follow-ups', 'In Progress', 'Pending'],
+                        datasets: [{
                             data: [taskStats.followUps, taskStats.inProgress, taskStats.pending],
-                            backgroundColor: ['#5955D1', '#ACAAE8', '#DEDDF6'],
-                            borderWidth: 3,
-                            borderColor: '#fff',
-                            hoverBorderColor: '#fff',
-                            borderRadius: 3,
-                            spacing: 0,
-                            hoverOffset: 5
-                          }]
-                        }}
-                        options={{
-                          cutout: '70%',
-                          plugins: {
-                            legend: { display: false },
-                            tooltip: { enabled: false }
-                          },
-                          maintainAspectRatio: false
-                        }}
-                      />
+                          backgroundColor: ['#5955D1', '#ACAAE8', '#DEDDF6'],
+                          borderWidth: 3,
+                          borderColor: '#fff',
+                          hoverBorderColor: '#fff',
+                          borderRadius: 3,
+                          spacing: 0,
+                          hoverOffset: 5
+                        }]
+                      }}
+                      options={{
+                        cutout: '70%',
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: { enabled: false }
+                        },
+                        maintainAspectRatio: false
+                      }}
+                    />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="text-xs text-gray-400">No Data</span>
@@ -1165,23 +1165,23 @@ export default function Dashboard() {
                           : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                           }`}>
                           {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
-                        </span>
+                      </span>
                       )}
                     </div>
                   </div>
-                  <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
+              <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
                         Vs last month: {dashboardStats?.lastMonthOrders?.toLocaleString() || '0'}
                       </p>
-                      <button
-                        onClick={() => navigate('/orders')}
-                        className="text-primary hover:text-primary-dark transition-colors"
-                      >
-                        <ArrowRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => navigate('/orders')}
+                    className="text-primary hover:text-primary-dark transition-colors"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
                 </>
               )}
             </div>
@@ -1201,16 +1201,16 @@ export default function Dashboard() {
                         className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${(tab === 'Month' && revenueTimeRange === 'month') ||
                           (tab === 'Week' && revenueTimeRange === 'week') ||
                           (tab === 'Today' && revenueTimeRange === 'today')
-                          ? 'bg-primary text-white'
+                            ? 'bg-primary text-white'
                           : 'text-gray-600 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                          }`}
+                        }`}
                       >
                         {tab}
                       </button>
                     ))}
                   </div>
                   <div className="relative" ref={calendarRef}>
-                    <button
+                    <button 
                       onClick={() => setIsCalendarOpen(!isCalendarOpen)}
                       className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
@@ -1263,11 +1263,11 @@ export default function Dashboard() {
                                 key={day}
                                 onClick={() => handleDateSelect(day)}
                                 className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isSelected(day)
-                                  ? 'bg-primary text-white shadow-lg scale-110'
-                                  : isToday(day)
+                                    ? 'bg-primary text-white shadow-lg scale-110'
+                                    : isToday(day)
                                     ? 'bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-300 font-bold border-2 border-primary'
                                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                  }`}
+                                }`}
                               >
                                 {day}
                               </button>
@@ -1280,11 +1280,11 @@ export default function Dashboard() {
                           <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                             <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
                               Selected: <span className="font-semibold text-gray-900 dark:text-white">
-                                {selectedDate.toLocaleDateString('en-US', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
+                                {selectedDate.toLocaleDateString('en-US', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
                                 })}
                               </span>
                             </p>
@@ -1411,7 +1411,7 @@ export default function Dashboard() {
         {/* Right Column - Side Cards (Cards 6-7) */}
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="grid grid-cols-1 gap-6">
-
+            
             {/* Card 6: Order Sources - Using order types from schema */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -1439,83 +1439,83 @@ export default function Dashboard() {
 
                   return (
                     <>
-                      <div style={{ height: '95px' }} className="my-1">
+                <div style={{ height: '95px' }} className="my-1">
                         {chartData.length > 0 ? (
-                          <Chart
-                            type="bar"
-                            height={95}
+                  <Chart
+                    type="bar"
+                    height={95}
                             series={chartData.map((val, idx) => ({
                               name: percentages[idx].type,
                               data: [val]
                             }))}
-                            options={{
-                              chart: {
-                                type: 'bar',
-                                height: 95,
-                                stacked: true,
-                                stackType: '100%',
-                                toolbar: { show: false }
-                              },
-                              plotOptions: {
-                                bar: {
-                                  horizontal: true,
-                                  barHeight: '100%',
-                                  borderRadius: 0
-                                }
-                              },
-                              dataLabels: { enabled: false },
-                              stroke: {
-                                width: 1,
-                                colors: ['#ffffff']
-                              },
-                              xaxis: {
-                                labels: { show: false },
-                                axisBorder: { show: false },
-                                axisTicks: { show: false }
-                              },
-                              yaxis: { labels: { show: false } },
-                              grid: {
-                                show: false,
-                                padding: { top: -15, bottom: -15, left: -15, right: 0 }
-                              },
-                              legend: { show: false },
-                              fill: {
-                                opacity: 1,
-                                colors: [
-                                  'rgba(89, 85, 209, 0.1)',
-                                  'rgba(89, 85, 209, 0.25)',
-                                  'rgba(89, 85, 209, 0.50)',
-                                  'rgba(89, 85, 209, 0.75)',
-                                  'rgba(89, 85, 209, 1)'
-                                ]
-                              },
-                              tooltip: {
-                                enabled: true,
+                    options={{
+                      chart: {
+                        type: 'bar',
+                        height: 95,
+                        stacked: true,
+                        stackType: '100%',
+                        toolbar: { show: false }
+                      },
+                      plotOptions: {
+                        bar: {
+                          horizontal: true,
+                          barHeight: '100%',
+                          borderRadius: 0
+                        }
+                      },
+                      dataLabels: { enabled: false },
+                      stroke: {
+                        width: 1,
+                        colors: ['#ffffff']
+                      },
+                      xaxis: {
+                        labels: { show: false },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                      },
+                      yaxis: { labels: { show: false } },
+                      grid: {
+                        show: false,
+                        padding: { top: -15, bottom: -15, left: -15, right: 0 }
+                      },
+                      legend: { show: false },
+                      fill: {
+                        opacity: 1,
+                        colors: [
+                          'rgba(89, 85, 209, 0.1)',
+                          'rgba(89, 85, 209, 0.25)',
+                          'rgba(89, 85, 209, 0.50)',
+                          'rgba(89, 85, 209, 0.75)',
+                          'rgba(89, 85, 209, 1)'
+                        ]
+                      },
+                      tooltip: {
+                        enabled: true,
                                 y: { formatter: (val: number) => val.toFixed(1) + '%' }
-                              }
-                            }}
-                          />
+                      }
+                    }}
+                  />
                         ) : (
                           <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-gray-400">
                             No data available
                           </div>
                         )}
-                      </div>
-                      <div className="space-y-1 mt-2">
+                </div>
+                <div className="space-y-1 mt-2">
                         {percentages.map((item, idx) => {
                           const opacityMap = ['opacity-10', 'opacity-25', 'opacity-50', 'opacity-75', 'opacity-100'];
                           return (
-                            <div key={idx} className="flex items-center gap-1 text-xs py-1">
+                    <div key={idx} className="flex items-center gap-1 text-xs py-1">
                               <div className={`w-3 h-3 bg-primary ${opacityMap[idx] || 'opacity-100'} rounded`}></div>
                               <span className="text-gray-600 dark:text-gray-400 flex-1">{item.type}</span>
                               <strong className="text-gray-900 dark:text-white font-semibold">{item.percentage.toFixed(1)}%</strong>
-                            </div>
+                    </div>
                           );
                         })}
                         {percentages.length === 0 && (
                           <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No data available</div>
                         )}
-                      </div>
+                </div>
                     </>
                   );
                 })()}
@@ -1553,7 +1553,7 @@ export default function Dashboard() {
 
                   return (
                     <>
-                      <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3">
                         {change !== 0 && (
                           <span className={`text-sm ${change >= 0
                             ? 'text-green-600 dark:text-green-400'
@@ -1562,7 +1562,7 @@ export default function Dashboard() {
                             {change >= 0 ? '+' : ''}{change.toFixed(0)}% vs last month
                           </span>
                         )}
-                      </div>
+                </div>
                       {reviewsStats && reviewsStats.ratingDistribution && (
                         <div className="space-y-2 mb-3">
                           {[5, 4, 3, 2, 1].map((rating) => {
@@ -1718,22 +1718,22 @@ export default function Dashboard() {
 
                   return (
                     <div style={{ height: '315px' }} className="-mt-1">
-                      <Chart
-                        type="bar"
-                        height={295}
+                  <Chart
+                    type="bar"
+                    height={295}
                         series={series}
-                        options={{
-                          chart: {
-                            type: 'bar',
-                            height: 295,
-                            stacked: true,
+                    options={{
+                      chart: {
+                        type: 'bar',
+                        height: 295,
+                        stacked: true,
                             stackType: '100%',
-                            toolbar: { show: false },
+                        toolbar: { show: false },
                             zoom: { enabled: false },
-                          },
-                          plotOptions: {
-                            bar: {
-                              horizontal: false,
+                      },
+                      plotOptions: {
+                        bar: {
+                          horizontal: false,
                               borderRadius: 4,
                               columnWidth: '60%',
                             }
@@ -1758,45 +1758,45 @@ export default function Dashboard() {
                               formatter: (val: number) => `${val.toFixed(0)}%`
                             }
                           },
-                          xaxis: {
+                      xaxis: {
                             categories: monthLabels,
-                            axisTicks: { show: false },
-                            axisBorder: { show: false },
-                            labels: {
-                              style: {
-                                colors: '#696981',
-                                fontSize: '13px',
-                                fontWeight: 500
-                              }
-                            }
-                          },
-                          legend: {
+                        axisTicks: { show: false },
+                        axisBorder: { show: false },
+                        labels: {
+                          style: {
+                            colors: '#696981',
+                            fontSize: '13px',
+                            fontWeight: 500
+                          }
+                        }
+                      },
+                      legend: {
                             show: true,
-                            position: 'bottom',
+                        position: 'bottom',
                             offsetY: 10,
-                            labels: {
-                              colors: '#696981'
-                            },
+                        labels: {
+                          colors: '#696981'
+                        },
                             markers: {
                               strokeWidth: 0,
                               size: 8
                             },
-                            fontSize: '12px',
-                            fontWeight: 500
-                          },
-                          grid: {
-                            borderColor: 'transparent',
-                            xaxis: { lines: { show: false } },
+                        fontSize: '12px',
+                        fontWeight: 500
+                      },
+                      grid: {
+                        borderColor: 'transparent',
+                        xaxis: { lines: { show: false } },
                             yaxis: {
                               lines: {
                                 show: true
                               }
                             },
                             strokeDashArray: 4
-                          },
-                          fill: {
-                            opacity: 1
-                          },
+                      },
+                      fill: {
+                        opacity: 1
+                      },
                           dataLabels: {
                             enabled: false
                           },
@@ -1821,9 +1821,9 @@ export default function Dashboard() {
                               }
                             }
                           }
-                        }}
-                      />
-                    </div>
+                    }}
+                  />
+                </div>
                   );
                 })()}
               </div>
@@ -1835,7 +1835,7 @@ export default function Dashboard() {
         {/* Right Column 2 - Additional Cards (Cards 8-9) */}
         <div className="lg:col-span-6 xl:col-span-3">
           <div className="grid grid-cols-1 gap-6">
-
+            
             {/* Card 8: Total Revenue with Order Status */}
             <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative" style={{
               backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
@@ -1931,30 +1931,30 @@ export default function Dashboard() {
                         .reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
 
                       return (
-                        <div className="px-4 mb-3 flex items-start justify-between">
-                          <div className="flex items-start gap-2">
-                            <div className="py-1">
-                              <div className="w-3 h-3 bg-white rounded"></div>
-                            </div>
-                            <div>
-                              <h3 className="mb-0 text-white font-bold text-lg">
+                    <div className="px-4 mb-3 flex items-start justify-between">
+                      <div className="flex items-start gap-2">
+                        <div className="py-1">
+                          <div className="w-3 h-3 bg-white rounded"></div>
+                        </div>
+                        <div>
+                          <h3 className="mb-0 text-white font-bold text-lg">
                                 {formatCurrency(shippedRevenue).split('.')[0]}
-                              </h3>
+                          </h3>
                               <p className="text-white/50 mb-0 text-sm">{pickups} Pickups</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <div className="p-1">
-                              <div className="w-3 h-3 bg-white/50 rounded"></div>
-                            </div>
-                            <div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="p-1">
+                          <div className="w-3 h-3 bg-white/50 rounded"></div>
+                        </div>
+                        <div>
                               <h3 className="mb-0 text-white font-bold text-lg">
                                 {formatCurrency(shippedRevenue).split('.')[0]}
                               </h3>
                               <p className="text-white/50 mb-0 text-sm">{shipments} Shipments</p>
-                            </div>
-                          </div>
                         </div>
+                      </div>
+                    </div>
                       );
                     })()}
                   </div>
@@ -1994,24 +1994,24 @@ export default function Dashboard() {
                       const opacityMap = ['opacity-100', 'opacity-50', 'opacity-25'];
 
                       return (
-                        <div className="space-y-2">
+                    <div className="space-y-2">
                           {topStatuses.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
                                 <div className={`w-3 h-3 bg-white ${opacityMap[idx] || 'opacity-25'} rounded`}></div>
                                 <h6 className="font-light text-white mb-0 text-sm">
                                   {statusMap[item.status] || item.status}
                                 </h6>
-                              </div>
+                          </div>
                               <strong className="text-white font-semibold">
                                 {((item.count / total) * 100).toFixed(0)}%
                               </strong>
-                            </div>
-                          ))}
+                        </div>
+                      ))}
                           {topStatuses.length === 0 && (
                             <div className="text-center text-sm text-white/50 py-2">No data available</div>
                           )}
-                        </div>
+                    </div>
                       );
                     })()}
                   </div>
@@ -2037,68 +2037,68 @@ export default function Dashboard() {
                     const data = ordersByTime?.data || [];
 
                     return (
-                      <div style={{ height: '250px' }} className="-mt-3 -mb-1">
-                        <Chart
-                          type="heatmap"
-                          height={250}
+                  <div style={{ height: '250px' }} className="-mt-3 -mb-1">
+                    <Chart
+                      type="heatmap"
+                      height={250}
                           series={timeSlots.map((slot: string, idx: number) => ({
                             name: slot,
                             data: data[idx] || [0, 0, 0, 0, 0, 0, 0]
                           }))}
-                          options={{
-                            chart: {
-                              height: 250,
-                              type: 'heatmap',
-                              toolbar: { show: false }
-                            },
-                            stroke: {
-                              width: 2,
-                              colors: ['var(--bs-body-bg)']
-                            },
-                            dataLabels: { enabled: false },
-                            plotOptions: {
-                              heatmap: {
-                                shadeIntensity: 0.95,
-                                radius: 6,
-                                distributed: false,
-                                colorScale: {
-                                  ranges: [
-                                    { from: 0, to: 10, color: '#E0E7FF' },
-                                    { from: 11, to: 25, color: '#A5B4FC' },
-                                    { from: 26, to: 50, color: '#6366F1' }
-                                  ]
-                                }
-                              }
-                            },
-                            grid: { show: false },
-                            yaxis: {
-                              min: 0,
-                              max: 500,
-                              tickAmount: 5,
-                              labels: {
-                                style: {
-                                  colors: '#696981',
-                                  fontSize: '13px',
-                                  fontWeight: 500
-                                }
-                              }
-                            },
-                            xaxis: {
+                      options={{
+                        chart: {
+                          height: 250,
+                          type: 'heatmap',
+                          toolbar: { show: false }
+                        },
+                        stroke: {
+                          width: 2,
+                          colors: ['var(--bs-body-bg)']
+                        },
+                        dataLabels: { enabled: false },
+                        plotOptions: {
+                          heatmap: {
+                            shadeIntensity: 0.95,
+                            radius: 6,
+                            distributed: false,
+                            colorScale: {
+                              ranges: [
+                                { from: 0, to: 10, color: '#E0E7FF' },
+                                { from: 11, to: 25, color: '#A5B4FC' },
+                                { from: 26, to: 50, color: '#6366F1' }
+                              ]
+                            }
+                          }
+                        },
+                        grid: { show: false },
+                        yaxis: {
+                          min: 0,
+                          max: 500,
+                          tickAmount: 5,
+                          labels: {
+                            style: {
+                              colors: '#696981',
+                              fontSize: '13px',
+                              fontWeight: 500
+                            }
+                          }
+                        },
+                        xaxis: {
                               categories: ordersByTime?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                              axisBorder: { show: false },
-                              axisTicks: { show: false },
-                              labels: {
-                                style: {
-                                  colors: '#696981',
-                                  fontSize: '13px',
-                                  fontWeight: 500
-                                }
-                              }
-                            },
-                            legend: { show: false }
-                          }}
-                        />
-                      </div>
+                          axisBorder: { show: false },
+                          axisTicks: { show: false },
+                          labels: {
+                            style: {
+                              colors: '#696981',
+                              fontSize: '13px',
+                              fontWeight: 500
+                            }
+                          }
+                        },
+                        legend: { show: false }
+                      }}
+                    />
+                  </div>
                     );
                   })()}
                 </div>
@@ -2184,9 +2184,9 @@ export default function Dashboard() {
                         </td>
                         <td className="px-3 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.isActive
-                            ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            }`}>
+                              ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300' 
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          }`}>
                             {customer.isActive ? 'Active' : 'Pending'}
                           </span>
                         </td>
@@ -2229,9 +2229,9 @@ export default function Dashboard() {
                       key={pageNum}
                       onClick={() => setCustomerPage(pageNum)}
                       className={`px-3 py-1 text-sm border rounded ${customerPage === pageNum
-                        ? 'bg-primary text-white border-primary'
+                          ? 'bg-primary text-white border-primary'
                         : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white'
-                        }`}
+                      }`}
                     >
                       {pageNum}
                     </button>

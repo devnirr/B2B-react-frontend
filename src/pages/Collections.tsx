@@ -459,8 +459,8 @@ export default function Collections() {
           </div>
         ) : (
           <>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {collections.map((collection: any) => (
                 <div key={collection.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow relative">
                   {/* Header with ID and Action Icons */}
@@ -517,7 +517,7 @@ export default function Collections() {
                     <p className="text-sm text-gray-600 dark:text-white">{collection.id}{collection.id}</p>
                   </div>
                 </div>
-                ))}
+              ))}
               </div>
             </div>
             
@@ -610,8 +610,8 @@ export default function Collections() {
                       &gt;&gt;
                     </button>
                   </div>
-                </div>
-              </div>
+            </div>
+          </div>
             )}
           </>
         )}

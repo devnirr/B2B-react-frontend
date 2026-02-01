@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { Warehouse, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
@@ -25,12 +25,15 @@ const CustomSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [typedChars, setTypedChars] = useState('');
+  const typedCharsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setHighlightedIndex(-1);
+        setTypedChars('');
       }
     };
 
@@ -40,27 +43,106 @@ const CustomSelect = ({
     }
   }, [isOpen]);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  useEffect(() => {
+    return () => {
+      if (typedCharsTimeoutRef.current) {
+        clearTimeout(typedCharsTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0) {
+      const optionElement = selectRef.current?.querySelector(
+        `[data-option-index="${highlightedIndex}"]`
+      ) as HTMLElement;
+      if (optionElement) {
+        optionElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [highlightedIndex, isOpen]);
+
+  // Sort options alphabetically by label (case-insensitive)
+  const sortedOptions = useMemo(() => {
+    return [...options].sort((a, b) => 
+      a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [options]);
+
+  const selectedOption = sortedOptions.find((opt) => opt.value === value);
 
   const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
     setIsOpen(false);
     setHighlightedIndex(-1);
+    setTypedChars('');
+  };
+
+  const findMatchingOption = (searchString: string, startIndex: number = 0) => {
+    const lowerSearch = searchString.toLowerCase();
+    // First, try to find a match starting from the current highlighted index
+    for (let i = startIndex; i < sortedOptions.length; i++) {
+      if (sortedOptions[i].label.toLowerCase().startsWith(lowerSearch)) {
+        return i;
+      }
+    }
+    // If not found, search from the beginning
+    for (let i = 0; i < startIndex; i++) {
+      if (sortedOptions[i].label.toLowerCase().startsWith(lowerSearch)) {
+        return i;
+      }
+    }
+    return -1;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+      if (!isOpen) setIsOpen(true);
+      setHighlightedIndex((prev) => (prev < sortedOptions.length - 1 ? prev + 1 : prev));
+      setTypedChars('');
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      if (!isOpen) setIsOpen(true);
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      setTypedChars('');
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      handleSelect(options[highlightedIndex].value);
+      if (highlightedIndex >= 0) {
+        handleSelect(sortedOptions[highlightedIndex].value);
+      } else if (!isOpen) {
+        setIsOpen(true);
+      }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
       setHighlightedIndex(-1);
+      setTypedChars('');
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Handle alphanumeric keys
+      e.preventDefault();
+      const newTypedChars = typedChars + e.key;
+      setTypedChars(newTypedChars);
+      
+      // Clear previous timeout
+      if (typedCharsTimeoutRef.current) {
+        clearTimeout(typedCharsTimeoutRef.current);
+      }
+      
+      // Set timeout to reset typed characters after 500ms
+      typedCharsTimeoutRef.current = setTimeout(() => {
+        setTypedChars('');
+      }, 500);
+      
+      // Open dropdown if closed
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      
+      // Find matching option
+      const matchIndex = findMatchingOption(newTypedChars, highlightedIndex >= 0 ? highlightedIndex + 1 : 0);
+      if (matchIndex >= 0) {
+        setHighlightedIndex(matchIndex);
+      }
     }
   };
 
@@ -100,7 +182,7 @@ const CustomSelect = ({
             maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
           }}
         >
-          {options.map((option, index) => {
+          {sortedOptions.map((option, index) => {
             const isSelected = option.value === value;
             const isHighlighted = index === highlightedIndex;
             
@@ -108,13 +190,14 @@ const CustomSelect = ({
               <button
                 key={option.value}
                 type="button"
+                data-option-index={index}
                 onClick={() => handleSelect(option.value)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
                   isSelected || isHighlighted
                     ? 'bg-primary-500 text-white'
                     : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === sortedOptions.length - 1 ? 'rounded-b-lg' : ''}`}
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
@@ -339,7 +422,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Inventory</h1>
         <div className="flex items-center gap-4">

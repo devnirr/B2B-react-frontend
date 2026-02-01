@@ -413,7 +413,7 @@ export default function Warehouses() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

@@ -31,7 +31,7 @@ export default function FinanceDashboard() {
   const getDateRange = () => {
     const endDate = new Date();
     const startDate = new Date();
-
+    
     if (selectedYear === 'This Year') {
       startDate.setMonth(0, 1); // January 1st
       startDate.setHours(0, 0, 0, 0);
@@ -41,10 +41,10 @@ export default function FinanceDashboard() {
       endDate.setFullYear(endDate.getFullYear() - 1, 11, 31);
       endDate.setHours(23, 59, 59, 999);
     }
-
-    return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0]
+    
+    return { 
+      startDate: startDate.toISOString().split('T')[0], 
+      endDate: endDate.toISOString().split('T')[0] 
     };
   };
 
@@ -82,13 +82,13 @@ export default function FinanceDashboard() {
   const processOrdersForChart = () => {
     const orders = salesReport?.orders || [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
+    
     // Group orders by month
     const monthlyData: Record<string, number> = {};
     orders.forEach((order: any) => {
       const orderDate = new Date(order.orderDate || order.createdAt);
       const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`;
-
+      
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = 0;
       }
@@ -202,7 +202,7 @@ export default function FinanceDashboard() {
     const orderDate = order.orderDate || order.createdAt;
     const date = new Date(orderDate);
     const formattedDate = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
+    
     return {
       name: order.customer?.name || 'Unknown Customer',
       date: formattedDate,
@@ -273,7 +273,7 @@ export default function FinanceDashboard() {
       return sum + (Number(order.totalAmount || 0));
     }, 0);
   };
-
+  
   const totalRevenue = calculateTotalRevenue();
   const totalExpenses = 0; // Expenses would need a separate endpoint
   const netProfit = totalRevenue - totalExpenses;
@@ -315,7 +315,7 @@ export default function FinanceDashboard() {
   };
 
   const salesStatus = calculateSalesStatus();
-
+  
   // Calculate today's revenue
   const todayRevenue = (salesReport?.orders || []).reduce((sum: number, order: any) => {
     const orderDate = new Date(order.orderDate || order.createdAt);
@@ -329,7 +329,7 @@ export default function FinanceDashboard() {
     }
     return sum;
   }, 0);
-
+  
   // Calculate monthly target progress
   // Use current month's revenue as target baseline, or set a reasonable target
   const currentMonthRevenue = (() => {
@@ -372,23 +372,23 @@ export default function FinanceDashboard() {
         </div>
         <div className="space-6 flex">
           <div className='mr-5 w-full'>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonStatsCard key={i} />)}
+          </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mt-5">
-              <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              </div>
-              <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              </div>
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mt-5">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
               </div>
               <div className="p-4">
-                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -433,89 +433,89 @@ export default function FinanceDashboard() {
       <div className="space-6 flex">
         {/* Stats Cards */}
         <div className='mr-5 w-full'>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-4">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-                </div>
-              ) : (
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              </div>
+            ) : (
+              <div className="flex gap-3 items-center">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                     <i className="fi fi-rr-coins text-green-600 dark:text-green-400" style={{ fontSize: '24px' }}></i>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Revenue</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
-                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalRevenue)}</h2>
                 </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              {!salesReport && isLoading ? (
-                <div className="flex flex-col items-center justify-center py-4">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-                </div>
-              ) : (
-                // Expenses endpoint doesn't exist, so we show 0 or placeholder
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <i className="fi fi-rr-credit-card text-red-600 dark:text-red-400" style={{ fontSize: '24px' }}></i>
-                  </div>
-                  <div>
-                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-4">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-                </div>
-              ) : (
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <i className="fi fi-rr-chart-histogram text-purple-600 dark:text-purple-400" style={{ fontSize: '24px' }}></i>
-                  </div>
-                  <div>
-                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-4">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
-                </div>
-              ) : (
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <i className="fi fi-rr-calendar text-orange-600 dark:text-orange-400" style={{ fontSize: '24px' }}></i>
-                  </div>
-                  <div>
-                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            {!salesReport && isLoading ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              </div>
+            ) : (
+              // Expenses endpoint doesn't exist, so we show 0 or placeholder
+              <div className="flex gap-3 items-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <i className="fi fi-rr-credit-card text-red-600 dark:text-red-400" style={{ fontSize: '24px' }}></i>
+                </div>
+                <div>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Total Expenses</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(totalExpenses)}</h2>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              </div>
+            ) : (
+              <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <i className="fi fi-rr-chart-histogram text-purple-600 dark:text-purple-400" style={{ fontSize: '24px' }}></i>
+                </div>
+                <div>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Net Profit</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{formatCurrency(netProfit)}</h2>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              </div>
+            ) : (
+              <div className="flex gap-3 items-center">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <i className="fi fi-rr-calendar text-orange-600 dark:text-orange-400" style={{ fontSize: '24px' }}></i>
+                </div>
+                <div>
+                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-400 block">Pending Invoices</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-0 mt-1">{pendingInvoices}</h2>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Revenue vs Expenses, Expense Breakdown, and Monthly Target - Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mt-5">
-            {/* Revenue vs Expenses Chart */}
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {/* Revenue vs Expenses Chart */}
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Revenue vs Expenses</h6>
                 <div className="relative" ref={yearDropdownRef}>
@@ -534,9 +534,9 @@ export default function FinanceDashboard() {
                           setIsYearDropdownOpen(false);
                         }}
                         className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'This Year'
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                          }`}
+                            ? 'bg-primary text-white font-medium'
+                            : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
                       >
                         This Year
                       </button>
@@ -546,9 +546,9 @@ export default function FinanceDashboard() {
                           setIsYearDropdownOpen(false);
                         }}
                         className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${selectedYear === 'Last Year'
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                          }`}
+                            ? 'bg-primary text-white font-medium'
+                            : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                        }`}
                       >
                         Last Year
                       </button>
@@ -671,18 +671,18 @@ export default function FinanceDashboard() {
                         },
                       }}
                     />
-                  </div>
+                </div>
                 </div>
               )}
             </div>
 
 
           </div>
-        </div>
-        
-        {/* Monthly Target */}
+            </div>
+
+            {/* Monthly Target */}
         <div className="flex" style={{ maxWidth: '350px', width: '100%' }}>
-          <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
+              <div className="bg-primary rounded-lg shadow-sm border-0 overflow-hidden relative w-full flex flex-col" style={{
             backgroundImage: 'linear-gradient(135deg, rgba(89, 85, 209, 0.1) 0%, rgba(112, 8, 231, 0.1) 100%)',
             backgroundPosition: 'center',
             backgroundSize: 'cover'
@@ -733,9 +733,9 @@ export default function FinanceDashboard() {
                   })()}
                 </div>
                 <div className="mb-5 relative z-0 flex-1 flex items-center justify-center" style={{ minHeight: '250px' }}>
-                  <Chart
-                    type="radialBar"
-                    height={350}
+                  <Chart 
+                    type="radialBar" 
+                    height={350} 
                     series={[Math.min(100, Math.max(0, monthlyTargetProgress))]}
                     options={{
                       chart: {
@@ -773,7 +773,7 @@ export default function FinanceDashboard() {
                       fill: {
                         colors: ['#FFFFFF'],
                       },
-                    }}
+                    }} 
                   />
                   <div className="absolute bottom-0 left-0 right-0 text-center text-white font-semibold" style={{ marginTop: '-40px' }}>{salesStatus.totalOrders.toLocaleString()} Orders</div>
                 </div>
@@ -803,11 +803,11 @@ export default function FinanceDashboard() {
                 <div className="text-center flex-1 py-2">
                   <h4 className="mb-0 text-gray-900 dark:text-white">${(todayRevenue / 1000).toFixed(1)}k</h4>
                   <span className="text-primary text-xs font-semibold block">Today</span>
-                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Recent Transactions Table */}

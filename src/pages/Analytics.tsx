@@ -475,11 +475,11 @@ export default function Analytics() {
           ) : (
             <div className="relative">
               <ResponsiveContainer width="100%" height={400}>
-                <PieChart>
-                  <Pie
-                    data={analyticsData.ordersByStatus}
-                    cx="50%"
-                    cy="50%"
+              <PieChart>
+                <Pie
+                  data={analyticsData.ordersByStatus}
+                  cx="50%"
+                  cy="50%"
                     labelLine={true}
                     label={({ status, percent }: any) => {
                       const percentage = ((percent || 0) * 100).toFixed(0);
@@ -487,24 +487,24 @@ export default function Analytics() {
                     }}
                     outerRadius={140}
                     innerRadius={50}
-                    fill="#8884d8"
-                    dataKey="count"
+                  fill="#8884d8"
+                  dataKey="count"
                     paddingAngle={3}
-                  >
-                    {analyticsData.ordersByStatus.map((_entry: any, index: number) => (
+                >
+                  {analyticsData.ordersByStatus.map((_entry: any, index: number) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]}
                         stroke={isDarkMode ? '#1f2937' : '#ffffff'}
                         strokeWidth={2}
                       />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
                       backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
                       border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
-                      borderRadius: '8px',
+                    borderRadius: '8px',
                       color: isDarkMode ? '#ffffff' : '#1f2937',
                     }}
                     labelStyle={{
@@ -519,10 +519,10 @@ export default function Analytics() {
                     }}
                     labelFormatter={() => {
                       return '';
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
             </div>
           )}
         </div>

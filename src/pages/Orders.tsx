@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { ShoppingCart, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
@@ -27,12 +27,15 @@ const CustomSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [typedChars, setTypedChars] = useState('');
+  const typedCharsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setHighlightedIndex(-1);
+        setTypedChars('');
       }
     };
 
@@ -42,27 +45,106 @@ const CustomSelect = ({
     }
   }, [isOpen]);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  useEffect(() => {
+    return () => {
+      if (typedCharsTimeoutRef.current) {
+        clearTimeout(typedCharsTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0) {
+      const optionElement = selectRef.current?.querySelector(
+        `[data-option-index="${highlightedIndex}"]`
+      ) as HTMLElement;
+      if (optionElement) {
+        optionElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [highlightedIndex, isOpen]);
+
+  // Sort options alphabetically by label (case-insensitive)
+  const sortedOptions = useMemo(() => {
+    return [...options].sort((a, b) => 
+      a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [options]);
+
+  const selectedOption = sortedOptions.find((opt) => opt.value === value);
 
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
     setIsOpen(false);
     setHighlightedIndex(-1);
+    setTypedChars('');
+  };
+
+  const findMatchingOption = (searchString: string, startIndex: number = 0) => {
+    const lowerSearch = searchString.toLowerCase();
+    // First, try to find a match starting from the current highlighted index
+    for (let i = startIndex; i < sortedOptions.length; i++) {
+      if (sortedOptions[i].label.toLowerCase().startsWith(lowerSearch)) {
+        return i;
+      }
+    }
+    // If not found, search from the beginning
+    for (let i = 0; i < startIndex; i++) {
+      if (sortedOptions[i].label.toLowerCase().startsWith(lowerSearch)) {
+        return i;
+      }
+    }
+    return -1;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+      if (!isOpen) setIsOpen(true);
+      setHighlightedIndex((prev) => (prev < sortedOptions.length - 1 ? prev + 1 : prev));
+      setTypedChars('');
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      if (!isOpen) setIsOpen(true);
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      setTypedChars('');
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      handleSelect(options[highlightedIndex].value);
+      if (highlightedIndex >= 0) {
+        handleSelect(sortedOptions[highlightedIndex].value);
+      } else if (!isOpen) {
+        setIsOpen(true);
+      }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
       setHighlightedIndex(-1);
+      setTypedChars('');
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Handle alphanumeric keys
+      e.preventDefault();
+      const newTypedChars = typedChars + e.key;
+      setTypedChars(newTypedChars);
+      
+      // Clear previous timeout
+      if (typedCharsTimeoutRef.current) {
+        clearTimeout(typedCharsTimeoutRef.current);
+      }
+      
+      // Set timeout to reset typed characters after 500ms
+      typedCharsTimeoutRef.current = setTimeout(() => {
+        setTypedChars('');
+      }, 500);
+      
+      // Open dropdown if closed
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      
+      // Find matching option
+      const matchIndex = findMatchingOption(newTypedChars, highlightedIndex >= 0 ? highlightedIndex + 1 : 0);
+      if (matchIndex >= 0) {
+        setHighlightedIndex(matchIndex);
+      }
     }
   };
 
@@ -102,7 +184,7 @@ const CustomSelect = ({
             ...(noOverflow ? {} : { maxHeight: '400px' }), // Limit to 10 items (10 * ~40px per item) only if overflow is enabled
           }}
         >
-          {options.map((option, index) => {
+          {sortedOptions.map((option, index) => {
             const isSelected = option.value === value;
             const isHighlighted = index === highlightedIndex;
             
@@ -110,13 +192,14 @@ const CustomSelect = ({
               <button
                 key={option.value}
                 type="button"
+                data-option-index={index}
                 onClick={() => handleSelect(option.value)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
                   isSelected || isHighlighted
                     ? 'bg-primary-500 text-white'
                     : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                } ${index === 0 ? 'rounded-t-lg' : ''} ${index === sortedOptions.length - 1 ? 'rounded-b-lg' : ''}`}
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
@@ -774,78 +857,78 @@ function AddOrderModal({
                         placeholder="Select type"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-                      <CustomSelect
-                        options={statusOptions}
-                        value={formData.status}
-                        onChange={(value) => handleChange('status', value)}
-                        placeholder="Select status"
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                    <CustomSelect
+                      options={statusOptions}
+                      value={formData.status}
+                      onChange={(value) => handleChange('status', value)}
+                      placeholder="Select status"
                         noOverflow={true}
-                      />
+                    />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Order Lines <span className="text-red-500">*</span></label>
                     <div className="space-y-3">
-                      {formData.orderLines.map((line: any, index: number) => (
+                    {formData.orderLines.map((line: any, index: number) => (
                         <div key={index} className="flex items-start gap-2">
                           <div className="flex-1 grid grid-cols-12 gap-2">
-                            <div className="col-span-5">
-                              <CustomSelect
-                                options={productOptions}
-                                value={line.productId}
-                                onChange={(value) => handleOrderLineChange(index, 'productId', value)}
-                                placeholder="Product"
-                                error={!!errors[`orderLines.${index}.productId`]}
-                              />
-                              {errors[`orderLines.${index}.productId`] && (
-                                <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.productId`]}</p>
-                              )}
-                            </div>
-                            <div className="col-span-3">
-                              <input
-                                type="number"
-                                value={line.quantity}
-                                onChange={(e) => handleOrderLineChange(index, 'quantity', e.target.value)}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                                  errors[`orderLines.${index}.quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                                }`}
-                                placeholder="Qty"
-                              />
-                              {errors[`orderLines.${index}.quantity`] && (
-                                <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.quantity`]}</p>
-                              )}
-                            </div>
-                            <div className="col-span-3">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={line.unitPrice}
-                                onChange={(e) => handleOrderLineChange(index, 'unitPrice', e.target.value)}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                                  errors[`orderLines.${index}.unitPrice`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                                }`}
-                                placeholder="Price"
-                              />
-                              {errors[`orderLines.${index}.unitPrice`] && (
-                                <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.unitPrice`]}</p>
-                              )}
-                            </div>
+                          <div className="col-span-5">
+                            <CustomSelect
+                              options={productOptions}
+                              value={line.productId}
+                              onChange={(value) => handleOrderLineChange(index, 'productId', value)}
+                              placeholder="Product"
+                              error={!!errors[`orderLines.${index}.productId`]}
+                            />
+                            {errors[`orderLines.${index}.productId`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.productId`]}</p>
+                            )}
                           </div>
-                          {formData.orderLines.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOrderLine(index)}
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              value={line.quantity}
+                              onChange={(e) => handleOrderLineChange(index, 'quantity', e.target.value)}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                                errors[`orderLines.${index}.quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                              placeholder="Qty"
+                            />
+                            {errors[`orderLines.${index}.quantity`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.quantity`]}</p>
+                            )}
+                          </div>
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={line.unitPrice}
+                              onChange={(e) => handleOrderLineChange(index, 'unitPrice', e.target.value)}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                                errors[`orderLines.${index}.unitPrice`] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                              placeholder="Price"
+                            />
+                            {errors[`orderLines.${index}.unitPrice`] && (
+                              <p className="mt-1 text-sm text-red-500">{errors[`orderLines.${index}.unitPrice`]}</p>
+                            )}
+                          </div>
+                          </div>
+                            {formData.orderLines.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeOrderLine(index)}
                               className="mt-0.5 flex items-center justify-center w-10 h-10 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors flex-shrink-0"
                               title="Remove line"
-                            >
+                              >
                               <X className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                              </button>
+                            )}
+                      </div>
+                    ))}
                     </div>
                     <button
                       type="button"
