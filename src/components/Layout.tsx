@@ -24,6 +24,10 @@ import {
   TrendingUp,
   Ruler,
   Lightbulb,
+  DollarSign,
+  Factory,
+  Store,
+  RotateCcw,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -123,11 +127,11 @@ export default function Layout({ children }: LayoutProps) {
       { path: '/service', label: 'Service', useFlaticon: true, flaticonClass: 'fi fi-rr-headset' },
     ],
     operations: [
-      { path: '/production-mrp', label: 'Production (MRP)', useFlaticon: true, flaticonClass: 'fi fi-rr-factory' },
+      { path: '/production-mrp', label: 'Production (MRP)', useFlaticon: false, icon: Factory },
       { path: '/inventory-warehouse', label: 'Inventory & Warehouse (WMS)', useFlaticon: true, flaticonClass: 'fi fi-rr-warehouse-alt' },
       { path: '/orders-fulfillment', label: 'Orders & Fulfillment (OMS)', useFlaticon: true, flaticonClass: 'fi fi-rr-shipping-fast' },
-      { path: '/returns-rma', label: 'Returns (RMA)', useFlaticon: true, flaticonClass: 'fi fi-rr-arrow-left' },
-      { path: '/omnichannel', label: 'Omnichannel', useFlaticon: true, flaticonClass: 'fi fi-rr-store' },
+      { path: '/returns-rma', label: 'Returns (RMA)', useFlaticon: false, icon: RotateCcw },
+      { path: '/omnichannel', label: 'Omnichannel', useFlaticon: false, icon: Store },
     ],
     'planning-intelligence': [
       { path: '/forecasting-ai', label: 'Forecasting (AI)', useFlaticon: true, flaticonClass: 'fi fi-rr-brain' },
@@ -140,7 +144,7 @@ export default function Layout({ children }: LayoutProps) {
     ],
     finance: [
       { path: '/invoicing', label: 'Invoicing', useFlaticon: true, flaticonClass: 'fi fi-rr-file-invoice' },
-      { path: '/ar-ap', label: 'AR / AP', useFlaticon: true, flaticonClass: 'fi fi-rr-money-bill' },
+      { path: '/ar-ap', label: 'AR / AP', useFlaticon: false, icon: DollarSign },
       { path: '/taxes-vat', label: 'Taxes & VAT', useFlaticon: true, flaticonClass: 'fi fi-rr-receipt' },
       { path: '/multi-currency-fx', label: 'Multi-Currency & FX', useFlaticon: true, flaticonClass: 'fi fi-rr-coins' },
       { path: '/accounting-integrations', label: 'Accounting Integrations', useFlaticon: true, flaticonClass: 'fi fi-rr-plug' },

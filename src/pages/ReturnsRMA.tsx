@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { RotateCcw, Plus } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -44,7 +44,7 @@ export default function ReturnsRMA() {
         {returns.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-              <ArrowLeft className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+              <RotateCcw className="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No RMAs found</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
