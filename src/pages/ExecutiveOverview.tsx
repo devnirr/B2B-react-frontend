@@ -892,31 +892,24 @@ export default function ExecutiveOverview() {
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Total Customers</h6>
               </div>
-              {(dashboardStats?.totalCustomers || 0) === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              <div className="px-4 mt-3 pb-0">
+                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                    {(dashboardStats?.totalCustomers || 0).toLocaleString()}
+                  </h2>
+                    {customerChangePercent !== 0 && (
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${customerChangePercent > 0
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                        {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
+                  </span>
+                    )}
                 </div>
-              ) : (
-                <>
-                  <div className="px-4 mt-3 pb-0">
-                    <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
-                        {dashboardStats?.totalCustomers?.toLocaleString() || '0'}
-                      </h2>
-                        {customerChangePercent !== 0 && (
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${customerChangePercent > 0
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
-                            {customerChangePercent > 0 ? '+' : ''}{customerChangePercent.toFixed(2)}%
-                      </span>
-                        )}
-                    </div>
-                    </div>
-                    <div className="w-full h-[120px] -mt-2">
-                  <Chart
+                </div>
+                <div className="w-full h-[120px] -mt-2">
+              <Chart
                     type="bar"
                     height={120}
                     series={[{
@@ -985,8 +978,6 @@ export default function ExecutiveOverview() {
                   </button>
                 </div>
               </div>
-                </>
-              )}
             </div>
 
             {/* Card 2: Order Analytics */}
@@ -994,28 +985,21 @@ export default function ExecutiveOverview() {
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h6 className="text-lg font-semibold text-gray-900 dark:text-white">Order Analytics</h6>
               </div>
-              {(dashboardStats?.thisMonthOrders || 0) === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 h-full">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              <div className="p-4 pt-0">
+                <div className="flex items-center gap-2 mb-3 mt-3">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    {(dashboardStats?.thisMonthOrders || 0).toLocaleString()}
+                  </h2>
+                  {orderChangePercent !== 0 && (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                      {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
+                  </span>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="p-4 pt-0">
-                    <div className="flex items-center gap-2 mb-3 mt-3">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                        {dashboardStats?.thisMonthOrders?.toLocaleString() || '0'}
-                      </h2>
-                      {orderChangePercent !== 0 && (
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                          {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
-                      </span>
-                      )}
-                    </div>
-                  </div>
+              </div>
               <div className="relative -mx-1" style={{ height: '120px', paddingBottom: '20px' }}>
                 <Chart
                   type="area"
@@ -1075,8 +1059,6 @@ export default function ExecutiveOverview() {
                   Compared to Last Month
                 </div>
               </div>
-                </>
-              )}
             </div>
 
             {/* Card 3: Tasks Overview */}
@@ -1151,32 +1133,25 @@ export default function ExecutiveOverview() {
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Active Orders</h6>
               </div>
-              {(dashboardStats?.totalOrders || 0) === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-2" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data</span>
+              <div className="p-4 pt-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
+                    {(dashboardStats?.totalOrders || 0).toLocaleString()}
+                  </h2>
+                  {orderChangePercent !== 0 && (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                      {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
+                  </span>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="p-4 pt-0">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-0">
-                        {dashboardStats?.totalOrders?.toLocaleString() || '0'}
-                      </h2>
-                      {orderChangePercent !== 0 && (
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${orderChangePercent > 0
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                          {orderChangePercent > 0 ? '+' : ''}{orderChangePercent.toFixed(2)}%
-                      </span>
-                      )}
-                    </div>
-                  </div>
+              </div>
               <div className="p-4 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-0">
-                        Vs last month: {dashboardStats?.lastMonthOrders?.toLocaleString() || '0'}
+                        Vs last month: {(dashboardStats?.lastMonthOrders || 0).toLocaleString()}
                       </p>
                   <button
                     onClick={() => navigate('/orders')}
@@ -1186,8 +1161,6 @@ export default function ExecutiveOverview() {
                   </button>
                 </div>
               </div>
-                </>
-              )}
             </div>
 
             {/* Card 5: Revenue */}
@@ -1318,14 +1291,8 @@ export default function ExecutiveOverview() {
                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-3">{getRevenueDateDisplay()}</p>
               </div>
               <div className="p-4 pt-0">
-                {revenuePeriodRevenue === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12" style={{ height: '280px' }}>
-                    <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-                  </div>
-                ) : (
-                  <div style={{ height: '280px' }}>
-                    <Chart
+                <div style={{ height: '280px' }}>
+                  <Chart
                       type="bar"
                       height={280}
                       series={[{
@@ -1405,7 +1372,6 @@ export default function ExecutiveOverview() {
                       }}
                     />
                   </div>
-                )}
               </div>
             </div>
 
@@ -1500,13 +1466,58 @@ export default function ExecutiveOverview() {
                     }}
                   />
                         ) : (
-                          <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-gray-400">
-                            No data available
-                          </div>
+                          <Chart
+                            type="bar"
+                            height={95}
+                            series={[{
+                              name: 'Orders',
+                              data: [0]
+                            }]}
+                            options={{
+                              chart: {
+                                type: 'bar',
+                                height: 95,
+                                stacked: true,
+                                stackType: '100%',
+                                toolbar: { show: false }
+                              },
+                              plotOptions: {
+                                bar: {
+                                  horizontal: true,
+                                  barHeight: '100%',
+                                  borderRadius: 0
+                                }
+                              },
+                              dataLabels: { enabled: false },
+                              stroke: {
+                                width: 1,
+                                colors: ['#ffffff']
+                              },
+                              xaxis: {
+                                labels: { show: false },
+                                axisBorder: { show: false },
+                                axisTicks: { show: false }
+                              },
+                              yaxis: { labels: { show: false } },
+                              grid: {
+                                show: false,
+                                padding: { top: -15, bottom: -15, left: -15, right: 0 }
+                              },
+                              legend: { show: false },
+                              fill: {
+                                opacity: 1,
+                                colors: ['rgba(89, 85, 209, 0.1)']
+                              },
+                              tooltip: {
+                                enabled: true,
+                                y: { formatter: (val: number) => val.toFixed(1) + '%' }
+                              }
+                            }}
+                          />
                         )}
                 </div>
                 <div className="space-y-1 mt-2">
-                        {percentages.map((item, idx) => {
+                        {percentages.length > 0 ? percentages.map((item, idx) => {
                           const opacityMap = ['opacity-10', 'opacity-25', 'opacity-50', 'opacity-75', 'opacity-100'];
                           return (
                     <div key={idx} className="flex items-center gap-1 text-xs py-1">
@@ -1515,9 +1526,12 @@ export default function ExecutiveOverview() {
                               <strong className="text-gray-900 dark:text-white font-semibold">{item.percentage.toFixed(1)}%</strong>
                     </div>
                           );
-                        })}
-                        {percentages.length === 0 && (
-                          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No data available</div>
+                        }) : (
+                          <div className="flex items-center gap-1 text-xs py-1">
+                            <div className="w-3 h-3 bg-primary opacity-10 rounded"></div>
+                            <span className="text-gray-600 dark:text-gray-400 flex-1">No orders</span>
+                            <strong className="text-gray-900 dark:text-white font-semibold">0.0%</strong>
+                          </div>
                         )}
                 </div>
                     </>
@@ -1857,16 +1871,9 @@ export default function ExecutiveOverview() {
               <div className="p-4 border-b border-white/10 relative z-10">
                 <h6 className="text-lg font-semibold text-white mb-0">Total Revenue</h6>
               </div>
-              {periodRevenue === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 flex-1" style={{ minHeight: '350px' }}>
-                  <Inbox className="w-12 h-12 text-white/50 mb-3" />
-                  <span className="text-sm text-white/70">No Data Available</span>
-                </div>
-              ) : (
-                <>
-                  <div className="p-4 pt-0 border-b border-white/10 relative z-10">
-                    <div className="mb-5 -mt-3 relative" style={{ height: '250px' }}>
-                      <Chart
+              <div className="p-4 pt-0 border-b border-white/10 relative z-10">
+                <div className="mb-5 -mt-3 relative" style={{ height: '250px' }}>
+                  <Chart
                         type="radialBar"
                         height={350}
                         series={[(() => {
@@ -2021,8 +2028,6 @@ export default function ExecutiveOverview() {
                       );
                     })()}
                   </div>
-                </>
-              )}
             </div>
 
             {/* Card 9: Orders By Time */}
@@ -2030,13 +2035,7 @@ export default function ExecutiveOverview() {
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h6 className="text-lg font-semibold text-gray-900 dark:text-white mb-0">Orders By Time</h6>
               </div>
-              {(dashboardStats?.totalOrders || 0) === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12" style={{ height: '250px' }}>
-                  <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">No Data Available</span>
-                </div>
-              ) : (
-                <div className="p-4 p-0">
+              <div className="p-4 p-0">
                   {(() => {
                     const ordersByTime = dashboardStats?.ordersByTime;
                     const timeSlots = ordersByTime?.timeSlots || ['8am', '10am', '12pm', '2pm', '4pm'];
@@ -2108,7 +2107,6 @@ export default function ExecutiveOverview() {
                     );
                   })()}
                 </div>
-              )}
             </div>
 
           </div>
