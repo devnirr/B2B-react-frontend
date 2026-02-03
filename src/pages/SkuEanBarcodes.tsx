@@ -1,14 +1,151 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Barcode, Plus, Search, Pencil, Download, X, Check, AlertCircle } from 'lucide-react';
+import { Barcode, Plus, Search, Pencil, Download, X, Check, AlertCircle, ChevronsLeft, ChevronsRight, ChevronDown, Inbox } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
+// Custom Select Component with beautiful dropdown
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  className = '',
+  error = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  className?: string;
+  error?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleSelect = (optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      e.preventDefault();
+      handleSelect(options[highlightedIndex].value);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  return (
+    <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 10001 : 'auto', position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
+          error ? 'border-red-500' : 'border-gray-300'
+        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        style={{
+          padding: '0.532rem 0.6rem 0.532rem 1.2rem',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          lineHeight: 1.6,
+        }}
+      >
+        <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div 
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto custom-dropdown-menu"
+          style={{
+            zIndex: 10001,
+            top: '100%',
+            left: 0,
+            right: 0,
+            minWidth: '100%',
+            position: 'absolute',
+            maxHeight: '400px',
+          }}
+        >
+          {options.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                <Inbox className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No data available</p>
+            </div>
+          ) : (
+            options.map((option, index) => {
+              const isSelected = option.value === value;
+              const isHighlighted = index === highlightedIndex;
+              
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option.value)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isSelected || isHighlighted
+                      ? 'bg-primary-500 text-white'
+                      : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                  } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    display: 'block',
+                    width: '100%',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function SkuEanBarcodes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'missing-sku' | 'missing-ean' | 'missing-barcode'>('all');
+  const [page, setPage] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -102,19 +239,31 @@ export default function SkuEanBarcodes() {
   const allVariants = generateVariants(products);
 
   // Filter variants
-  const filteredVariants = allVariants.filter((variant) => {
-    const matchesSearch = searchQuery === '' || 
-      variant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      variant.variantSku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (variant.variantEan && variant.variantEan.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesFilter = filterType === 'all' ||
-      (filterType === 'missing-sku' && !variant.variantSku) ||
-      (filterType === 'missing-ean' && !variant.variantEan) ||
-      (filterType === 'missing-barcode' && !variant.variantEan);
-    
-    return matchesSearch && matchesFilter;
-  });
+  const filteredVariants = useMemo(() => {
+    return allVariants.filter((variant) => {
+      const matchesSearch = searchQuery === '' || 
+        variant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        variant.variantSku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (variant.variantEan && variant.variantEan.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesFilter = filterType === 'all' ||
+        (filterType === 'missing-sku' && !variant.variantSku) ||
+        (filterType === 'missing-ean' && !variant.variantEan) ||
+        (filterType === 'missing-barcode' && !variant.variantEan);
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [allVariants, searchQuery, filterType]);
+
+  // Pagination
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredVariants.length / itemsPerPage);
+  const paginatedVariants = filteredVariants.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+
+  // Reset to page 0 when search or filter changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, filterType]);
 
   const openEditModal = (variant: any) => {
     setSelectedProduct(variant);
@@ -233,16 +382,18 @@ export default function SkuEanBarcodes() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <select
+            <CustomSelect
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Products</option>
-              <option value="missing-sku">Missing SKU</option>
-              <option value="missing-ean">Missing EAN</option>
-              <option value="missing-barcode">Missing Barcode</option>
-            </select>
+              onChange={(value) => setFilterType(value as any)}
+              options={[
+                { value: 'all', label: 'All Products' },
+                { value: 'missing-sku', label: 'Missing SKU' },
+                { value: 'missing-ean', label: 'Missing EAN' },
+                { value: 'missing-barcode', label: 'Missing Barcode' },
+              ]}
+              placeholder="Select filter..."
+              className="min-w-[180px]"
+            />
           </div>
         </div>
       </div>
@@ -319,7 +470,7 @@ export default function SkuEanBarcodes() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredVariants.map((variant) => {
+                {paginatedVariants.map((variant) => {
                   const barcodeUrl = generateBarcodeUrl(variant.variantEan || variant.variantSku);
                   return (
                     <tr key={variant.variantKey} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -400,6 +551,52 @@ export default function SkuEanBarcodes() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {filteredVariants.length > 0 && (
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
+            <div className="text-sm text-gray-600 dark:text-white">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{page * itemsPerPage + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min((page + 1) * itemsPerPage, filteredVariants.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredVariants.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(0)}
+                disabled={page === 0}
+                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPage(totalPages - 1)}
+                disabled={page >= totalPages - 1}
+                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

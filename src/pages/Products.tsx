@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Package, Plus, X, ChevronDown, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox } from 'lucide-react';
+import { Package, Plus, X, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { generateEAN13, validateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
@@ -214,6 +214,9 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'table' | 'variants'>('table'); // Default: table view
   const [activeTab, setActiveTab] = useState<'products' | 'attributes' | 'bundles'>('products'); // Tab state for Catalog sections
+  const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set()); // Track expanded styles in variant view
+  const [expandedColors, setExpandedColors] = useState<Set<string>>(new Set()); // Track expanded colors (key: "style-color")
+  const [expandedSizes, setExpandedSizes] = useState<Set<string>>(new Set()); // Track expanded sizes (key: "style-color-size")
   const queryClient = useQueryClient();
 
   // Handle body scroll lock when modal is open
@@ -547,23 +550,84 @@ export default function Products() {
               </div>
             ) : (
               <div className="p-6">
-                {variantGroups.map((styleGroup, styleIdx) => (
-                  <div key={styleIdx} className="mb-8 last:mb-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                      Style: {styleGroup.style}
-                    </h3>
-                    {Object.values(styleGroup.colors).map((colorGroup, colorIdx) => (
-                      <div key={colorIdx} className="ml-4 mb-6">
-                        <h4 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-3">
-                          Color: {colorGroup.color}
-                        </h4>
-                        {Object.values(colorGroup.sizes).map((sizeGroup, sizeIdx) => (
-                          <div key={sizeIdx} className="ml-4 mb-4">
-                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Size: {sizeGroup.size}
-                            </h5>
-                            <div className="ml-4 space-y-2">
-                              {sizeGroup.variants.map((variant: any) => (
+                {variantGroups.map((styleGroup, styleIdx) => {
+                  const styleKey = styleGroup.style;
+                  const isExpanded = expandedStyles.has(styleKey);
+                  
+                  return (
+                    <div key={styleIdx} className="mb-8 last:mb-0">
+                      <h3 
+                        onClick={() => {
+                          const newExpanded = new Set(expandedStyles);
+                          if (newExpanded.has(styleKey)) {
+                            newExpanded.delete(styleKey);
+                          } else {
+                            newExpanded.add(styleKey);
+                          }
+                          setExpandedStyles(newExpanded);
+                        }}
+                        className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                        Style: {styleGroup.style}
+                      </h3>
+                      {isExpanded && Object.values(styleGroup.colors).map((colorGroup, colorIdx) => {
+                        const colorKey = `${styleKey}-${colorGroup.color}`;
+                        const isColorExpanded = expandedColors.has(colorKey);
+                        
+                        return (
+                          <div key={colorIdx} className="ml-4 mb-6">
+                            <h4 
+                              onClick={() => {
+                                const newExpanded = new Set(expandedColors);
+                                if (newExpanded.has(colorKey)) {
+                                  newExpanded.delete(colorKey);
+                                } else {
+                                  newExpanded.add(colorKey);
+                                }
+                                setExpandedColors(newExpanded);
+                              }}
+                              className="text-md font-medium text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                            >
+                              {isColorExpanded ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                              Color: {colorGroup.color}
+                            </h4>
+                            {isColorExpanded && Object.values(colorGroup.sizes).map((sizeGroup, sizeIdx) => {
+                              const sizeKey = `${colorKey}-${sizeGroup.size}`;
+                              const isSizeExpanded = expandedSizes.has(sizeKey);
+                              
+                              return (
+                                <div key={sizeIdx} className="ml-4 mb-4">
+                                  <h5 
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedSizes);
+                                      if (newExpanded.has(sizeKey)) {
+                                        newExpanded.delete(sizeKey);
+                                      } else {
+                                        newExpanded.add(sizeKey);
+                                      }
+                                      setExpandedSizes(newExpanded);
+                                    }}
+                                    className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                                  >
+                                    {isSizeExpanded ? (
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <ChevronRight className="w-3.5 h-3.5" />
+                                    )}
+                                    Size: {sizeGroup.size}
+                                  </h5>
+                                  {isSizeExpanded && (
+                                    <div className="ml-4 space-y-2">
+                                      {sizeGroup.variants.map((variant: any) => (
                                 <div
                                   key={variant.variantKey}
                                   className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -604,14 +668,18 @@ export default function Products() {
                                     </button>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
-                    ))}
+                        );
+                      })}
                   </div>
-                ))}
+                );
+                })}
               </div>
             )
           ) : (

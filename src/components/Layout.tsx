@@ -632,7 +632,7 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Header and Sidebar Brand Row */}
-      <div className={`right-0 h-20 flex z-40 ${sidebarOpen ? 'ml-[368px]' : 'ml-[100px]'}`}>
+      <div className={`fixed top-0 h-20 flex z-40 ${sidebarOpen ? 'left-[368px] right-0' : 'left-[100px] right-0'}`}>
 
         {/* Header */}
         <header className="flex-1 h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -1020,7 +1020,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main
-        className={`transition-all duration-300 bg-gray-50 dark:bg-gray-900 ${sidebarOpen ? 'ml-[368px]' : 'ml-[100px]'}`}
+        className={`transition-all duration-300 bg-gray-50 dark:bg-gray-900 pt-20 ${sidebarOpen ? 'ml-[368px]' : 'ml-[100px]'}`}
       >
         <div className="p-6 px-10">{children}</div>
       </main>

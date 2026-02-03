@@ -325,8 +325,8 @@ function BillOfMaterialsSection() {
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {filteredBoms.map((bom) => (
-              <div key={bom.id} className="p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div key={bom.id} className="p-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => toggleBOM(bom.id)}
