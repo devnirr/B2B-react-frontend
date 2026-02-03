@@ -918,16 +918,356 @@ function AddProductModal({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Autocomplete for sizes
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [sizesInputValue, setSizesInputValue] = useState('');
+  const [sizesSuggestions, setSizesSuggestions] = useState<string[]>([]);
+  const [showSizesSuggestions, setShowSizesSuggestions] = useState(false);
+  const sizesInputRef = useRef<HTMLInputElement>(null);
+  const sizesDropdownRef = useRef<HTMLDivElement>(null);
+  const sizesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Common sizes list
+  const commonSizes = [
+    'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL',
+    '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50',
+    '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24',
+    'One Size', 'OS', 'Free Size',
+  ];
+
+  // Autocomplete for colors
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [colorsInputValue, setColorsInputValue] = useState('');
+  const [colorsSuggestions, setColorsSuggestions] = useState<string[]>([]);
+  const [showColorsSuggestions, setShowColorsSuggestions] = useState(false);
+  const colorsInputRef = useRef<HTMLInputElement>(null);
+  const colorsDropdownRef = useRef<HTMLDivElement>(null);
+  const colorsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Common colors list
+  const commonColors = [
+    'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Brown', 'Black', 'White',
+    'Gray', 'Grey', 'Navy', 'Beige', 'Tan', 'Khaki', 'Olive', 'Maroon', 'Burgundy', 'Crimson',
+    'Coral', 'Salmon', 'Peach', 'Lavender', 'Violet', 'Indigo', 'Turquoise', 'Teal', 'Cyan',
+    'Magenta', 'Lime', 'Mint', 'Emerald', 'Forest', 'Sage', 'Ivory', 'Cream', 'Gold', 'Silver',
+    'Bronze', 'Copper', 'Rose', 'Fuchsia', 'Aqua', 'Sky', 'Royal', 'Midnight', 'Charcoal',
+    'Slate', 'Taupe', 'Camel', 'Cognac', 'Burgundy', 'Wine', 'Plum', 'Mauve', 'Lilac',
+  ];
+
+  // Autocomplete for materials
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [materialsInputValue, setMaterialsInputValue] = useState('');
+  const [materialsSuggestions, setMaterialsSuggestions] = useState<string[]>([]);
+  const [showMaterialsSuggestions, setShowMaterialsSuggestions] = useState(false);
+  const materialsInputRef = useRef<HTMLInputElement>(null);
+  const materialsDropdownRef = useRef<HTMLDivElement>(null);
+  const materialsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Common materials list
+  const commonMaterials = [
+    'Cotton', 'Polyester', 'Wool', 'Silk', 'Linen', 'Denim', 'Leather', 'Suede', 'Cashmere',
+    'Rayon', 'Nylon', 'Spandex', 'Elastane', 'Bamboo', 'Hemp', 'Modal', 'Tencel', 'Lyocell',
+    'Acrylic', 'Viscose', 'Chiffon', 'Satin', 'Velvet', 'Corduroy', 'Flannel', 'Jersey',
+    'Mesh', 'Organza', 'Tulle', 'Twill', 'Canvas', 'Fleece', 'Terry', 'Towel', 'Microfiber',
+    'Faux Leather', 'Faux Fur', 'Synthetic', 'Blend', 'Organic Cotton', 'Recycled Polyester',
+  ];
+
+  // Initialize sizes from formData
+  useEffect(() => {
+    if (formData.sizes) {
+      const sizesArray = formData.sizes.split(',').map(s => s.trim()).filter(Boolean);
+      setSelectedSizes(sizesArray);
+    } else {
+      setSelectedSizes([]);
+    }
+  }, [formData.sizes]);
+
+  // Initialize colors from formData
+  useEffect(() => {
+    if (formData.colors) {
+      const colorsArray = formData.colors.split(',').map(c => c.trim()).filter(Boolean);
+      setSelectedColors(colorsArray);
+    } else {
+      setSelectedColors([]);
+    }
+  }, [formData.colors]);
+
+  // Initialize materials from formData
+  useEffect(() => {
+    if (formData.materials) {
+      const materialsArray = formData.materials.split(',').map(m => m.trim()).filter(Boolean);
+      setSelectedMaterials(materialsArray);
+    } else {
+      setSelectedMaterials([]);
+    }
+  }, [formData.materials]);
+
   // Reset images when modal closes
   useEffect(() => {
     if (!isShowing) {
       setSelectedImages([]);
       setImagePreviews([]);
+      setShowSizesSuggestions(false);
+      setShowColorsSuggestions(false);
+      setShowMaterialsSuggestions(false);
+      setSelectedSizes([]);
+      setSelectedColors([]);
+      setSelectedMaterials([]);
+      setSizesInputValue('');
+      setColorsInputValue('');
+      setMaterialsInputValue('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   }, [isShowing]);
+
+  // Handle sizes input change with autocomplete
+  const handleSizesInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSizesInputValue(value);
+
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonSizes
+        .filter(size =>
+          size.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedSizes.includes(size) // Don't suggest already added sizes
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      setSizesSuggestions(filtered);
+      setShowSizesSuggestions(filtered.length > 0);
+    } else {
+      setSizesSuggestions([]);
+      setShowSizesSuggestions(false);
+    }
+  };
+
+  // Handle size suggestion selection
+  const handleSizeSelect = (size: string) => {
+    if (!selectedSizes.includes(size)) {
+      const newSizes = [...selectedSizes, size];
+      setSelectedSizes(newSizes);
+      setSizesInputValue('');
+      setShowSizesSuggestions(false);
+      setSizesSuggestions([]);
+      
+      // Update form data with comma-separated string
+      handleChange('sizes', newSizes.join(', '));
+    }
+
+    // Focus back on input
+    if (sizesInputRef.current) {
+      sizesInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a size tag
+  const handleRemoveSize = (sizeToRemove: string) => {
+    const newSizes = selectedSizes.filter(size => size !== sizeToRemove);
+    setSelectedSizes(newSizes);
+    
+    // Update form data with comma-separated string
+    handleChange('sizes', newSizes.join(', '));
+    
+    // Focus back on input
+    if (sizesInputRef.current) {
+      sizesInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add size
+  const handleSizesKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && sizesInputValue.trim()) {
+      e.preventDefault();
+      const sizeToAdd = sizesInputValue.trim();
+      if (!selectedSizes.includes(sizeToAdd) && commonSizes.some(s => s.toLowerCase() === sizeToAdd.toLowerCase())) {
+        handleSizeSelect(commonSizes.find(s => s.toLowerCase() === sizeToAdd.toLowerCase()) || sizeToAdd);
+      }
+    } else if (e.key === 'Backspace' && sizesInputValue === '' && selectedSizes.length > 0) {
+      // Remove last size if backspace is pressed on empty input
+      handleRemoveSize(selectedSizes[selectedSizes.length - 1]);
+    }
+  };
+
+  // Handle colors input change with autocomplete
+  const handleColorsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setColorsInputValue(value);
+
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonColors
+        .filter(color =>
+          color.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedColors.includes(color) // Don't suggest already added colors
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      setColorsSuggestions(filtered);
+      setShowColorsSuggestions(filtered.length > 0);
+    } else {
+      setColorsSuggestions([]);
+      setShowColorsSuggestions(false);
+    }
+  };
+
+  // Handle color suggestion selection
+  const handleColorSelect = (color: string) => {
+    if (!selectedColors.includes(color)) {
+      const newColors = [...selectedColors, color];
+      setSelectedColors(newColors);
+      setColorsInputValue('');
+      setShowColorsSuggestions(false);
+      setColorsSuggestions([]);
+      
+      // Update form data with comma-separated string
+      handleChange('colors', newColors.join(', '));
+    }
+
+    // Focus back on input
+    if (colorsInputRef.current) {
+      colorsInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a color tag
+  const handleRemoveColor = (colorToRemove: string) => {
+    const newColors = selectedColors.filter(color => color !== colorToRemove);
+    setSelectedColors(newColors);
+    
+    // Update form data with comma-separated string
+    handleChange('colors', newColors.join(', '));
+    
+    // Focus back on input
+    if (colorsInputRef.current) {
+      colorsInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add color
+  const handleColorsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && colorsInputValue.trim()) {
+      e.preventDefault();
+      const colorToAdd = colorsInputValue.trim();
+      if (!selectedColors.includes(colorToAdd) && commonColors.some(c => c.toLowerCase() === colorToAdd.toLowerCase())) {
+        handleColorSelect(commonColors.find(c => c.toLowerCase() === colorToAdd.toLowerCase()) || colorToAdd);
+      }
+    } else if (e.key === 'Backspace' && colorsInputValue === '' && selectedColors.length > 0) {
+      // Remove last color if backspace is pressed on empty input
+      handleRemoveColor(selectedColors[selectedColors.length - 1]);
+    }
+  };
+
+  // Handle materials input change with autocomplete
+  const handleMaterialsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMaterialsInputValue(value);
+
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonMaterials
+        .filter(material =>
+          material.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedMaterials.includes(material) // Don't suggest already added materials
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      setMaterialsSuggestions(filtered);
+      setShowMaterialsSuggestions(filtered.length > 0);
+    } else {
+      setMaterialsSuggestions([]);
+      setShowMaterialsSuggestions(false);
+    }
+  };
+
+  // Handle material suggestion selection
+  const handleMaterialSelect = (material: string) => {
+    if (!selectedMaterials.includes(material)) {
+      const newMaterials = [...selectedMaterials, material];
+      setSelectedMaterials(newMaterials);
+      setMaterialsInputValue('');
+      setShowMaterialsSuggestions(false);
+      setMaterialsSuggestions([]);
+      
+      // Update form data with comma-separated string
+      handleChange('materials', newMaterials.join(', '));
+    }
+
+    // Focus back on input
+    if (materialsInputRef.current) {
+      materialsInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a material tag
+  const handleRemoveMaterial = (materialToRemove: string) => {
+    const newMaterials = selectedMaterials.filter(material => material !== materialToRemove);
+    setSelectedMaterials(newMaterials);
+    
+    // Update form data with comma-separated string
+    handleChange('materials', newMaterials.join(', '));
+    
+    // Focus back on input
+    if (materialsInputRef.current) {
+      materialsInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add material
+  const handleMaterialsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && materialsInputValue.trim()) {
+      e.preventDefault();
+      const materialToAdd = materialsInputValue.trim();
+      if (!selectedMaterials.includes(materialToAdd) && commonMaterials.some(m => m.toLowerCase() === materialToAdd.toLowerCase())) {
+        handleMaterialSelect(commonMaterials.find(m => m.toLowerCase() === materialToAdd.toLowerCase()) || materialToAdd);
+      }
+    } else if (e.key === 'Backspace' && materialsInputValue === '' && selectedMaterials.length > 0) {
+      // Remove last material if backspace is pressed on empty input
+      handleRemoveMaterial(selectedMaterials[selectedMaterials.length - 1]);
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        sizesDropdownRef.current &&
+        !sizesDropdownRef.current.contains(event.target as Node) &&
+        sizesInputRef.current &&
+        !sizesInputRef.current.contains(event.target as Node) &&
+        sizesContainerRef.current &&
+        !sizesContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowSizesSuggestions(false);
+      }
+      if (
+        colorsDropdownRef.current &&
+        !colorsDropdownRef.current.contains(event.target as Node) &&
+        colorsInputRef.current &&
+        !colorsInputRef.current.contains(event.target as Node) &&
+        colorsContainerRef.current &&
+        !colorsContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowColorsSuggestions(false);
+      }
+      if (
+        materialsDropdownRef.current &&
+        !materialsDropdownRef.current.contains(event.target as Node) &&
+        materialsInputRef.current &&
+        !materialsInputRef.current.contains(event.target as Node) &&
+        materialsContainerRef.current &&
+        !materialsContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowMaterialsSuggestions(false);
+      }
+    };
+
+    if (showSizesSuggestions || showColorsSuggestions || showMaterialsSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSizesSuggestions, showColorsSuggestions, showMaterialsSuggestions]);
 
   const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isLoading) return;
@@ -1182,49 +1522,235 @@ function AddProductModal({
 
                   {/* Sizes, Colors, Materials */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+                    <div className="relative" ref={sizesContainerRef}>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Sizes <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.sizes}
-                        onChange={(e) => handleChange('sizes', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.sizes ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                        placeholder="S, M, L, XL"
-                      />
+                      <div
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
+                          errors.sizes ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        onClick={() => sizesInputRef.current?.focus()}
+                      >
+                        {/* Size Tags */}
+                        {selectedSizes.map((size, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                          >
+                            {size}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveSize(size);
+                              }}
+                              className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                              aria-label={`Remove ${size}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        
+                        {/* Input Field */}
+                        <input
+                          ref={sizesInputRef}
+                          type="text"
+                          value={sizesInputValue}
+                          onChange={handleSizesInputChange}
+                          onKeyDown={handleSizesKeyDown}
+                          onFocus={() => {
+                            if (sizesInputValue.trim().length > 0) {
+                              const filtered = commonSizes
+                                .filter(size =>
+                                  size.toLowerCase().includes(sizesInputValue.toLowerCase()) &&
+                                  !selectedSizes.includes(size)
+                                )
+                                .slice(0, 5);
+                              setSizesSuggestions(filtered);
+                              setShowSizesSuggestions(filtered.length > 0);
+                            }
+                          }}
+                          className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                          placeholder={selectedSizes.length === 0 ? "Type to search sizes..." : ""}
+                        />
+                      </div>
                       {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
+
+                      {/* Autocomplete Dropdown */}
+                      {showSizesSuggestions && sizesSuggestions.length > 0 && (
+                        <div
+                          ref={sizesDropdownRef}
+                          className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                        >
+                          {sizesSuggestions.map((size, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleSizeSelect(size)}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                              onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <div>
+                    <div className="relative" ref={colorsContainerRef}>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Colors <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.colors}
-                        onChange={(e) => handleChange('colors', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.colors ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                        placeholder="Red, Blue, Green"
-                      />
+                      <div
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
+                          errors.colors ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        onClick={() => colorsInputRef.current?.focus()}
+                      >
+                        {/* Color Tags */}
+                        {selectedColors.map((color, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                          >
+                            {color}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveColor(color);
+                              }}
+                              className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                              aria-label={`Remove ${color}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        
+                        {/* Input Field */}
+                        <input
+                          ref={colorsInputRef}
+                          type="text"
+                          value={colorsInputValue}
+                          onChange={handleColorsInputChange}
+                          onKeyDown={handleColorsKeyDown}
+                          onFocus={() => {
+                            if (colorsInputValue.trim().length > 0) {
+                              const filtered = commonColors
+                                .filter(color =>
+                                  color.toLowerCase().includes(colorsInputValue.toLowerCase()) &&
+                                  !selectedColors.includes(color)
+                                )
+                                .slice(0, 5);
+                              setColorsSuggestions(filtered);
+                              setShowColorsSuggestions(filtered.length > 0);
+                            }
+                          }}
+                          className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                          placeholder={selectedColors.length === 0 ? "Type to search colors..." : ""}
+                        />
+                      </div>
                       {errors.colors && <p className="mt-1 text-sm text-red-500">{errors.colors}</p>}
+
+                      {/* Autocomplete Dropdown */}
+                      {showColorsSuggestions && colorsSuggestions.length > 0 && (
+                        <div
+                          ref={colorsDropdownRef}
+                          className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                        >
+                          {colorsSuggestions.map((color, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleColorSelect(color)}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                              onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                            >
+                              {color}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <div>
+                    <div className="relative" ref={materialsContainerRef}>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Materials <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.materials}
-                        onChange={(e) => handleChange('materials', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.materials ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                        placeholder="Cotton, Polyester"
-                      />
+                      <div
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
+                          errors.materials ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        onClick={() => materialsInputRef.current?.focus()}
+                      >
+                        {/* Material Tags */}
+                        {selectedMaterials.map((material, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                          >
+                            {material}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveMaterial(material);
+                              }}
+                              className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                              aria-label={`Remove ${material}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        
+                        {/* Input Field */}
+                        <input
+                          ref={materialsInputRef}
+                          type="text"
+                          value={materialsInputValue}
+                          onChange={handleMaterialsInputChange}
+                          onKeyDown={handleMaterialsKeyDown}
+                          onFocus={() => {
+                            if (materialsInputValue.trim().length > 0) {
+                              const filtered = commonMaterials
+                                .filter(material =>
+                                  material.toLowerCase().includes(materialsInputValue.toLowerCase()) &&
+                                  !selectedMaterials.includes(material)
+                                )
+                                .slice(0, 5);
+                              setMaterialsSuggestions(filtered);
+                              setShowMaterialsSuggestions(filtered.length > 0);
+                            }
+                          }}
+                          className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                          placeholder={selectedMaterials.length === 0 ? "Type to search materials..." : ""}
+                        />
+                      </div>
                       {errors.materials && <p className="mt-1 text-sm text-red-500">{errors.materials}</p>}
+
+                      {/* Autocomplete Dropdown */}
+                      {showMaterialsSuggestions && materialsSuggestions.length > 0 && (
+                        <div
+                          ref={materialsDropdownRef}
+                          className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                        >
+                          {materialsSuggestions.map((material, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleMaterialSelect(material)}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                              onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                            >
+                              {material}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
