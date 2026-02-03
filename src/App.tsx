@@ -8,7 +8,7 @@ import SalesDashboard from './pages/SalesDashboard';
 import FinanceDashboard from './pages/FinanceDashboard';
 import Review from './pages/Review';
 import Products from './pages/Products';
-import Collections from './pages/Collections';
+// import Collections from './pages/Collections'; // Replaced by CollectionsDrops
 import Inventory from './pages/Inventory';
 import Warehouses from './pages/Warehouses';
 import Orders from './pages/Orders';
@@ -27,6 +27,7 @@ import MyTasks from './pages/MyTasks';
 import BOM from './pages/BOM';
 import Costing from './pages/Costing';
 import Drops from './pages/Drops';
+import CollectionsDrops from './pages/CollectionsDrops';
 import Pricing from './pages/Pricing';
 import Retailers from './pages/Retailers';
 import Returns from './pages/Returns';
@@ -176,7 +177,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Collections />
+                  <CollectionsDrops />
                 </Layout>
               </ProtectedRoute>
             }

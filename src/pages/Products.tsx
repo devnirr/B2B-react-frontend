@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { Package, Plus, X, ChevronDown, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox } from 'lucide-react';
 import { validators } from '../utils/validation';
+import { generateEAN13, validateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -1757,14 +1758,64 @@ function AddProductModal({
                   {/* EAN and Base Price */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EAN</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">EAN</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newEAN = generateEAN13('200');
+                            handleChange('ean', newEAN);
+                            // Clear any existing EAN error
+                            if (errors.ean) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.ean;
+                                return newErrors;
+                              });
+                            }
+                          }}
+                          className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                        >
+                          Auto-generate
+                        </button>
+                      </div>
                       <input
                         type="text"
                         value={formData.ean}
-                        onChange={(e) => handleChange('ean', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Enter EAN"
+                        onChange={(e) => {
+                          // Only allow digits and limit to 13 characters
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 13);
+                          handleChange('ean', value);
+                          // Real-time validation
+                          if (value.length === 13) {
+                            const eanError = validators.ean(value);
+                            if (eanError) {
+                              setErrors(prev => ({ ...prev, ean: eanError }));
+                            } else {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.ean;
+                                return newErrors;
+                              });
+                            }
+                          } else if (value.length > 0) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.ean;
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                          errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        placeholder="Enter EAN (13 digits)"
+                        maxLength={13}
                       />
+                      {errors.ean && <p className="mt-1 text-sm text-red-500">{errors.ean}</p>}
+                      {formData.ean && formData.ean.length === 13 && !errors.ean && (
+                        <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Valid EAN</p>
+                      )}
                     </div>
 
                     <div>
@@ -2383,14 +2434,64 @@ function EditProductModal({
                 {/* EAN and Base Price */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EAN</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">EAN</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newEAN = generateEAN13('200', product?.id);
+                          handleChange('ean', newEAN);
+                          // Clear any existing EAN error
+                          if (errors.ean) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.ean;
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                      >
+                        Auto-generate
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={formData.ean}
-                      onChange={(e) => handleChange('ean', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Enter EAN"
+                      onChange={(e) => {
+                        // Only allow digits and limit to 13 characters
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 13);
+                        handleChange('ean', value);
+                        // Real-time validation
+                        if (value.length === 13) {
+                          const eanError = validators.ean(value);
+                          if (eanError) {
+                            setErrors(prev => ({ ...prev, ean: eanError }));
+                          } else {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.ean;
+                              return newErrors;
+                            });
+                          }
+                        } else if (value.length > 0) {
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.ean;
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
+                        errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                      placeholder="Enter EAN (13 digits)"
+                      maxLength={13}
                     />
+                    {errors.ean && <p className="mt-1 text-sm text-red-500">{errors.ean}</p>}
+                    {formData.ean && formData.ean.length === 13 && !errors.ean && (
+                      <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Valid EAN</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Price</label>

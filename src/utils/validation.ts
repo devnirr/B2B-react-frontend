@@ -119,13 +119,38 @@ export const validators = {
     return null;
   },
 
-  // EAN validation (8 or 13 digits)
+  // EAN validation (EAN-13 with check digit validation)
   ean: (value: string | undefined): string | null => {
     if (!value || !value.trim()) return null; // Optional field
-    const eanRegex = /^\d{8}$|^\d{13}$/;
-    if (!eanRegex.test(value.trim())) {
-      return 'EAN must be 8 or 13 digits';
+    const trimmedValue = value.trim();
+    
+    // Must be exactly 13 digits
+    if (!/^\d{13}$/.test(trimmedValue)) {
+      return 'EAN must be exactly 13 digits';
     }
+
+    // Validate check digit
+    const digits = trimmedValue.split('').map(Number);
+    const checkDigit = digits[12]; // Last digit (13th)
+    const first12 = digits.slice(0, 12);
+
+    // Sum digits in odd positions (1-indexed, so indices 0, 2, 4, 6, 8, 10)
+    const oddSum = first12.filter((_, i) => i % 2 === 0).reduce((sum, digit) => sum + digit, 0);
+    
+    // Sum digits in even positions and multiply by 3 (indices 1, 3, 5, 7, 9, 11)
+    const evenSum = first12.filter((_, i) => i % 2 === 1).reduce((sum, digit) => sum + digit, 0) * 3;
+    
+    // Add both sums
+    const totalSum = oddSum + evenSum;
+    
+    // Calculate check digit
+    const calculatedCheckDigit = (10 - (totalSum % 10)) % 10;
+    
+    // Compare with the 13th digit
+    if (calculatedCheckDigit !== checkDigit) {
+      return 'Invalid EAN check digit';
+    }
+    
     return null;
   },
 
