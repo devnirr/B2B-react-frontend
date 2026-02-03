@@ -1225,6 +1225,23 @@ function MarginSimulatorSection() {
   });
   const [targetMargin, setTargetMargin] = useState(40);
   const [targetPrice, setTargetPrice] = useState(0);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch products for selection
+  const { data: productsData } = useQuery({
+    queryKey: ['products', 'margin-simulator'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/products?skip=0&take=1000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const products = productsData || [];
 
   const totalCost = costs.materials + costs.labor + costs.overhead;
   const calculatedPrice = totalCost / (1 - targetMargin / 100);
@@ -1244,8 +1261,82 @@ function MarginSimulatorSection() {
     setTargetPrice(value);
   };
 
+  // Save cost sheet mutation
+  const saveCostSheetMutation = useMutation({
+    mutationFn: async ({ productId, costSheetData }: { productId: number; costSheetData: any }) => {
+      // Check if cost sheet exists for this product
+      try {
+        const existingResponse = await api.get(`/cost-sheets?skip=0&take=1000`);
+        const existingSheets = Array.isArray(existingResponse.data) 
+          ? existingResponse.data 
+          : (existingResponse.data?.data || []);
+        const existingSheet = existingSheets.find((sheet: any) => sheet.productId === productId);
+
+        if (existingSheet) {
+          // Update existing cost sheet
+          const response = await api.patch(`/cost-sheets/${existingSheet.id}`, costSheetData);
+          return response.data;
+        } else {
+          // Create new cost sheet
+          const response = await api.post(`/cost-sheets/${productId}`, costSheetData);
+          return response.data;
+        }
+      } catch (error: any) {
+        // If check fails, try to create
+        const response = await api.post(`/cost-sheets/${productId}`, costSheetData);
+        return response.data;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cost-sheets'] });
+      toast.success('Cost sheet saved successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to save cost sheet');
+    },
+  });
+
+  const handleSave = () => {
+    if (!selectedProductId) {
+      toast.error('Please select a product to save');
+      return;
+    }
+
+    const costSheetData = {
+      materials: costs.materials,
+      labor: costs.labor,
+      overhead: costs.overhead,
+      sellingPrice: calculatedPrice,
+      notes: `Margin Simulator: Target margin ${targetMargin}%, Calculated price $${calculatedPrice.toFixed(2)}`,
+    };
+
+    saveCostSheetMutation.mutate({
+      productId: selectedProductId,
+      costSheetData,
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Product Selection */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Select Product
+        </label>
+        <select
+          value={selectedProductId || ''}
+          onChange={(e) => setSelectedProductId(e.target.value ? parseInt(e.target.value) : null)}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+        >
+          <option value="">-- Select a product --</option>
+          {products.map((product: any) => (
+            <option key={product.id} value={product.id}>
+              {product.name} ({product.sku})
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cost Inputs */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -1394,9 +1485,28 @@ function MarginSimulatorSection() {
 
       {/* Summary Card */}
       <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-lg shadow-sm border border-primary-200 dark:border-primary-800 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pricing Summary</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pricing Summary</h3>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={!selectedProductId || saveCostSheetMutation.isPending}
+            className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saveCostSheetMutation.isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save Cost Sheet
+              </>
+            )}
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
