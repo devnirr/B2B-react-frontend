@@ -1444,7 +1444,7 @@ function ChannelReplenishmentSection() {
                       <div className="text-sm font-medium text-primary-600 dark:text-primary-400">
                         {item.totalReorder > 0 ? item.totalReorder : 'N/A'}
                       </div>
-                    </td>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => {
