@@ -525,8 +525,6 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
     
     // Auto-calculate total price when quantity or unit price changes
     if (field === 'quantity' || field === 'unitPrice') {
-      const qty = parseFloat(updated[index].quantity) || 0;
-      const price = parseFloat(updated[index].unitPrice) || 0;
       // Note: totalPrice is calculated on backend, but we can show it in UI
     }
     
@@ -1049,7 +1047,7 @@ function ProformaInvoicesSection() {
 }
 
 // Proforma Invoice Modal Component (simplified for now)
-function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onClose: () => void; onSave: () => void }) {
+function ProformaInvoiceModal({ invoice, onClose, onSave: _onSave }: { invoice?: any; onClose: () => void; onSave: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">

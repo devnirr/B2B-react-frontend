@@ -10,7 +10,6 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  Edit,
   Trash2,
   Key,
   Smartphone,
@@ -20,9 +19,7 @@ import {
   RefreshCw,
   Lock,
   Unlock,
-  Settings,
   Globe,
-  Users,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -1286,20 +1283,6 @@ function getMethodIcon(method: TwoFactorMethod) {
   }
 }
 
-function getMethodColor(method: TwoFactorMethod) {
-  switch (method) {
-    case 'totp':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-    case 'sms':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-    case 'email':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-    case 'backup-code':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
-  }
-}
 
 function getStatusColor(status: TwoFactorStatus) {
   switch (status) {
@@ -2063,6 +2046,38 @@ function SSODetailsModal({ sso, onClose, onUpdate, onDelete }: SSODetailsModalPr
     if (window.confirm('Are you sure you want to delete this SSO configuration?')) {
       onDelete(sso.id);
       onClose();
+    }
+  };
+
+  const getProviderIcon = (provider: SSOProvider) => {
+    switch (provider) {
+      case 'google':
+        return Globe;
+      case 'microsoft':
+        return Globe;
+      case 'okta':
+        return Shield;
+      case 'auth0':
+        return Shield;
+      case 'saml':
+        return Lock;
+      case 'oauth2':
+        return Key;
+      default:
+        return Globe;
+    }
+  };
+
+  const getSSOStatusColor = (status: SSOStatus) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
     }
   };
 

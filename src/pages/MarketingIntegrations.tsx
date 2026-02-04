@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { 
   Link2, 
@@ -8,15 +8,11 @@ import {
   CheckCircle2, 
   AlertCircle, 
   BarChart3, 
-  TrendingUp, 
   Search,
-  ExternalLink,
   Settings,
   Trash2,
   RefreshCw
 } from 'lucide-react';
-import api from '../lib/api';
-import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
 interface AnalyticsConnection {
@@ -153,7 +149,7 @@ export default function MarketingIntegrations() {
     queryClient.invalidateQueries({ queryKey: ['integrations', 'marketing'] });
   };
 
-  const handleSync = (connectionId: string) => {
+  const handleSync = (_connectionId: string) => {
     toast.success('Syncing data...');
     // Simulate sync
     setTimeout(() => {

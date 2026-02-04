@@ -13,18 +13,13 @@ import {
   AlertTriangle,
   ChevronDown,
   Search,
-  Filter,
   Building2,
-  User,
   Mail,
   Phone,
-  MapPin,
   Crown,
   ShoppingBag,
   Briefcase,
   Tag,
-  Eye,
-  Download,
   UserPlus,
 } from 'lucide-react';
 import { validators } from '../utils/validation';
@@ -269,7 +264,6 @@ export default function Customers() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isContactModalShowing, setIsContactModalShowing] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const queryClient = useQueryClient();
 
   // Handle body scroll lock when modal is open
@@ -433,7 +427,6 @@ export default function Customers() {
     setTimeout(() => {
       setIsContactModalOpen(false);
       setSelectedCustomer(null);
-      setSelectedContact(null);
     }, 300);
   };
 
@@ -848,7 +841,7 @@ export default function Customers() {
         <EditCustomerModal
           customer={selectedCustomer}
           onClose={closeEditModal}
-          onSubmit={(customerData) => updateCustomerMutation.mutate({ id: selectedCustomer.id, customerData })}
+          onSubmit={(customerData) => updateCustomerMutation.mutate({ id: Number(selectedCustomer.id), customerData })}
           isLoading={updateCustomerMutation.isPending}
           isShowing={isEditModalShowing}
         />
@@ -859,7 +852,7 @@ export default function Customers() {
         <DeleteCustomerModal
           customer={selectedCustomer}
           onClose={closeDeleteModal}
-          onConfirm={() => deleteCustomerMutation.mutate(selectedCustomer.id)}
+          onConfirm={() => deleteCustomerMutation.mutate(Number(selectedCustomer.id))}
           isLoading={deleteCustomerMutation.isPending}
           isShowing={isDeleteModalShowing}
         />

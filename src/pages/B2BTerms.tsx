@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import {
@@ -6,7 +6,6 @@ import {
   Plus,
   X,
   Pencil,
-  Trash2,
   Search,
   Filter,
   DollarSign,
@@ -18,12 +17,10 @@ import {
   Clock,
   TrendingUp,
   ChevronDown,
-  Eye,
 } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { validators } from '../utils/validation';
 
 type PaymentTermType = 'NET_15' | 'NET_30' | 'NET_45' | 'NET_60' | 'DUE_ON_RECEIPT' | 'CUSTOM';
 type CreditStatus = 'ACTIVE' | 'SUSPENDED' | 'EXCEEDED' | 'PENDING_APPROVAL';
@@ -129,7 +126,6 @@ const CustomSelect = ({
 };
 
 export default function B2BTerms() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

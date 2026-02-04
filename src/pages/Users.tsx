@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
-  User,
   Plus,
   Search,
   Filter,
@@ -17,7 +16,6 @@ import {
   Users as UsersIcon,
   Edit,
   Trash2,
-  Calendar,
 } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
@@ -333,7 +331,7 @@ function RoleBasedAccessSection() {
       toast.error('Cannot delete system roles');
       return;
     }
-    if (role?.userCount > 0) {
+    if (role?.userCount && role.userCount > 0) {
       toast.error('Cannot delete role with assigned users');
       return;
     }

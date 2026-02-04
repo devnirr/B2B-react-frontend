@@ -222,16 +222,7 @@ function BillOfMaterialsSection() {
     }
   }, [isEditModalOpen]);
 
-  // Calculate total cost for each BOM
-  const calculateBOMCost = (items: any[]): number => {
-    return items.reduce((total, item) => {
-      const cost = parseFloat(item.cost) || 0;
-      const qty = parseFloat(item.quantity) || 0;
-      return total + (cost * qty);
-    }, 0);
-  };
-
-  const filteredBoms = boms.filter((bom) =>
+  const filteredBoms = boms.filter((bom: any) =>
     bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     bom.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -324,7 +315,7 @@ function BillOfMaterialsSection() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredBoms.map((bom) => (
+            {filteredBoms.map((bom: any) => (
               <div key={bom.id} className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -407,7 +398,11 @@ function BillOfMaterialsSection() {
         <BOMModal
           products={products}
           onClose={closeModal}
-          onSubmit={(bomData) => createBOMMutation.mutate(bomData)}
+          onSubmit={(bomData) => {
+            if ('productId' in bomData) {
+              createBOMMutation.mutate(bomData);
+            }
+          }}
           isLoading={createBOMMutation.isPending}
           isShowing={isModalShowing}
         />
@@ -484,7 +479,7 @@ function BOMModal({
   const removeComponent = (index: number) => {
     setFormData({
       ...formData,
-      components: formData.components.filter((_, i) => i !== index),
+      components: formData.components.filter((_: any, i: number) => i !== index),
     });
   };
 
@@ -627,7 +622,7 @@ function BOMModal({
                     </div>
 
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {formData.components.map((comp, index) => (
+                      {formData.components.map((comp: any, index: number) => (
                         <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                           <div className="flex-1 grid grid-cols-4 gap-2 text-sm">
                             <span className="font-medium text-gray-900 dark:text-white">{comp.name}</span>
@@ -833,7 +828,7 @@ function CostSheetsSection() {
     }
   }, [isEditModalOpen]);
 
-  const filteredCostSheets = costSheets.filter((sheet) =>
+  const filteredCostSheets = costSheets.filter((sheet: any) =>
     sheet.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     sheet.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -915,7 +910,7 @@ function CostSheetsSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredCostSheets.map((sheet) => (
+                {filteredCostSheets.map((sheet: any) => (
                   <tr key={sheet.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {sheet.productName}
@@ -976,7 +971,11 @@ function CostSheetsSection() {
         <CostSheetModal
           products={products}
           onClose={closeModal}
-          onSubmit={(costSheetData) => createCostSheetMutation.mutate(costSheetData)}
+          onSubmit={(costSheetData) => {
+            if ('productId' in costSheetData) {
+              createCostSheetMutation.mutate(costSheetData);
+            }
+          }}
           isLoading={createCostSheetMutation.isPending}
           isShowing={isModalShowing}
         />

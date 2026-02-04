@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Layers, Percent, Star, TrendingDown, Package, Search, Plus, X, Pencil, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { Percent, Star, TrendingDown, Package, Search, X, DollarSign } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -63,9 +63,6 @@ export default function AssortmentMerchandising() {
 // Featured Collections Section Component
 function FeaturedCollectionsSection() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCollection, setSelectedCollection] = useState<any>(null);
-  const queryClient = useQueryClient();
 
   // Fetch collections
   const { data: collectionsData, isLoading } = useQuery({
@@ -242,7 +239,6 @@ function MarkdownPlanningSection() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const queryClient = useQueryClient();
 
   // Fetch products with inventory
   const { data: productsData, isLoading: productsLoading } = useQuery({

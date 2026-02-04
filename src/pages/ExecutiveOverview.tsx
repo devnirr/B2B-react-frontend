@@ -1420,7 +1420,7 @@ export default function ExecutiveOverview() {
                             }))}
                             options={{
                               chart: {
-                                type: 'bar',
+                                type: 'bar' as const,
                                 height: 95,
                                 stacked: true,
                                 stackType: '100%',
@@ -1475,7 +1475,7 @@ export default function ExecutiveOverview() {
                             }]}
                             options={{
                               chart: {
-                                type: 'bar',
+                                type: 'bar' as const,
                                 height: 95,
                                 stacked: true,
                                 stackType: '100%',

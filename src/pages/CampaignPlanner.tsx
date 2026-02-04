@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Calendar, Plus, ChevronLeft, ChevronRight, X, Pencil, Trash2, Package, Rocket, Tag } from 'lucide-react';
+import { Calendar, Plus, ChevronLeft, ChevronRight, X, Trash2, Package, Rocket, Tag } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -24,7 +24,6 @@ export default function CampaignPlanner() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<CampaignEvent | null>(null);
-  const queryClient = useQueryClient();
 
   // Fetch collections for drops
   const { data: collectionsData, isLoading: collectionsLoading } = useQuery({
@@ -377,7 +376,6 @@ export default function CampaignPlanner() {
             {calendarDays.map((day, index) => {
               const events = getEventsForDate(day.fullDate);
               const isToday = day.fullDate === today;
-              const hasEvents = events.length > 0;
 
               return (
                 <div

@@ -25,7 +25,6 @@ import {
   Ruler,
   Lightbulb,
   DollarSign,
-  Factory,
   Store,
   RotateCcw,
   CheckSquare,
@@ -38,7 +37,6 @@ import {
   Hash,
   ShoppingBag,
   PackageSearch,
-  Truck,
 } from 'lucide-react';
 
 interface LayoutProps {

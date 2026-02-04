@@ -3,7 +3,6 @@ import { toast } from 'react-hot-toast';
 import {
   FileText,
   Search,
-  Filter,
   ChevronDown,
   Eye,
   X,
@@ -16,7 +15,6 @@ import {
   Clock,
   Trash2,
   Download,
-  RefreshCw,
   Activity,
   Server,
   Shield,
@@ -304,7 +302,6 @@ function AuditLogsSection() {
 
     // Filter by date range
     if (dateRange !== 'all') {
-      const now = new Date();
       const cutoff = new Date();
       switch (dateRange) {
         case '1h':
@@ -1097,7 +1094,6 @@ function SystemLogsSection() {
 
     // Filter by date range
     if (dateRange !== 'all') {
-      const now = new Date();
       const cutoff = new Date();
       switch (dateRange) {
         case '1h':

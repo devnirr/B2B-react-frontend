@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, ShoppingCart, User, Globe, Search, Download, Share2, Eye, X, Mail, Link as LinkIcon, Copy, Check, Receipt, RotateCcw, Package } from 'lucide-react';
+import { FileText, ShoppingCart, User, Search, Download, Share2, Eye, X, Mail, Link as LinkIcon, Copy, Check, Receipt, RotateCcw, Package } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';

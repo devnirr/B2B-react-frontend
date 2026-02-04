@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Plus, TrendingUp, Layers, Calendar as CalendarIcon, BarChart3, X, Pencil, Trash2, AlertTriangle, Inbox, ChevronDown, ChevronLeft, ChevronRight, Package, ArrowUp, ArrowDown, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, TrendingUp, Layers, Calendar as CalendarIcon, BarChart3, X, Pencil, Trash2, AlertTriangle, Inbox, ChevronDown, ChevronLeft, ChevronRight, Package, ArrowUp, ArrowDown, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
@@ -341,7 +341,6 @@ function CollectionPlanner() {
   };
 
   // Drag and drop state
-  const [activeId, setActiveId] = useState<number | null>(null);
   const [draggedCollection, setDraggedCollection] = useState<any>(null);
 
   // Drag and drop sensors
@@ -366,14 +365,12 @@ function CollectionPlanner() {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const collection = collections.find((c: any) => c.id === active.id);
-    setActiveId(active.id as number);
     setDraggedCollection(collection);
   };
 
   // Handle drag end
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
     setDraggedCollection(null);
 
     if (!over) return;
@@ -528,7 +525,7 @@ function DropCalendar() {
     });
 
   const getDropsForDate = (date: string) => {
-    return drops.filter((drop) => drop.date === date);
+    return drops.filter((drop: any) => drop.date === date);
   };
 
   const formatDate = (date: Date) => {
@@ -599,14 +596,14 @@ function DropCalendar() {
 
   // Get upcoming drops (next 7 days)
   const upcomingDrops = drops
-    .filter((drop) => {
+    .filter((drop: any) => {
       const dropDate = new Date(drop.date);
       const today = new Date();
       const nextWeek = new Date(today);
       nextWeek.setDate(today.getDate() + 7);
       return dropDate >= today && dropDate <= nextWeek;
     })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
 
   // Handle date click to show detail modal
@@ -740,7 +737,7 @@ function DropCalendar() {
                     {day.date}
                   </div>
                   <div className="space-y-1">
-                    {dayDrops.slice(0, 2).map((drop) => (
+                    {dayDrops.slice(0, 2).map((drop: any) => (
                       <div
                         key={drop.id}
                         className={`text-xs px-2 py-1 rounded truncate ${
@@ -779,7 +776,7 @@ function DropCalendar() {
             </div>
           ) : (
             <div className="space-y-3">
-              {upcomingDrops.map((drop) => {
+              {upcomingDrops.map((drop: any) => {
                 const dropDate = new Date(drop.date);
                 const isToday = drop.date === today;
                 const isTomorrow = drop.date === formatDate(new Date(Date.now() + 86400000));
@@ -873,7 +870,6 @@ function StylePerformanceTracking() {
 
   const products = data?.products || [];
   const orders = data?.orders || [];
-  const collections = data?.collections || [];
 
   // Calculate style performance metrics
   const stylePerformance = useMemo(() => {
@@ -1298,9 +1294,9 @@ function DraggableCollectionCard({
 // Collection Card Component (for DragOverlay)
 function CollectionCard({
   collection,
-  isDragging,
-  onEdit,
-  onDelete,
+  isDragging: _isDragging,
+  onEdit: _onEdit,
+  onDelete: _onDelete,
 }: {
   collection: any;
   isDragging: boolean;

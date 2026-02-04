@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Image, FileText, BookOpen, Plus, Search, Grid, List, Upload, X, Pencil, Trash2, Download, Eye } from 'lucide-react';
+import { Image, FileText, BookOpen, Search, Grid, List, Upload, X, Pencil, Trash2, Download, Eye } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -67,7 +67,7 @@ function ImagesSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -461,7 +461,7 @@ function ImagesSection() {
 function LookbooksSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -740,7 +740,7 @@ function BrandContentSection() {
   const [filterType, setFilterType] = useState<'all' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'OTHER'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const queryClient = useQueryClient();

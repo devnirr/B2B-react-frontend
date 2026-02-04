@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Leaf, FileText, Search, Plus, Shield, Globe, X, Pencil, Trash2, Eye, ChevronDown, Inbox } from 'lucide-react';
+import { Search, Plus, Shield, Globe, X, Pencil, Trash2, Eye, ChevronDown, Inbox } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -1058,7 +1058,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   };
 
   const removeStandard = (standard: string) => {
-    setFormData({ ...formData, standards: formData.standards.filter((s) => s !== standard) });
+    setFormData({ ...formData, standards: formData.standards.filter((s: string) => s !== standard) });
   };
 
   const addTag = () => {
@@ -1069,7 +1069,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   };
 
   const removeTag = (tag: string) => {
-    setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tag) });
+    setFormData({ ...formData, tags: formData.tags.filter((t: string) => t !== tag) });
   };
 
   return (
@@ -1210,7 +1210,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.standards.map((std) => (
+              {formData.standards.map((std: string) => (
                 <span key={std} className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-full text-sm flex items-center gap-2">
                   {std}
                   <button
@@ -1249,7 +1249,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.tags.map((tag) => (
+              {formData.tags.map((tag: string) => (
                 <span key={tag} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full text-sm flex items-center gap-2">
                   {tag}
                   <button

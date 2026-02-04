@@ -9,8 +9,6 @@ import {
   TrendingUp, 
   TrendingDown,
   BarChart3,
-  Search,
-  Filter,
   Download,
   RefreshCw
 } from 'lucide-react';
@@ -111,7 +109,7 @@ function ForecastBySKUStyleCollectionSection() {
     },
   });
 
-  const { data: ordersData } = useQuery({
+  useQuery({
     queryKey: ['orders', 'forecast'],
     queryFn: async () => {
       try {
@@ -136,7 +134,6 @@ function ForecastBySKUStyleCollectionSection() {
   });
 
   const products = productsData || [];
-  const orders = ordersData || [];
   const collections = collectionsData || [];
 
   // Generate forecast data (simulated AI predictions)
@@ -160,13 +157,13 @@ function ForecastBySKUStyleCollectionSection() {
 
   const chartOptions = useMemo(() => ({
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 400,
       toolbar: { show: false },
     },
     dataLabels: { enabled: false },
     stroke: {
-      curve: 'smooth',
+      curve: 'smooth' as const,
       width: 2,
     },
     xaxis: {
@@ -243,7 +240,7 @@ function ForecastBySKUStyleCollectionSection() {
               {forecastType === 'SKU' && products.slice(0, 20).map((p: any) => (
                 <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
               ))}
-              {forecastType === 'Style' && Array.from(new Set(products.map((p: any) => p.style).filter(Boolean))).slice(0, 20).map((style: string) => (
+              {forecastType === 'Style' && (Array.from(new Set(products.map((p: any) => p.style).filter(Boolean))) as string[]).slice(0, 20).map((style: string) => (
                 <option key={style} value={style}>{style}</option>
               ))}
               {forecastType === 'Collection' && collections.slice(0, 20).map((c: any) => (
@@ -387,7 +384,7 @@ function ForecastByChannelWarehouseRegionSection() {
 
   const chartOptions = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'bar' as const,
       height: 400,
       toolbar: { show: false },
     },
@@ -529,13 +526,13 @@ function SeasonalityDetectionSection() {
 
   const chartOptions = useMemo(() => ({
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 400,
       toolbar: { show: false },
     },
     dataLabels: { enabled: false },
     stroke: {
-      curve: 'smooth',
+      curve: 'smooth' as const,
       width: 2,
     },
     xaxis: {
@@ -776,13 +773,13 @@ function ForecastAccuracySection() {
 
   const chartOptions = useMemo(() => ({
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 400,
       toolbar: { show: false },
     },
     dataLabels: { enabled: false },
     stroke: {
-      curve: 'smooth',
+      curve: 'smooth' as const,
       width: 2,
     },
     xaxis: {

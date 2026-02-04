@@ -24,7 +24,7 @@ export default function MarketingInsights() {
   }, []);
 
   // Fetch products
-  const { data: productsData, isLoading: productsLoading } = useQuery({
+  const { isLoading: productsLoading } = useQuery({
     queryKey: ['products', 'insights'],
     queryFn: async () => {
       try {
@@ -49,7 +49,6 @@ export default function MarketingInsights() {
     },
   });
 
-  const products = productsData || [];
   const orders = ordersData || [];
 
   // Calculate date range
@@ -171,14 +170,14 @@ export default function MarketingInsights() {
   // Chart configurations
   const revenueChartOptions = useMemo(() => ({
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 350,
       toolbar: { show: false },
       zoom: { enabled: false },
     },
     dataLabels: { enabled: false },
     stroke: {
-      curve: 'smooth',
+      curve: 'smooth' as const,
       width: 2,
     },
     xaxis: {
@@ -215,7 +214,7 @@ export default function MarketingInsights() {
 
   const topProductsChartOptions = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'bar' as const,
       height: 400,
       toolbar: { show: false },
     },

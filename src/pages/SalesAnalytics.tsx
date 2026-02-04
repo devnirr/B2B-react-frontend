@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, Store, Users, ChartBar, Search, Calendar, ArrowUp, ArrowDown, DollarSign, Package, ShoppingCart } from 'lucide-react';
+import { TrendingUp, Store, Users, Search, Calendar, ArrowUp, ArrowDown, DollarSign, Package, ShoppingCart } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -187,14 +187,14 @@ function SellInPerformanceSection() {
   // Chart configuration
   const chartOptions = useMemo(() => ({
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 350,
       toolbar: { show: false },
       zoom: { enabled: false },
     },
     dataLabels: { enabled: false },
     stroke: {
-      curve: 'smooth',
+      curve: 'smooth' as const,
       width: 2,
     },
     xaxis: {
@@ -543,7 +543,7 @@ function ChannelPerformanceSection() {
   // Chart configuration for channel performance
   const channelChartOptions = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'bar' as const,
       height: 350,
       toolbar: { show: false },
     },
@@ -589,7 +589,7 @@ function ChannelPerformanceSection() {
   // Pie chart for channel distribution
   const pieChartOptions = useMemo(() => ({
     chart: {
-      type: 'pie',
+      type: 'pie' as const,
       height: 350,
     },
     labels: channelMetrics.channels.map((ch: any) => ch.name),
@@ -601,7 +601,7 @@ function ChannelPerformanceSection() {
       },
     },
     legend: {
-      position: 'bottom',
+      position: 'bottom' as const,
       labels: {
         colors: isDarkMode ? '#9CA3AF' : '#6B7280',
       },
@@ -811,7 +811,7 @@ function CustomerPerformanceSection() {
     },
   });
 
-  const { data: customersData, isLoading: customersLoading } = useQuery({
+  const { isLoading: customersLoading } = useQuery({
     queryKey: ['customers', 'performance'],
     queryFn: async () => {
       try {
@@ -824,7 +824,6 @@ function CustomerPerformanceSection() {
   });
 
   const orders = ordersData || [];
-  const customers = customersData || [];
 
   // Calculate customer performance metrics
   const customerMetrics = useMemo(() => {
@@ -938,7 +937,7 @@ function CustomerPerformanceSection() {
   // Chart configuration for top customers
   const topCustomersChartOptions = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'bar' as const,
       height: 350,
       toolbar: { show: false },
     },
@@ -988,7 +987,7 @@ function CustomerPerformanceSection() {
   // Customer segments pie chart
   const segmentsChartOptions = useMemo(() => ({
     chart: {
-      type: 'pie',
+      type: 'pie' as const,
       height: 300,
     },
     labels: ['High Value ($10k+)', 'Medium Value ($5k-$10k)', 'Low Value (<$5k)'],
@@ -997,7 +996,7 @@ function CustomerPerformanceSection() {
       theme: isDarkMode ? 'dark' : 'light',
     },
     legend: {
-      position: 'bottom',
+      position: 'bottom' as const,
       labels: {
         colors: isDarkMode ? '#9CA3AF' : '#6B7280',
       },

@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import {
-  Settings,
   Plus,
   Search,
   Filter,
@@ -9,14 +8,10 @@ import {
   Eye,
   X,
   CheckCircle,
-  AlertCircle,
-  Edit,
   Trash2,
   Hash,
   Receipt,
   Warehouse,
-  Save,
-  Copy,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 

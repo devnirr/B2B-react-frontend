@@ -15,11 +15,8 @@ import {
   FileSpreadsheet,
   File,
   Trash2,
-  RefreshCw,
-  Calendar,
   Clock,
   User,
-  Check,
   XCircle,
   Loader,
   Package,
@@ -1048,8 +1045,6 @@ function ExportsSection() {
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedExport, setSelectedExport] = useState<ExportRecord | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Load exports from localStorage
   const [exports, setExports] = useState<ExportRecord[]>(() => {
@@ -1166,30 +1161,6 @@ function ExportsSection() {
     };
   }, [exports]);
 
-  const handleCreateExport = (exportData: any) => {
-    const newExport: ExportRecord = {
-      id: Date.now(),
-      ...exportData,
-      status: 'pending' as ExportStatus,
-      recordsCount: 0,
-      createdBy: 'Current User', // Would come from auth context
-      createdAt: new Date().toISOString(),
-    };
-    setExports([newExport, ...exports]);
-    setShowCreateModal(false);
-    toast.success('Export created successfully! Processing will begin shortly.');
-    
-    // Simulate processing
-    setTimeout(() => {
-      setExports((prev) =>
-        prev.map((exp) =>
-          exp.id === newExport.id
-            ? { ...exp, status: 'processing' as ExportStatus }
-            : exp
-        )
-      );
-    }, 1000);
-  };
 
   const handleDeleteExport = (exportId: string | number) => {
     setExports(exports.filter((exp) => exp.id !== exportId));
@@ -1382,7 +1353,6 @@ function ExportsSection() {
               />
             </div>
             <button
-              onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -1507,7 +1477,6 @@ function ExportsSection() {
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedExport(exp)}
                             className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                             title="View Details"
                           >

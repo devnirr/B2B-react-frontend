@@ -194,9 +194,9 @@ export default function Integrations() {
 
 // Connected Channels Section
 function ConnectedChannelsSection() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery] = useState('');
+  const [typeFilter] = useState<string>('all');
+  const [statusFilter] = useState<string>('all');
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -763,8 +763,6 @@ function ChannelDetailsModal({ channel, onClose, onUpdate, onDelete }: ChannelDe
     shipping: ['FedEx', 'UPS', 'USPS', 'DHL', 'Custom'],
   };
 
-  const TypeIcon = getTypeIcon(channel.type);
-
   const handleSave = () => {
     onUpdate(channel.id, {
       name: name.trim(),
@@ -944,56 +942,6 @@ function ChannelDetailsModal({ channel, onClose, onUpdate, onDelete }: ChannelDe
       </div>
     </div>
   );
-}
-
-// Helper functions for channel modals
-function getTypeIcon(type: ChannelType) {
-  switch (type) {
-    case 'ecommerce':
-      return ShoppingCart;
-    case 'pos':
-      return Store;
-    case 'marketplace':
-      return Globe;
-    case '3pl':
-      return Package;
-    case 'shipping':
-      return Truck;
-    default:
-      return Link2;
-  }
-}
-
-function getTypeColor(type: ChannelType) {
-  switch (type) {
-    case 'ecommerce':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-    case 'pos':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-    case 'marketplace':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-    case '3pl':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-    case 'shipping':
-      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
-  }
-}
-
-function getStatusColor(status: ConnectionStatus) {
-  switch (status) {
-    case 'connected':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-    case 'error':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-    case 'disconnected':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
-  }
 }
 
 // API Keys / Webhooks Section

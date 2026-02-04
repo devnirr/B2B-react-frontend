@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { User, MapPin, Users, DollarSign, Search, Plus, X, Pencil, Trash2, Eye, ChevronDown, Inbox } from 'lucide-react';
+import { User, MapPin, Users, DollarSign, Search, Plus, X, Pencil, Trash2, ChevronDown, Inbox } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -335,7 +335,7 @@ function RepAccountsTerritoriesSection() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {reps.map((rep: any) => {
                   const fullName = `${rep.firstName || ''} ${rep.lastName || ''}`.trim() || rep.email || 'Unknown';
-                  const territory = territories.find((t: any) => t.userId === rep.id);
+                  const territory: any = territories.find((t: any) => t.userId === rep.id);
                   return (
                     <tr key={rep.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -1151,7 +1151,6 @@ function CommissionsSection() {
   });
 
   const commissions = commissionsData || [];
-  const reps = repsData || [];
 
   // Generate period options (last 12 months)
   const periodOptions = [

@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { Package, Plus, X, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox } from 'lucide-react';
 import { validators } from '../utils/validation';
-import { generateEAN13, validateEAN13 } from '../utils/ean';
+import { generateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
