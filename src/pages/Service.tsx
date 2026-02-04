@@ -349,7 +349,7 @@ function ReturnStatusSection() {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
-            <div>
+    <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Processing</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
                 {summaryMetrics.processing}
@@ -362,8 +362,8 @@ function ReturnStatusSection() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="flex items-center justify-between">
+          <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
                 {summaryMetrics.completed}
@@ -424,13 +424,13 @@ function ReturnStatusSection() {
                 : 'No return requests (RMA) found. Returns will appear here once created.'}
             </p>
           </div>
-        </div>
-      ) : (
+          </div>
+        ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
                     RMA Number
                   </th>
@@ -455,9 +455,9 @@ function ReturnStatusSection() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
                     Actions
                   </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredReturns.map((item: any) => {
                   const StatusIcon = getStatusIcon(item.status);
                   return (
@@ -491,14 +491,14 @@ function ReturnStatusSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {new Date(item.requestedDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusColor(item.status)}`}>
                           <StatusIcon className="w-3 h-3" />
                           {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => setSelectedReturn(item)}
                           className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
@@ -1019,11 +1019,11 @@ function CaseLogSection() {
                         <Eye className="w-4 h-4" />
                         View
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       )}
