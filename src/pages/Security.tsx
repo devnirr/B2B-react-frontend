@@ -522,7 +522,7 @@ function TwoFactorSection() {
                       <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                         Setup your first 2FA method to get started
                       </p>
-                    </div>
+          </div>
                   </td>
                 </tr>
               ) : (

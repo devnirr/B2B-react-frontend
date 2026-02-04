@@ -1,8 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Users, Plus, X, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  X,
+  ChevronsLeft,
+  ChevronsRight,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  ChevronDown,
+  Search,
+  Filter,
+  Building2,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Crown,
+  ShoppingBag,
+  Briefcase,
+  Tag,
+  Eye,
+  Download,
+  UserPlus,
+} from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import { useCheckCustomerEmail, useDebounce } from '../utils/emailDuplicateCheck';
@@ -16,6 +40,36 @@ const CustomerType = {
 } as const;
 
 type CustomerType = typeof CustomerType[keyof typeof CustomerType];
+
+type CustomerSegment = 'RETAIL' | 'B2B' | 'VIP';
+
+interface Contact {
+  id?: string | number;
+  name: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  isPrimary?: boolean;
+}
+
+interface Customer {
+  id: string | number;
+  name: string;
+  email?: string;
+  phone?: string;
+  type: CustomerType;
+  segment?: CustomerSegment;
+  companyName?: string;
+  taxId?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  creditLimit?: number;
+  contacts?: Contact[];
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 // Custom Select Component
 const CustomSelect = ({
@@ -203,24 +257,31 @@ const ButtonWithWaves = ({
 
 export default function Customers() {
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isContactModalShowing, setIsContactModalShowing] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const queryClient = useQueryClient();
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
-    if (isModalOpen || isEditModalOpen || isDeleteModalOpen) {
+    if (isModalOpen || isEditModalOpen || isDeleteModalOpen || isContactModalOpen) {
       document.body.classList.add('modal-open');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (isModalOpen) setIsModalShowing(true);
           if (isEditModalOpen) setIsEditModalShowing(true);
           if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+          if (isContactModalOpen) setIsContactModalShowing(true);
         });
       });
     } else {
@@ -228,8 +289,9 @@ export default function Customers() {
       setIsModalShowing(false);
       setIsEditModalShowing(false);
       setIsDeleteModalShowing(false);
+      setIsContactModalShowing(false);
     }
-  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
+  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isContactModalOpen]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', page],
@@ -238,6 +300,58 @@ export default function Customers() {
       return response.data;
     },
   });
+
+  // Filter and search customers
+  const filteredCustomers = useMemo(() => {
+    if (!data?.data) return [];
+    
+    let filtered = data.data as Customer[];
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((customer) =>
+        customer.name.toLowerCase().includes(query) ||
+        customer.email?.toLowerCase().includes(query) ||
+        customer.phone?.toLowerCase().includes(query) ||
+        customer.companyName?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by segment
+    if (segmentFilter !== 'all') {
+      filtered = filtered.filter((customer) => customer.segment === segmentFilter);
+    }
+
+    // Filter by type
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((customer) => customer.type === typeFilter);
+    }
+
+    return filtered;
+  }, [data?.data, searchQuery, segmentFilter, typeFilter]);
+
+  // Calculate summary metrics
+  const summaryMetrics = useMemo(() => {
+    if (!data?.data) {
+      return {
+        total: 0,
+        retail: 0,
+        b2b: 0,
+        vip: 0,
+        withContacts: 0,
+      };
+    }
+
+    const customers = data.data as Customer[];
+    const total = customers.length;
+    const retail = customers.filter((c) => c.segment === 'RETAIL').length;
+    const b2b = customers.filter((c) => c.segment === 'B2B').length;
+    const vip = customers.filter((c) => c.segment === 'VIP').length;
+    const withContacts = customers.filter((c) => c.contacts && c.contacts.length > 0).length;
+
+    return { total, retail, b2b, vip, withContacts };
+  }, [data?.data]);
 
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
@@ -314,21 +428,183 @@ export default function Customers() {
     }, 300);
   };
 
+  const closeContactModal = () => {
+    setIsContactModalShowing(false);
+    setTimeout(() => {
+      setIsContactModalOpen(false);
+      setSelectedCustomer(null);
+      setSelectedContact(null);
+    }, 300);
+  };
+
   if (isLoading) {
     return <SkeletonPage />;
   }
 
+  const getSegmentColor = (segment?: CustomerSegment) => {
+    switch (segment) {
+      case 'RETAIL':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'B2B':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'VIP':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+    }
+  };
+
+  const getSegmentIcon = (segment?: CustomerSegment) => {
+    switch (segment) {
+      case 'RETAIL':
+        return ShoppingBag;
+      case 'B2B':
+        return Briefcase;
+      case 'VIP':
+        return Crown;
+      default:
+        return Tag;
+    }
+  };
+
   return (
     <div>
       <Breadcrumb currentPage="Customers" />
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customers</h1>
-        {(!data?.data || data.data.length === 0) ? null : (
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customers</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Manage your customer database and contacts by segment
+            </p>
+          </div>
           <ButtonWithWaves onClick={openModal}>
             <Plus className="w-5 h-5" />
             Add Customer
           </ButtonWithWaves>
-        )}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Customers</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {summaryMetrics.total}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Retail</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+                {summaryMetrics.retail}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">B2B</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+                {summaryMetrics.b2b}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">VIP</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                {summaryMetrics.vip}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+              <Crown className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">With Contacts</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {summaryMetrics.withContacts}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+              <UserPlus className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="lg:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Segment Filter */}
+          <div>
+            <CustomSelect
+              value={segmentFilter}
+              onChange={setSegmentFilter}
+              options={[
+                { value: 'all', label: 'All Segments' },
+                { value: 'RETAIL', label: 'Retail' },
+                { value: 'B2B', label: 'B2B' },
+                { value: 'VIP', label: 'VIP' },
+              ]}
+              placeholder="Segment"
+            />
+          </div>
+
+          {/* Type Filter */}
+          <div>
+            <CustomSelect
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                { value: 'RETAILER', label: 'Retailer' },
+                { value: 'B2B', label: 'B2B' },
+                { value: 'WHOLESALE', label: 'Wholesale' },
+              ]}
+              placeholder="Type"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -351,63 +627,117 @@ export default function Customers() {
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Segment</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Address</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Contacts</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {data.data.map((customer: any) => (
-                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {customer.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {customer.email || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {customer.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
-                      {customer.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {customer.companyName || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-white">
-                    {customer.address || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <Search className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                      <p>No customers match your filters</p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredCustomers.map((customer: Customer) => {
+                  const SegmentIcon = getSegmentIcon(customer.segment);
+                  return (
+                    <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {customer.name}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {customer.segment ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getSegmentColor(customer.segment)}`}>
+                            <SegmentIcon className="w-3 h-3" />
+                            {customer.segment}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400 rounded-full">
+                            No Segment
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Mail className="w-4 h-4" />
+                          {customer.email || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-4 h-4" />
+                          {customer.phone || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
+                          {customer.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Building2 className="w-4 h-4" />
+                          {customer.companyName || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {customer.contacts?.length || 0} contact{(customer.contacts?.length || 0) !== 1 ? 's' : ''}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setIsContactModalOpen(true);
+                            }}
+                            className="p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                            title="Manage Contacts"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         )}
@@ -534,6 +864,15 @@ export default function Customers() {
           isShowing={isDeleteModalShowing}
         />
       )}
+
+      {/* Contact Management Modal */}
+      {isContactModalOpen && selectedCustomer && (
+        <ContactManagementModal
+          customer={selectedCustomer}
+          onClose={closeContactModal}
+          isShowing={isContactModalShowing}
+        />
+      )}
     </div>
   );
 }
@@ -555,6 +894,7 @@ function AddCustomerModal({
     email: '',
     phone: '',
     type: CustomerType.B2B,
+    segment: 'B2B' as CustomerSegment,
     companyName: '',
     taxId: '',
     address: '',
@@ -798,6 +1138,20 @@ function AddCustomerModal({
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Segment</label>
+                    <CustomSelect
+                      options={[
+                        { value: 'RETAIL', label: 'Retail' },
+                        { value: 'B2B', label: 'B2B' },
+                        { value: 'VIP', label: 'VIP' },
+                      ]}
+                      value={formData.segment}
+                      onChange={(value) => handleChange('segment', value as CustomerSegment)}
+                      placeholder="Select segment"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company Name</label>
                     <input
                       type="text"
@@ -934,6 +1288,7 @@ function EditCustomerModal({
     email: customer.email || '',
     phone: customer.phone || '',
     type: customer.type || CustomerType.B2B,
+    segment: (customer.segment || 'B2B') as CustomerSegment,
     companyName: customer.companyName || '',
     taxId: customer.taxId || '',
     address: customer.address || '',
@@ -1035,6 +1390,7 @@ function EditCustomerModal({
       email: formData.email.trim() || undefined,
       phone: formData.phone.trim() || undefined,
       type: formData.type,
+      segment: formData.segment,
       companyName: formData.companyName.trim() || undefined,
       taxId: formData.taxId.trim() || undefined,
       address: formData.address.trim() || undefined,
@@ -1047,7 +1403,7 @@ function EditCustomerModal({
     onSubmit(customerData);
   };
 
-  const handleChange = (field: string, value: string | CustomerType) => {
+  const handleChange = (field: string, value: string | CustomerType | CustomerSegment) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field
     if (errors[field]) {
@@ -1174,6 +1530,20 @@ function EditCustomerModal({
                         error={!!errors.type}
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Segment</label>
+                    <CustomSelect
+                      options={[
+                        { value: 'RETAIL', label: 'Retail' },
+                        { value: 'B2B', label: 'B2B' },
+                        { value: 'VIP', label: 'VIP' },
+                      ]}
+                      value={formData.segment}
+                      onChange={(value) => handleChange('segment', value as CustomerSegment)}
+                      placeholder="Select segment"
+                    />
                   </div>
 
                   <div>
@@ -1364,6 +1734,343 @@ function DeleteCustomerModal({
               >
                 <Trash2 className="w-4 h-4" />
                 {isLoading ? 'Deleting...' : 'Delete Customer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Contact Management Modal Component
+function ContactManagementModal({
+  customer,
+  onClose,
+  isShowing,
+}: {
+  customer: Customer;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  const [contacts, setContacts] = useState<Contact[]>(customer.contacts || []);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    position: '',
+    isPrimary: false,
+  });
+
+  const handleAddContact = () => {
+    if (!formData.name.trim()) {
+      toast.error('Contact name is required');
+      return;
+    }
+
+    const newContact: Contact = {
+      id: Date.now(),
+      name: formData.name.trim(),
+      email: formData.email.trim() || undefined,
+      phone: formData.phone.trim() || undefined,
+      position: formData.position.trim() || undefined,
+      isPrimary: formData.isPrimary,
+    };
+
+    // If this is set as primary, unset others
+    if (formData.isPrimary) {
+      setContacts((prev) => prev.map((c) => ({ ...c, isPrimary: false })));
+    }
+
+    setContacts((prev) => [...prev, newContact]);
+    setFormData({ name: '', email: '', phone: '', position: '', isPrimary: false });
+    setIsAddContactOpen(false);
+    toast.success('Contact added successfully');
+  };
+
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({
+      name: contact.name,
+      email: contact.email || '',
+      phone: contact.phone || '',
+      position: contact.position || '',
+      isPrimary: contact.isPrimary || false,
+    });
+    setIsAddContactOpen(true);
+  };
+
+  const handleUpdateContact = () => {
+    if (!formData.name.trim()) {
+      toast.error('Contact name is required');
+      return;
+    }
+
+    if (editingContact) {
+      // If this is set as primary, unset others
+      if (formData.isPrimary && !editingContact.isPrimary) {
+        setContacts((prev) => prev.map((c) => ({ ...c, isPrimary: false })));
+      }
+
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.id === editingContact.id
+            ? {
+                ...c,
+                name: formData.name.trim(),
+                email: formData.email.trim() || undefined,
+                phone: formData.phone.trim() || undefined,
+                position: formData.position.trim() || undefined,
+                isPrimary: formData.isPrimary,
+              }
+            : c
+        )
+      );
+      toast.success('Contact updated successfully');
+    }
+
+    setEditingContact(null);
+    setFormData({ name: '', email: '', phone: '', position: '', isPrimary: false });
+    setIsAddContactOpen(false);
+  };
+
+  const handleDeleteContact = (contactId: string | number) => {
+    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    toast.success('Contact deleted successfully');
+  };
+
+  const handleSave = () => {
+    // Here you would save contacts to the backend
+    // For now, we'll just show a success message
+    toast.success('Contacts saved successfully');
+    onClose();
+  };
+
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contactModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '48rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            <div className="modal-header">
+              <h5 id="contactModalLabel" className="modal-title text-xl font-semibold text-gray-900 dark:text-white">
+                Manage Contacts - {customer.name}
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="modal-body flex-1 overflow-y-auto" style={{ overflowX: 'visible', position: 'relative' }}>
+              <div className="space-y-4">
+                {/* Add Contact Button */}
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {contacts.length} contact{contacts.length !== 1 ? 's' : ''} for this customer
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingContact(null);
+                      setFormData({ name: '', email: '', phone: '', position: '', isPrimary: false });
+                      setIsAddContactOpen(true);
+                    }}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Contact
+                  </button>
+                </div>
+
+                {/* Add/Edit Contact Form */}
+                {isAddContactOpen && (
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                      {editingContact ? 'Edit Contact' : 'Add New Contact'}
+                    </h6>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                            placeholder="Contact name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Position</label>
+                          <input
+                            type="text"
+                            value={formData.position}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, position: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                            placeholder="Job title"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                            placeholder="email@example.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                          <PhoneInput
+                            value={formData.phone}
+                            onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || '' }))}
+                            placeholder="Phone number"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isPrimary"
+                          checked={formData.isPrimary}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, isPrimary: e.target.checked }))}
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <label htmlFor="isPrimary" className="text-sm text-gray-700 dark:text-gray-300">
+                          Set as primary contact
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={editingContact ? handleUpdateContact : handleAddContact}
+                          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                        >
+                          {editingContact ? 'Update' : 'Add'} Contact
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddContactOpen(false);
+                            setEditingContact(null);
+                            setFormData({ name: '', email: '', phone: '', position: '', isPrimary: false });
+                          }}
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contacts List */}
+                <div className="space-y-2">
+                  {contacts.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <UserPlus className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                      <p>No contacts added yet</p>
+                    </div>
+                  ) : (
+                    contacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h6 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                {contact.name}
+                              </h6>
+                              {contact.isPrimary && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-400 rounded-full">
+                                  Primary
+                                </span>
+                              )}
+                            </div>
+                            {contact.position && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{contact.position}</p>
+                            )}
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
+                              {contact.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {contact.email}
+                                </div>
+                              )}
+                              {contact.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3" />
+                                  {contact.phone}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditContact(contact)}
+                              className="p-1.5 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteContact(contact.id!)}
+                              className="p-1.5 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                Save Contacts
               </button>
             </div>
           </div>
