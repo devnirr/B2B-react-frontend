@@ -14,20 +14,14 @@ import {
   ChevronDown,
   Search,
   Warehouse,
-  Package,
   Box,
-  Layers,
   Settings,
-  Eye,
   CheckCircle2,
   XCircle,
-  Grid3x3,
   Hash,
-  Filter,
   ArrowRight,
   ChevronRight,
 } from 'lucide-react';
-import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -1610,12 +1604,13 @@ function BinsModal({
     localStorage.setItem(storageKey, JSON.stringify(allBins));
   };
 
-  const handleAddBin = (binData: Omit<Bin, 'id' | 'warehouseId'>) => {
+  const handleAddBin = (binData: Omit<Bin, 'id' | 'warehouseId'> | Partial<Bin>) => {
+    const fullData = binData as Omit<Bin, 'id' | 'warehouseId'>;
     const newBin: Bin = {
-      ...binData,
+      ...fullData,
       id: Date.now().toString(),
       warehouseId: warehouse.id,
-      currentCapacity: binData.currentCapacity || 0,
+      currentCapacity: fullData.currentCapacity || 0,
     };
     const updated = [...bins, newBin].sort((a, b) => a.binCode.localeCompare(b.binCode));
     setBins(updated);
@@ -2035,7 +2030,7 @@ function AddEditBinModal({
               </label>
               <CustomSelect
                 value={formData.binType}
-                onChange={(value) => setFormData({ ...formData, binType: value })}
+                onChange={(value) => setFormData({ ...formData, binType: value as 'PICKING' | 'STORAGE' | 'BULK' | 'QUARANTINE' | 'RETURNS' })}
                 options={[
                   { value: 'PICKING', label: 'Picking' },
                   { value: 'STORAGE', label: 'Storage' },
@@ -2188,9 +2183,10 @@ function PutAwayRulesModal({
     localStorage.setItem(storageKey, JSON.stringify(allRules));
   };
 
-  const handleAddRule = (ruleData: Omit<PutAwayRule, 'id' | 'warehouseId'>) => {
+  const handleAddRule = (ruleData: Omit<PutAwayRule, 'id' | 'warehouseId'> | Partial<PutAwayRule>) => {
+    const fullData = ruleData as Omit<PutAwayRule, 'id' | 'warehouseId'>;
     const newRule: PutAwayRule = {
-      ...ruleData,
+      ...fullData,
       id: Date.now().toString(),
       warehouseId: warehouse.id,
     };
@@ -2454,7 +2450,6 @@ function PutAwayRulesModal({
 // Add/Edit Put-Away Rule Modal Component
 function AddEditPutAwayRuleModal({
   rule,
-  warehouse,
   onClose,
   onSubmit,
 }: {

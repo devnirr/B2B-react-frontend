@@ -1,10 +1,148 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { List, DollarSign, Calculator, Plus, ChevronRight, ChevronDown, Package, Factory, Users, TrendingUp, X, Pencil, Trash2, Save } from 'lucide-react';
+import { List, DollarSign, Calculator, Plus, ChevronRight, ChevronDown, Package, Factory, Users, TrendingUp, X, Pencil, Trash2, Save, Inbox } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
+
+// Custom Select Component with beautiful dropdown
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  className = '',
+  error = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  className?: string;
+  error?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleSelect = (optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+      e.preventDefault();
+      handleSelect(options[highlightedIndex].value);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  return (
+    <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 9999 : 'auto' }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between transition-all ${
+          error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+        } ${isOpen ? 'ring-2 ring-primary-500 border-primary-500' : ''} hover:border-gray-400 dark:hover:border-gray-500`}
+        style={{
+          padding: '0.532rem 0.8rem 0.532rem 1.2rem',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          lineHeight: 1.6,
+          backgroundColor: 'transparent',
+        }}
+      >
+        <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+          style={{
+            zIndex: 10000,
+            top: '100%',
+            left: 0,
+            right: 0,
+            minWidth: '100%',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          {options.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                <Inbox className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No data available</p>
+            </div>
+          ) : (
+            options.map((option, index) => {
+              const isSelected = option.value === value;
+              const isHighlighted = index === highlightedIndex;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option.value)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isSelected || isHighlighted
+                      ? 'bg-primary-500 text-white'
+                      : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                  } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    display: 'block',
+                    width: '100%',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 type TabType = 'bom' | 'cost-sheets' | 'margin-simulator';
 
@@ -271,9 +409,9 @@ function BillOfMaterialsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex-1 max-w-md">
           <input
             type="text"
@@ -528,19 +666,15 @@ function BOMModal({
                   {!bom && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product *</label>
-                      <select
-                        value={formData.productId}
-                        onChange={(e) => setFormData({ ...formData, productId: parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                        required
-                      >
-                        <option value={0}>Select a product</option>
-                        {products.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name} ({product.sku})
-                          </option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        value={formData.productId > 0 ? formData.productId.toString() : ''}
+                        onChange={(value) => setFormData({ ...formData, productId: parseInt(value) || 0 })}
+                        options={products && products.length > 0 ? products.map((product) => ({
+                          value: product.id.toString(),
+                          label: `${product.name} (${product.sku})`
+                        })) : []}
+                        placeholder="Select a product"
+                      />
                     </div>
                   )}
 
@@ -557,15 +691,16 @@ function BOMModal({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-                    <select
+                    <CustomSelect
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="DRAFT">Draft</option>
-                      <option value="ACTIVE">Active</option>
-                      <option value="ARCHIVED">Archived</option>
-                    </select>
+                      onChange={(value) => setFormData({ ...formData, status: value })}
+                      options={[
+                        { value: 'DRAFT', label: 'Draft' },
+                        { value: 'ACTIVE', label: 'Active' },
+                        { value: 'ARCHIVED', label: 'Archived' },
+                      ]}
+                      placeholder="Select status..."
+                    />
                   </div>
 
                   <div>
@@ -870,13 +1005,6 @@ function CostSheetsSection() {
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
               Get started by adding your first cost sheet.
             </p>
-            <button 
-              onClick={openModal}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add Cost Sheet
-            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1068,19 +1196,16 @@ function CostSheetModal({
                   {!costSheet && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product *</label>
-                      <select
-                        value={formData.productId}
-                        onChange={(e) => setFormData({ ...formData, productId: parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                        required
-                      >
-                        <option value={0}>Select a product</option>
-                        {products.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name} ({product.sku})
-                          </option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        value={formData.productId > 0 ? formData.productId.toString() : ''}
+                        onChange={(value) => setFormData({ ...formData, productId: parseInt(value) || 0 })}
+                        options={products && products.length > 0 ? products.map((product) => ({
+                          value: product.id.toString(),
+                          label: `${product.name} (${product.sku})`
+                        })) : []}
+                        placeholder="Select a product"
+                        error={!formData.productId}
+                      />
                     </div>
                   )}
 
@@ -1322,18 +1447,15 @@ function MarginSimulatorSection() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Select Product
         </label>
-        <select
-          value={selectedProductId || ''}
-          onChange={(e) => setSelectedProductId(e.target.value ? parseInt(e.target.value) : null)}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">-- Select a product --</option>
-          {products.map((product: any) => (
-            <option key={product.id} value={product.id}>
-              {product.name} ({product.sku})
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          value={selectedProductId ? selectedProductId.toString() : ''}
+          onChange={(value) => setSelectedProductId(value ? parseInt(value) : null)}
+          options={products && products.length > 0 ? products.map((product: any) => ({
+            value: product.id.toString(),
+            label: `${product.name} (${product.sku})`
+          })) : []}
+          placeholder="Select a product"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

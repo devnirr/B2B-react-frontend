@@ -91,14 +91,14 @@ const CustomSelect = ({
 
       {isOpen && (
         <div
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+          className="absolute w-full mt-1 bg-gray-800 dark:bg-gray-800 border border-gray-600 dark:border-gray-600 rounded-lg shadow-xl custom-dropdown-menu"
           style={{
             zIndex: 10000,
             top: '100%',
             left: 0,
             right: 0,
             minWidth: '100%',
-            maxHeight: '400px', // Limit to 10 items (10 * ~40px per item)
+            maxHeight: '400px',
             overflowY: 'auto',
             overflowX: 'hidden',
           }}
@@ -121,10 +121,11 @@ const CustomSelect = ({
                   type="button"
                   onClick={() => handleSelect(option.value)}
                   onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${isSelected || isHighlighted
-                    ? 'bg-primary-500 text-white'
-                    : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                    } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isSelected || isHighlighted
+                      ? 'bg-primary-500 text-white'
+                      : 'text-white hover:bg-gray-700 dark:hover:bg-gray-700'
+                  }`}
                   style={{
                     fontSize: '0.875rem',
                     fontWeight: 500,
@@ -860,7 +861,7 @@ export default function Products() {
           )}
 
           {/* Pagination */}
-          {viewMode === 'table' && data?.data && data.data.length > 0 && (
+          {data?.data && data.data.length > 0 && (
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
               <div className="text-sm text-gray-600 dark:text-white">
                 Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
@@ -917,104 +918,6 @@ export default function Products() {
         <BundlesKitsSection />
       )}
 
-      {data?.data && data.data.length > 0 && (
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-600 dark:text-white">
-            Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
-            <span className="font-medium text-gray-900 dark:text-white">
-              {Math.min((page + 1) * 10, data?.total || 0)}
-            </span>{' '}
-            of <span className="font-medium text-gray-900 dark:text-white">{data?.total || 0}</span> results
-          </div>
-          <nav aria-label="Page navigation">
-            <ul className="pagination pagination-rounded pagination-primary">
-              <li className="page-item">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="page-link"
-                  aria-label="Previous"
-                >
-                  <ChevronsLeft className="w-3.5 h-3.5" />
-                </button>
-              </li>
-              {(() => {
-                const totalPages = Math.max(1, Math.ceil((data?.total || 0) / 10));
-                const currentPage = page + 1;
-                const pages: (number | string)[] = [];
-
-                if (totalPages <= 7) {
-                  // Show all pages if 7 or fewer
-                  for (let i = 1; i <= totalPages; i++) {
-                    pages.push(i);
-                  }
-                } else {
-                  // Always show first page
-                  pages.push(1);
-
-                  if (currentPage > 3) {
-                    pages.push('...');
-                  }
-
-                  // Show pages around current
-                  const start = Math.max(2, currentPage - 1);
-                  const end = Math.min(totalPages - 1, currentPage + 1);
-
-                  for (let i = start; i <= end; i++) {
-                    if (i !== 1 && i !== totalPages) {
-                      pages.push(i);
-                    }
-                  }
-
-                  if (currentPage < totalPages - 2) {
-                    pages.push('...');
-                  }
-
-                  // Always show last page
-                  if (totalPages > 1) {
-                    pages.push(totalPages);
-                  }
-                }
-
-                return pages.map((pageNum, idx) => {
-                  if (pageNum === '...') {
-                    return (
-                      <li key={`ellipsis-${idx}`} className="page-item">
-                        <span className="page-link" style={{ cursor: 'default', pointerEvents: 'none' }}>
-                          ...
-                        </span>
-                      </li>
-                    );
-                  }
-                  return (
-                    <li key={pageNum} className="page-item">
-                      <button
-                        type="button"
-                        onClick={() => setPage((pageNum as number) - 1)}
-                        className={`page-link ${currentPage === pageNum ? 'active' : ''}`}
-                      >
-                        {pageNum}
-                      </button>
-                    </li>
-                  );
-                });
-              })()}
-              <li className="page-item">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={!data?.data || data.data.length < 10 || page + 1 >= Math.ceil((data?.total || 0) / 10)}
-                  className="page-link"
-                  aria-label="Next"
-                >
-                  <ChevronsRight className="w-3.5 h-3.5" />
-                </button>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      )}
 
       {/* Add Product Modal */}
       {isModalOpen && (
@@ -2163,11 +2066,13 @@ function EditProductModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Autocomplete for sizes
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sizesInputValue, setSizesInputValue] = useState('');
   const [sizesSuggestions, setSizesSuggestions] = useState<string[]>([]);
   const [showSizesSuggestions, setShowSizesSuggestions] = useState(false);
   const sizesInputRef = useRef<HTMLInputElement>(null);
   const sizesDropdownRef = useRef<HTMLDivElement>(null);
+  const sizesContainerRef = useRef<HTMLDivElement>(null);
 
   // Common sizes list
   const commonSizes = [
@@ -2175,6 +2080,43 @@ function EditProductModal({
     '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50',
     '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24',
     'One Size', 'OS', 'Free Size',
+  ];
+
+  // Autocomplete for colors
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [colorsInputValue, setColorsInputValue] = useState('');
+  const [colorsSuggestions, setColorsSuggestions] = useState<string[]>([]);
+  const [showColorsSuggestions, setShowColorsSuggestions] = useState(false);
+  const colorsInputRef = useRef<HTMLInputElement>(null);
+  const colorsDropdownRef = useRef<HTMLDivElement>(null);
+  const colorsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Common colors list
+  const commonColors = [
+    'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Brown', 'Black', 'White',
+    'Gray', 'Grey', 'Navy', 'Beige', 'Tan', 'Khaki', 'Olive', 'Maroon', 'Burgundy', 'Crimson',
+    'Coral', 'Salmon', 'Peach', 'Lavender', 'Violet', 'Indigo', 'Turquoise', 'Teal', 'Cyan',
+    'Magenta', 'Lime', 'Mint', 'Emerald', 'Forest', 'Sage', 'Ivory', 'Cream', 'Gold', 'Silver',
+    'Bronze', 'Copper', 'Rose', 'Fuchsia', 'Aqua', 'Sky', 'Royal', 'Midnight', 'Charcoal',
+    'Slate', 'Taupe', 'Camel', 'Cognac', 'Burgundy', 'Wine', 'Plum', 'Mauve', 'Lilac',
+  ];
+
+  // Autocomplete for materials
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [materialsInputValue, setMaterialsInputValue] = useState('');
+  const [materialsSuggestions, setMaterialsSuggestions] = useState<string[]>([]);
+  const [showMaterialsSuggestions, setShowMaterialsSuggestions] = useState(false);
+  const materialsInputRef = useRef<HTMLInputElement>(null);
+  const materialsDropdownRef = useRef<HTMLDivElement>(null);
+  const materialsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Common materials list
+  const commonMaterials = [
+    'Cotton', 'Polyester', 'Wool', 'Silk', 'Linen', 'Denim', 'Leather', 'Suede', 'Cashmere',
+    'Rayon', 'Nylon', 'Spandex', 'Elastane', 'Bamboo', 'Hemp', 'Modal', 'Tencel', 'Lyocell',
+    'Acrylic', 'Viscose', 'Chiffon', 'Satin', 'Velvet', 'Corduroy', 'Flannel', 'Jersey',
+    'Mesh', 'Organza', 'Tulle', 'Twill', 'Canvas', 'Fleece', 'Terry', 'Towel', 'Microfiber',
+    'Faux Leather', 'Faux Fur', 'Synthetic', 'Blend', 'Organic Cotton', 'Recycled Polyester',
   ];
 
   // Fetch existing product images from product data
@@ -2186,10 +2128,33 @@ function EditProductModal({
     }
   }, [product]);
 
-  // Initialize sizes input value
+  // Initialize selected arrays from formData
   useEffect(() => {
-    setSizesInputValue(formData.sizes);
+    if (formData.sizes) {
+      const sizesArray = formData.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+      setSelectedSizes(sizesArray);
+    } else {
+      setSelectedSizes([]);
+    }
   }, [formData.sizes]);
+
+  useEffect(() => {
+    if (formData.colors) {
+      const colorsArray = formData.colors.split(',').map((c: string) => c.trim()).filter(Boolean);
+      setSelectedColors(colorsArray);
+    } else {
+      setSelectedColors([]);
+    }
+  }, [formData.colors]);
+
+  useEffect(() => {
+    if (formData.materials) {
+      const materialsArray = formData.materials.split(',').map((m: string) => m.trim()).filter(Boolean);
+      setSelectedMaterials(materialsArray);
+    } else {
+      setSelectedMaterials([]);
+    }
+  }, [formData.materials]);
 
   // Reset images when modal closes
   useEffect(() => {
@@ -2198,6 +2163,14 @@ function EditProductModal({
       setImagePreviews([]);
       setImagesToDelete([]);
       setShowSizesSuggestions(false);
+      setShowColorsSuggestions(false);
+      setShowMaterialsSuggestions(false);
+      setSelectedSizes([]);
+      setSelectedColors([]);
+      setSelectedMaterials([]);
+      setSizesInputValue('');
+      setColorsInputValue('');
+      setMaterialsInputValue('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -2209,50 +2182,202 @@ function EditProductModal({
     const value = e.target.value;
     setSizesInputValue(value);
 
-    // Get the last part after the last comma (what user is currently typing)
-    const lastCommaIndex = value.lastIndexOf(',');
-    const currentInput = lastCommaIndex === -1 ? value.trim() : value.substring(lastCommaIndex + 1).trim();
-
-    if (currentInput.length > 0) {
-      // Filter suggestions based on current input
-      const filtered = commonSizes.filter(size =>
-        size.toLowerCase().includes(currentInput.toLowerCase()) &&
-        !value.toLowerCase().includes(size.toLowerCase()) // Don't suggest already added sizes
-      );
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonSizes
+        .filter(size =>
+          size.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedSizes.includes(size) // Don't suggest already added sizes
+        )
+        .slice(0, 5); // Limit to 5 suggestions
       setSizesSuggestions(filtered);
       setShowSizesSuggestions(filtered.length > 0);
     } else {
       setSizesSuggestions([]);
       setShowSizesSuggestions(false);
     }
-
-    // Update form data
-    handleChange('sizes', value);
   };
 
   // Handle size suggestion selection
   const handleSizeSelect = (size: string) => {
-    const currentValue = sizesInputValue.trim();
-    const lastCommaIndex = currentValue.lastIndexOf(',');
+    if (!selectedSizes.includes(size)) {
+      const newSizes = [...selectedSizes, size];
+      setSelectedSizes(newSizes);
+      setSizesInputValue('');
+      setShowSizesSuggestions(false);
+      setSizesSuggestions([]);
 
-    let newValue: string;
-    if (lastCommaIndex === -1) {
-      // No comma, replace entire value
-      newValue = size;
-    } else {
-      // Replace the part after the last comma
-      const beforeComma = currentValue.substring(0, lastCommaIndex + 1).trim();
-      newValue = beforeComma ? `${beforeComma} ${size}` : size;
+      // Update form data with comma-separated string
+      handleChange('sizes', newSizes.join(', '));
     }
-
-    setSizesInputValue(newValue);
-    handleChange('sizes', newValue);
-    setShowSizesSuggestions(false);
-    setSizesSuggestions([]);
 
     // Focus back on input
     if (sizesInputRef.current) {
       sizesInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a size tag
+  const handleRemoveSize = (sizeToRemove: string) => {
+    const newSizes = selectedSizes.filter(size => size !== sizeToRemove);
+    setSelectedSizes(newSizes);
+
+    // Update form data with comma-separated string
+    handleChange('sizes', newSizes.join(', '));
+
+    // Focus back on input
+    if (sizesInputRef.current) {
+      sizesInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add size
+  const handleSizesKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && sizesInputValue.trim()) {
+      e.preventDefault();
+      const sizeToAdd = sizesInputValue.trim();
+      if (!selectedSizes.includes(sizeToAdd) && commonSizes.some(s => s.toLowerCase() === sizeToAdd.toLowerCase())) {
+        handleSizeSelect(commonSizes.find(s => s.toLowerCase() === sizeToAdd.toLowerCase()) || sizeToAdd);
+      }
+    } else if (e.key === 'Backspace' && sizesInputValue === '' && selectedSizes.length > 0) {
+      // Remove last size if backspace is pressed on empty input
+      handleRemoveSize(selectedSizes[selectedSizes.length - 1]);
+    }
+  };
+
+  // Handle colors input change with autocomplete
+  const handleColorsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setColorsInputValue(value);
+
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonColors
+        .filter(color =>
+          color.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedColors.includes(color) // Don't suggest already added colors
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      setColorsSuggestions(filtered);
+      setShowColorsSuggestions(filtered.length > 0);
+    } else {
+      setColorsSuggestions([]);
+      setShowColorsSuggestions(false);
+    }
+  };
+
+  // Handle color suggestion selection
+  const handleColorSelect = (color: string) => {
+    if (!selectedColors.includes(color)) {
+      const newColors = [...selectedColors, color];
+      setSelectedColors(newColors);
+      setColorsInputValue('');
+      setShowColorsSuggestions(false);
+      setColorsSuggestions([]);
+
+      // Update form data with comma-separated string
+      handleChange('colors', newColors.join(', '));
+    }
+
+    // Focus back on input
+    if (colorsInputRef.current) {
+      colorsInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a color tag
+  const handleRemoveColor = (colorToRemove: string) => {
+    const newColors = selectedColors.filter(color => color !== colorToRemove);
+    setSelectedColors(newColors);
+
+    // Update form data with comma-separated string
+    handleChange('colors', newColors.join(', '));
+
+    // Focus back on input
+    if (colorsInputRef.current) {
+      colorsInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add color
+  const handleColorsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && colorsInputValue.trim()) {
+      e.preventDefault();
+      const colorToAdd = colorsInputValue.trim();
+      if (!selectedColors.includes(colorToAdd) && commonColors.some(c => c.toLowerCase() === colorToAdd.toLowerCase())) {
+        handleColorSelect(commonColors.find(c => c.toLowerCase() === colorToAdd.toLowerCase()) || colorToAdd);
+      }
+    } else if (e.key === 'Backspace' && colorsInputValue === '' && selectedColors.length > 0) {
+      // Remove last color if backspace is pressed on empty input
+      handleRemoveColor(selectedColors[selectedColors.length - 1]);
+    }
+  };
+
+  // Handle materials input change with autocomplete
+  const handleMaterialsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMaterialsInputValue(value);
+
+    if (value.trim().length > 0) {
+      // Filter suggestions based on current input (limit to 5)
+      const filtered = commonMaterials
+        .filter(material =>
+          material.toLowerCase().includes(value.toLowerCase()) &&
+          !selectedMaterials.includes(material) // Don't suggest already added materials
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      setMaterialsSuggestions(filtered);
+      setShowMaterialsSuggestions(filtered.length > 0);
+    } else {
+      setMaterialsSuggestions([]);
+      setShowMaterialsSuggestions(false);
+    }
+  };
+
+  // Handle material suggestion selection
+  const handleMaterialSelect = (material: string) => {
+    if (!selectedMaterials.includes(material)) {
+      const newMaterials = [...selectedMaterials, material];
+      setSelectedMaterials(newMaterials);
+      setMaterialsInputValue('');
+      setShowMaterialsSuggestions(false);
+      setMaterialsSuggestions([]);
+
+      // Update form data with comma-separated string
+      handleChange('materials', newMaterials.join(', '));
+    }
+
+    // Focus back on input
+    if (materialsInputRef.current) {
+      materialsInputRef.current.focus();
+    }
+  };
+
+  // Handle removing a material tag
+  const handleRemoveMaterial = (materialToRemove: string) => {
+    const newMaterials = selectedMaterials.filter(material => material !== materialToRemove);
+    setSelectedMaterials(newMaterials);
+
+    // Update form data with comma-separated string
+    handleChange('materials', newMaterials.join(', '));
+
+    // Focus back on input
+    if (materialsInputRef.current) {
+      materialsInputRef.current.focus();
+    }
+  };
+
+  // Handle Enter key to add material
+  const handleMaterialsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && materialsInputValue.trim()) {
+      e.preventDefault();
+      const materialToAdd = materialsInputValue.trim();
+      if (!selectedMaterials.includes(materialToAdd) && commonMaterials.some(m => m.toLowerCase() === materialToAdd.toLowerCase())) {
+        handleMaterialSelect(commonMaterials.find(m => m.toLowerCase() === materialToAdd.toLowerCase()) || materialToAdd);
+      }
+    } else if (e.key === 'Backspace' && materialsInputValue === '' && selectedMaterials.length > 0) {
+      // Remove last material if backspace is pressed on empty input
+      handleRemoveMaterial(selectedMaterials[selectedMaterials.length - 1]);
     }
   };
 
@@ -2263,9 +2388,31 @@ function EditProductModal({
         sizesDropdownRef.current &&
         !sizesDropdownRef.current.contains(event.target as Node) &&
         sizesInputRef.current &&
-        !sizesInputRef.current.contains(event.target as Node)
+        !sizesInputRef.current.contains(event.target as Node) &&
+        sizesContainerRef.current &&
+        !sizesContainerRef.current.contains(event.target as Node)
       ) {
         setShowSizesSuggestions(false);
+      }
+      if (
+        colorsDropdownRef.current &&
+        !colorsDropdownRef.current.contains(event.target as Node) &&
+        colorsInputRef.current &&
+        !colorsInputRef.current.contains(event.target as Node) &&
+        colorsContainerRef.current &&
+        !colorsContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowColorsSuggestions(false);
+      }
+      if (
+        materialsDropdownRef.current &&
+        !materialsDropdownRef.current.contains(event.target as Node) &&
+        materialsInputRef.current &&
+        !materialsInputRef.current.contains(event.target as Node) &&
+        materialsContainerRef.current &&
+        !materialsContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowMaterialsSuggestions(false);
       }
     };
 
@@ -2528,30 +2675,59 @@ function EditProductModal({
 
                 {/* Sizes, Colors, Materials */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="relative">
+                  <div className="relative" ref={sizesContainerRef}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Sizes <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      ref={sizesInputRef}
-                      type="text"
-                      value={sizesInputValue}
-                      onChange={handleSizesInputChange}
-                      onFocus={() => {
-                        const currentInput = sizesInputValue.split(',').pop()?.trim() || '';
-                        if (currentInput.length > 0) {
-                          const filtered = commonSizes.filter(size =>
-                            size.toLowerCase().includes(currentInput.toLowerCase()) &&
-                            !sizesInputValue.toLowerCase().includes(size.toLowerCase())
-                          );
-                          setSizesSuggestions(filtered);
-                          setShowSizesSuggestions(filtered.length > 0);
-                        }
-                      }}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.sizes ? 'border-red-500' : 'border-gray-300'
+                    <div
+                      className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.sizes ? 'border-red-500' : 'border-gray-300'
                         }`}
-                      placeholder="S, M, L, XL"
-                    />
+                      onClick={() => sizesInputRef.current?.focus()}
+                    >
+                      {/* Size Tags */}
+                      {selectedSizes.map((size, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
+                        >
+                          {size}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSize(size);
+                            }}
+                            className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                            aria-label={`Remove ${size}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+
+                      {/* Input Field */}
+                      <input
+                        ref={sizesInputRef}
+                        type="text"
+                        value={sizesInputValue}
+                        onChange={handleSizesInputChange}
+                        onKeyDown={handleSizesKeyDown}
+                        onFocus={() => {
+                          if (sizesInputValue.trim().length > 0) {
+                            const filtered = commonSizes
+                              .filter(size =>
+                                size.toLowerCase().includes(sizesInputValue.toLowerCase()) &&
+                                !selectedSizes.includes(size)
+                              )
+                              .slice(0, 5);
+                            setSizesSuggestions(filtered);
+                            setShowSizesSuggestions(filtered.length > 0);
+                          }
+                        }}
+                        className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        placeholder={selectedSizes.length === 0 ? "Type to search sizes..." : ""}
+                      />
+                    </div>
                     {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
 
                     {/* Autocomplete Dropdown */}
@@ -2574,33 +2750,157 @@ function EditProductModal({
                       </div>
                     )}
                   </div>
-                  <div>
+
+                  <div className="relative" ref={colorsContainerRef}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Colors <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={formData.colors}
-                      onChange={(e) => handleChange('colors', e.target.value)}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.colors ? 'border-red-500' : 'border-gray-300'
+                    <div
+                      className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.colors ? 'border-red-500' : 'border-gray-300'
                         }`}
-                      placeholder="Red, Blue, Green"
-                    />
+                      onClick={() => colorsInputRef.current?.focus()}
+                    >
+                      {/* Color Tags */}
+                      {selectedColors.map((color, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
+                        >
+                          {color}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveColor(color);
+                            }}
+                            className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                            aria-label={`Remove ${color}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+
+                      {/* Input Field */}
+                      <input
+                        ref={colorsInputRef}
+                        type="text"
+                        value={colorsInputValue}
+                        onChange={handleColorsInputChange}
+                        onKeyDown={handleColorsKeyDown}
+                        onFocus={() => {
+                          if (colorsInputValue.trim().length > 0) {
+                            const filtered = commonColors
+                              .filter(color =>
+                                color.toLowerCase().includes(colorsInputValue.toLowerCase()) &&
+                                !selectedColors.includes(color)
+                              )
+                              .slice(0, 5);
+                            setColorsSuggestions(filtered);
+                            setShowColorsSuggestions(filtered.length > 0);
+                          }
+                        }}
+                        className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        placeholder={selectedColors.length === 0 ? "Type to search colors..." : ""}
+                      />
+                    </div>
                     {errors.colors && <p className="mt-1 text-sm text-red-500">{errors.colors}</p>}
+
+                    {/* Autocomplete Dropdown */}
+                    {showColorsSuggestions && colorsSuggestions.length > 0 && (
+                      <div
+                        ref={colorsDropdownRef}
+                        className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
+                        {colorsSuggestions.map((color, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleColorSelect(color)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                            onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                          >
+                            {color}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
+
+                  <div className="relative" ref={materialsContainerRef}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Materials <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={formData.materials}
-                      onChange={(e) => handleChange('materials', e.target.value)}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.materials ? 'border-red-500' : 'border-gray-300'
+                    <div
+                      className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.materials ? 'border-red-500' : 'border-gray-300'
                         }`}
-                      placeholder="Cotton, Polyester"
-                    />
+                      onClick={() => materialsInputRef.current?.focus()}
+                    >
+                      {/* Material Tags */}
+                      {selectedMaterials.map((material, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
+                        >
+                          {material}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveMaterial(material);
+                            }}
+                            className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded-full p-0.5 transition-colors"
+                            aria-label={`Remove ${material}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+
+                      {/* Input Field */}
+                      <input
+                        ref={materialsInputRef}
+                        type="text"
+                        value={materialsInputValue}
+                        onChange={handleMaterialsInputChange}
+                        onKeyDown={handleMaterialsKeyDown}
+                        onFocus={() => {
+                          if (materialsInputValue.trim().length > 0) {
+                            const filtered = commonMaterials
+                              .filter(material =>
+                                material.toLowerCase().includes(materialsInputValue.toLowerCase()) &&
+                                !selectedMaterials.includes(material)
+                              )
+                              .slice(0, 5);
+                            setMaterialsSuggestions(filtered);
+                            setShowMaterialsSuggestions(filtered.length > 0);
+                          }
+                        }}
+                        className="flex-1 min-w-[120px] px-2 py-1 border-0 bg-transparent focus:outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        placeholder={selectedMaterials.length === 0 ? "Type to search materials..." : ""}
+                      />
+                    </div>
                     {errors.materials && <p className="mt-1 text-sm text-red-500">{errors.materials}</p>}
+
+                    {/* Autocomplete Dropdown */}
+                    {showMaterialsSuggestions && materialsSuggestions.length > 0 && (
+                      <div
+                        ref={materialsDropdownRef}
+                        className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
+                        {materialsSuggestions.map((material, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleMaterialSelect(material)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors"
+                            onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                          >
+                            {material}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2977,13 +3277,6 @@ function AttributesTaxonomySection() {
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4">No attributes defined yet</p>
-            <ButtonWithWaves onClick={() => {
-              setEditingAttribute(null);
-              setIsAttributeModalOpen(true);
-            }}>
-              <Plus className="w-5 h-5" />
-              Create First Attribute
-            </ButtonWithWaves>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -3060,13 +3353,6 @@ function AttributesTaxonomySection() {
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4">No taxonomy defined yet</p>
-            <ButtonWithWaves onClick={() => {
-              setEditingTaxonomy(null);
-              setIsTaxonomyModalOpen(true);
-            }}>
-              <Plus className="w-5 h-5" />
-              Create First Category
-            </ButtonWithWaves>
           </div>
         ) : (
           <div className="space-y-4">
@@ -3189,17 +3475,18 @@ function AttributeModal({ attribute, onClose, onSave }: {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-            <select
+            <CustomSelect
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="text">Text</option>
-              <option value="number">Number</option>
-              <option value="select">Select (Single)</option>
-              <option value="multiselect">Multi-Select</option>
-              <option value="boolean">Boolean (Yes/No)</option>
-            </select>
+              onChange={(value) => setType(value as any)}
+              options={[
+                { value: 'text', label: 'Text' },
+                { value: 'number', label: 'Number' },
+                { value: 'select', label: 'Select (Single)' },
+                { value: 'multiselect', label: 'Multi-Select' },
+                { value: 'boolean', label: 'Boolean (Yes/No)' },
+              ]}
+              placeholder="Select type..."
+            />
           </div>
           {(type === 'select' || type === 'multiselect') && (
             <div>
@@ -3219,13 +3506,13 @@ function AttributeModal({ attribute, onClose, onSave }: {
               id="required"
               checked={required}
               onChange={(e) => setRequired(e.target.checked)}
-              className="w-4 h-4 text-primary-600 rounded border-gray-300"
+              className="w-4 h-4 rounded border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 text-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
             />
-            <label htmlFor="required" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Required</label>
+            <label htmlFor="required" className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-300 cursor-pointer">Required</label>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
             Cancel
           </button>
           <button
@@ -3289,7 +3576,7 @@ function TaxonomyModal({ taxonomy, onClose, onSave }: {
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
             Cancel
           </button>
           <button
@@ -3367,13 +3654,6 @@ function BundlesKitsSection() {
         <div className="text-center py-12">
           <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400 mb-4">No bundles created yet</p>
-          <ButtonWithWaves onClick={() => {
-            setEditingBundle(null);
-            setIsBundleModalOpen(true);
-          }}>
-            <Plus className="w-5 h-5" />
-            Create First Bundle
-          </ButtonWithWaves>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -3537,14 +3817,15 @@ function BundleModal({ bundle, products, onClose, onSave }: {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-            <select
+            <CustomSelect
               value={type}
-              onChange={(e) => setType(e.target.value as 'static' | 'dynamic')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="static">Static (Fixed Products)</option>
-              <option value="dynamic">Dynamic (Rule-based)</option>
-            </select>
+              onChange={(value) => setType(value as 'static' | 'dynamic')}
+              options={[
+                { value: 'static', label: 'Static (Fixed Products)' },
+                { value: 'dynamic', label: 'Dynamic (Rule-based)' },
+              ]}
+              placeholder="Select type..."
+            />
           </div>
 
           {type === 'static' ? (
@@ -3562,16 +3843,17 @@ function BundleModal({ bundle, products, onClose, onSave }: {
               <div className="space-y-2">
                 {selectedProducts.map((item, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <select
-                      value={item.productId}
-                      onChange={(e) => updateProduct(index, 'productId', Number(e.target.value))}
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    >
-                      <option value={0}>Select Product</option>
-                      {products.map((p: any) => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                      ))}
-                    </select>
+                    <div className="flex-1">
+                      <CustomSelect
+                        value={item.productId > 0 ? item.productId.toString() : ''}
+                        onChange={(value) => updateProduct(index, 'productId', Number(value))}
+                        options={products && products.length > 0 ? products.map((p: any) => ({
+                          value: p.id.toString(),
+                          label: `${p.name} (${p.sku})`
+                        })) : []}
+                        placeholder="Select Product"
+                      />
+                    </div>
                     <input
                       type="number"
                       min="1"
@@ -3685,7 +3967,8 @@ function ViewProductModal({
   const images = product.images || [];
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+    // Close if clicking the backdrop or outside the modal content
+    if (e.target === e.currentTarget || (modalRef.current && !modalRef.current.contains(e.target as Node))) {
       onClose();
     }
   };
@@ -3741,7 +4024,7 @@ function ViewProductModal({
       {/* Modal Backdrop */}
       <div
         className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={handleBackdropClick}
+        onClick={onClose}
       />
 
       {/* Modal */}
@@ -3758,6 +4041,7 @@ function ViewProductModal({
         <div
           className="modal-dialog modal-dialog-centered"
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           style={{ maxWidth: '1100px' }}
         >
           <div className="modal-content w-full flex flex-col shadow-2xl">

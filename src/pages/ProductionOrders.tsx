@@ -10,26 +10,19 @@ import {
   ChevronsRight,
   Pencil,
   Trash2,
-  AlertTriangle,
   ChevronDown,
   Search,
   Building2,
-  Package,
   CheckCircle2,
   Clock,
   FileText,
   TrendingUp,
-  Filter,
   Eye,
-  Check,
   XCircle,
   Factory,
   Layers,
   Hash,
-  Calendar,
-  User,
 } from 'lucide-react';
-import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -39,7 +32,7 @@ interface ProductionOrder {
   poNumber: string;
   supplierId: number;
   bomId?: number;
-  status: PurchaseOrderStatus;
+  status: PurchaseOrderStatusType;
   totalAmount: number;
   currency: string;
   orderDate: string;
@@ -82,14 +75,16 @@ interface ProductionOrderLine {
   };
 }
 
-enum PurchaseOrderStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  CONFIRMED = 'CONFIRMED',
-  PARTIALLY_RECEIVED = 'PARTIALLY_RECEIVED',
-  RECEIVED = 'RECEIVED',
-  CANCELLED = 'CANCELLED',
-}
+const PurchaseOrderStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  CONFIRMED: 'CONFIRMED',
+  PARTIALLY_RECEIVED: 'PARTIALLY_RECEIVED',
+  RECEIVED: 'RECEIVED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+type PurchaseOrderStatusType = typeof PurchaseOrderStatus[keyof typeof PurchaseOrderStatus];
 
 interface BOM {
   id: number;
@@ -350,10 +345,10 @@ export default function ProductionOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalOpen, _setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  // Keep isEditModalShowing for future edit modal implementation
+  void isEditModalShowing;
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
@@ -364,7 +359,6 @@ export default function ProductionOrders() {
   const [isBatchModalShowing, setIsBatchModalShowing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const itemsPerPage = 10;
-  const queryClient = useQueryClient();
 
   // Local storage keys for approvals, WIP tracking, and batches
   const APPROVALS_KEY = 'production_order_approvals';
@@ -373,7 +367,7 @@ export default function ProductionOrders() {
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
-    const modalsOpen = isModalOpen || isEditModalOpen || isDeleteModalOpen || isViewModalOpen || 
+    const modalsOpen = isModalOpen || isEditModalOpen || isViewModalOpen || 
                       isApprovalModalOpen || isWIPTrackingModalOpen || isBatchModalOpen;
     if (modalsOpen) {
       document.body.classList.add('modal-open');
@@ -381,7 +375,6 @@ export default function ProductionOrders() {
         requestAnimationFrame(() => {
           if (isModalOpen) setIsModalShowing(true);
           if (isEditModalOpen) setIsEditModalShowing(true);
-          if (isDeleteModalOpen) setIsDeleteModalShowing(true);
           if (isViewModalOpen) setIsViewModalShowing(true);
           if (isApprovalModalOpen) setIsApprovalModalShowing(true);
           if (isWIPTrackingModalOpen) setIsWIPTrackingModalShowing(true);
@@ -392,13 +385,12 @@ export default function ProductionOrders() {
       document.body.classList.remove('modal-open');
       setIsModalShowing(false);
       setIsEditModalShowing(false);
-      setIsDeleteModalShowing(false);
       setIsViewModalShowing(false);
       setIsApprovalModalShowing(false);
       setIsWIPTrackingModalShowing(false);
       setIsBatchModalShowing(false);
     }
-  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isViewModalOpen, 
+  }, [isModalOpen, isEditModalOpen, isViewModalOpen, 
       isApprovalModalOpen, isWIPTrackingModalOpen, isBatchModalOpen]);
 
   // Fetch purchase orders (using suppliers endpoint as placeholder)
@@ -525,7 +517,7 @@ export default function ProductionOrders() {
     return { total, draft, confirmed, inProgress, completed };
   }, [productionOrders]);
 
-  const getStatusColor = (status: PurchaseOrderStatus) => {
+  const getStatusColor = (status: PurchaseOrderStatusType) => {
     switch (status) {
       case PurchaseOrderStatus.DRAFT:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
@@ -1398,9 +1390,10 @@ function ApprovalsModal({
     localStorage.setItem(storageKey, JSON.stringify(allApprovals));
   };
 
-  const handleAddApproval = (approvalData: Omit<Approval, 'id' | 'poId'>) => {
+  const handleAddApproval = (approvalData: Omit<Approval, 'id' | 'poId'> | Partial<Approval>) => {
+    const fullData = approvalData as Omit<Approval, 'id' | 'poId'>;
     const newApproval: Approval = {
-      ...approvalData,
+      ...fullData,
       id: Date.now().toString(),
       poId: order.id,
     };
@@ -1663,7 +1656,7 @@ function AddEditApprovalModal({
               </label>
               <CustomSelect
                 value={formData.status}
-                onChange={(value) => setFormData({ ...formData, status: value })}
+                onChange={(value) => setFormData({ ...formData, status: value as 'PENDING' | 'APPROVED' | 'REJECTED' })}
                 options={[
                   { value: 'PENDING', label: 'Pending' },
                   { value: 'APPROVED', label: 'Approved' },
@@ -1770,7 +1763,7 @@ function WIPTrackingModal({
           const allWIP: WIPTracking[] = JSON.parse(stored);
           const orderWIP = allWIP
             .filter((w) => w.poId === order.id)
-            .sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
+            .sort((a, b) => new Date(b.startDate || b.completionDate || '').getTime() - new Date(a.startDate || a.completionDate || '').getTime());
           setWipTracking(orderWIP);
         } catch (error) {
           console.error('Error loading WIP tracking:', error);
@@ -1795,9 +1788,10 @@ function WIPTrackingModal({
     localStorage.setItem(storageKey, JSON.stringify(allWIP));
   };
 
-  const handleAddWIP = (wipData: Omit<WIPTracking, 'id' | 'poId'>) => {
+  const handleAddWIP = (wipData: Omit<WIPTracking, 'id' | 'poId'> | Partial<WIPTracking>) => {
+    const fullData = wipData as Omit<WIPTracking, 'id' | 'poId'>;
     const newWIP: WIPTracking = {
-      ...wipData,
+      ...fullData,
       id: Date.now().toString(),
       poId: order.id,
     };
@@ -2147,7 +2141,7 @@ function AddEditWIPModal({
               </label>
               <CustomSelect
                 value={formData.status}
-                onChange={(value) => setFormData({ ...formData, status: value })}
+                onChange={(value) => setFormData({ ...formData, status: value as 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' })}
                 options={[
                   { value: 'NOT_STARTED', label: 'Not Started' },
                   { value: 'IN_PROGRESS', label: 'In Progress' },
@@ -2267,9 +2261,10 @@ function BatchModal({
     localStorage.setItem(storageKey, JSON.stringify(allBatches));
   };
 
-  const handleAddBatch = (batchData: Omit<Batch, 'id' | 'poId'>) => {
+  const handleAddBatch = (batchData: Omit<Batch, 'id' | 'poId'> | Partial<Batch>) => {
+    const fullData = batchData as Omit<Batch, 'id' | 'poId'>;
     const newBatch: Batch = {
-      ...batchData,
+      ...fullData,
       id: Date.now().toString(),
       poId: order.id,
     };
@@ -2610,7 +2605,7 @@ function AddEditBatchModal({
               </label>
               <CustomSelect
                 value={formData.status}
-                onChange={(value) => setFormData({ ...formData, status: value })}
+                onChange={(value) => setFormData({ ...formData, status: value as 'PENDING' | 'COMPLETED' | 'IN_PRODUCTION' | 'QUARANTINED' })}
                 options={[
                   { value: 'PENDING', label: 'Pending' },
                   { value: 'IN_PRODUCTION', label: 'In Production' },

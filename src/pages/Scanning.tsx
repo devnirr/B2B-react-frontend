@@ -14,16 +14,8 @@ import {
   AlertTriangle,
   Clock,
   Warehouse,
-  Hash,
-  Filter,
-  Camera,
-  FileText,
-  Download,
   Trash2,
-  Eye,
-  Plus,
 } from 'lucide-react';
-import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
 // Types
@@ -367,7 +359,8 @@ export default function Scanning() {
       const errorResult: ScanResult = {
         id: scanId,
         code,
-        codeType,
+        codeType: 'BARCODE',
+        action: 'LOOKUP',
         status: 'ERROR',
         message: 'Error processing scan',
         scannedAt: new Date().toISOString(),

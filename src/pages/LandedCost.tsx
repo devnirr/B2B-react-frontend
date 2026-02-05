@@ -1,16 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import {
   DollarSign,
-  Plus,
   X,
   ChevronsLeft,
   ChevronsRight,
-  Pencil,
-  Trash2,
-  AlertTriangle,
   ChevronDown,
   Search,
   Calculator,
@@ -212,7 +208,9 @@ const CustomSelect = ({
   );
 };
 
-// Waves effect button component
+// Waves effect button component (unused)
+// Waves effect button component (unused)
+/*
 const ButtonWithWaves = ({ 
   children, 
   onClick, 
@@ -271,6 +269,7 @@ const ButtonWithWaves = ({
     </button>
   );
 };
+*/
 
 export default function LandedCost() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,7 +281,6 @@ export default function LandedCost() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedLandedCost, setSelectedLandedCost] = useState<LandedCost | null>(null);
   const itemsPerPage = 10;
-  const queryClient = useQueryClient();
 
   // Local storage key for landed costs
   const LANDED_COSTS_KEY = 'landed_costs';

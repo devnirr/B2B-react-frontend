@@ -288,7 +288,7 @@ export default function KPIReports() {
       csvRows.push('KPI Summary');
       csvRows.push(['KPI', 'Current Value', 'Growth (%)', 'Status'].join(','));
       
-      Object.entries(kpis).forEach(([key, kpi]) => {
+      Object.entries(kpis).forEach(([, kpi]) => {
         const status = kpi.growth > 0 ? 'Positive' : kpi.growth < 0 ? 'Negative' : 'Stable';
         const growthValue = kpi.growth !== 0 ? kpi.growth.toFixed(2) : '-';
         csvRows.push([

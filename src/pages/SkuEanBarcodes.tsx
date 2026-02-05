@@ -289,7 +289,7 @@ export default function SkuEanBarcodes() {
   const bulkGenerateSkus = () => {
     const productsToUpdate = allVariants.filter(v => !v.variantSku);
     if (productsToUpdate.length === 0) {
-      toast.success('All products already have SKUs');
+      toast('No missing SKUs', { icon: 'ℹ️' });
       return;
     }
     
@@ -315,7 +315,7 @@ export default function SkuEanBarcodes() {
   const bulkGenerateEans = () => {
     const productsToUpdate = allVariants.filter(v => !v.variantEan);
     if (productsToUpdate.length === 0) {
-      toast.success('All products already have EANs');
+      toast('No missing EANs', { icon: 'ℹ️' });
       return;
     }
     

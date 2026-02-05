@@ -1,7 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import api from '../lib/api';
 import {
   RotateCcw,
   Plus,

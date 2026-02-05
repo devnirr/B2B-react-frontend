@@ -396,9 +396,9 @@ function WholesaleOrderingSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header with Search and Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex-1 relative w-full sm:max-w-md">

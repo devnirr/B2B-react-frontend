@@ -1,15 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import {
-  Boxes,
-  Plus,
-  X,
   ChevronsLeft,
   ChevronsRight,
-  Pencil,
-  Trash2,
   AlertTriangle,
   ChevronDown,
   Search,
@@ -17,20 +11,10 @@ import {
   Package,
   ArrowRightLeft,
   CheckCircle2,
-  XCircle,
-  Clock,
-  Filter,
   Grid3x3,
-  Hash,
   Truck,
-  ClipboardCheck,
   Layers,
-  TrendingUp,
-  TrendingDown,
-  Eye,
-  FileText,
 } from 'lucide-react';
-import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -257,6 +241,8 @@ const CustomSelect = ({
 };
 
 // Waves effect button component
+// ButtonWithWaves component (unused)
+/*
 const ButtonWithWaves = ({ 
   children, 
   onClick, 
@@ -315,6 +301,7 @@ const ButtonWithWaves = ({
     </button>
   );
 };
+*/
 
 export default function StockControl() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'transfers' | 'crossdock'>('inventory');
@@ -323,7 +310,7 @@ export default function StockControl() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
 
   // Local storage keys
   const TRANSFERS_KEY = 'stock_control_transfers';
@@ -475,23 +462,23 @@ export default function StockControl() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'APPROVED':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'IN_TRANSIT':
-      case 'IN_PROGRESS':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
-    }
-  };
+  // const getStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'PENDING':
+  //       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+  //     case 'APPROVED':
+  //       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+  //     case 'IN_TRANSIT':
+  //     case 'IN_PROGRESS':
+  //       return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+  //     case 'COMPLETED':
+  //       return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+  //     case 'CANCELLED':
+  //       return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+  //     default:
+  //       return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+  //   }
+  // };
 
   if (isLoadingInventory) {
     return <SkeletonPage />;
@@ -879,6 +866,33 @@ export default function StockControl() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// TransfersTab Component
+function TransfersTab({
+  transfers: _transfers,
+  setTransfers: _setTransfers,
+  approvals: _approvals,
+  setApprovals: _setApprovals,
+  warehouses: _warehouses,
+  inventory: _inventory,
+  storageKey: _storageKey,
+  approvalsKey: _approvalsKey,
+}: {
+  transfers: Transfer[];
+  setTransfers: (transfers: Transfer[]) => void;
+  approvals: Record<string | number, Approval[]>;
+  setApprovals: (approvals: Record<string | number, Approval[]>) => void;
+  warehouses: Warehouse[];
+  inventory: InventoryItem[];
+  storageKey: string;
+  approvalsKey: string;
+}) {
+  return (
+    <div className="text-center py-12">
+      <p className="text-gray-500 dark:text-gray-400">Transfers & Approvals feature implementation</p>
     </div>
   );
 }

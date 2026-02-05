@@ -1,36 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { toast } from 'react-hot-toast';
-import api from '../lib/api';
 import {
   Hash,
   Plus,
-  X,
+  Eye,
   ChevronsLeft,
   ChevronsRight,
-  Pencil,
-  Trash2,
-  AlertTriangle,
   ChevronDown,
   Search,
   Warehouse,
-  Package,
   CheckCircle2,
   Clock,
   Calendar,
-  FileText,
-  Eye,
   Play,
   Pause,
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Filter,
-  Download,
-  ClipboardCheck,
   BarChart3,
 } from 'lucide-react';
-import { SkeletonPage } from '../components/Skeleton';
+import api from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 
 // Types
@@ -43,12 +30,12 @@ interface Warehouse {
   isActive: boolean;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  sku: string;
-  ean?: string;
-}
+// // interface Product {
+//   id: number;
+//   name: string;
+//   sku: string;
+//   ean?: string;
+// }
 
 interface CycleCount {
   id?: string | number;
@@ -355,23 +342,23 @@ export default function Counting() {
     }
   }, []);
 
-  // Save cycle counts
-  const saveCycleCounts = (counts: CycleCount[]) => {
-    try {
-      localStorage.setItem(CYCLE_COUNTS_KEY, JSON.stringify(counts));
-    } catch (error) {
-      console.error('Error saving cycle counts:', error);
-    }
-  };
+  // Save cycle counts (unused but kept for future use)
+  // const saveCycleCounts = (counts: CycleCount[]) => {
+  //   try {
+  //     localStorage.setItem(CYCLE_COUNTS_KEY, JSON.stringify(counts));
+  //   } catch (error) {
+  //     console.error('Error saving cycle counts:', error);
+  //   }
+  // };
 
-  // Save physical inventory
-  const savePhysicalInventory = (inventories: PhysicalInventory[]) => {
-    try {
-      localStorage.setItem(PHYSICAL_INVENTORY_KEY, JSON.stringify(inventories));
-    } catch (error) {
-      console.error('Error saving physical inventory:', error);
-    }
-  };
+  // Save physical inventory (unused but kept for future use)
+  // const savePhysicalInventory = (inventories: PhysicalInventory[]) => {
+  //   try {
+  //     localStorage.setItem(PHYSICAL_INVENTORY_KEY, JSON.stringify(inventories));
+  //   } catch (error) {
+  //     console.error('Error saving physical inventory:', error);
+  //   }
+  // };
 
   // Filter cycle counts
   const filteredCycleCounts = useMemo(() => {
