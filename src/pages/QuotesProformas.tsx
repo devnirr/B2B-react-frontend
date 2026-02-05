@@ -124,9 +124,9 @@ const CustomSelect = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between bg-white ${
           error ? 'border-red-500' : 'border-gray-300'
-        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
         style={{
           padding: '0.532rem 0.6rem 0.532rem 1.2rem',
           fontSize: '0.875rem',
@@ -144,7 +144,7 @@ const CustomSelect = ({
 
       {isOpen && (
         <div 
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto custom-dropdown-menu"
+          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden custom-dropdown-menu"
           style={{
             zIndex: 10001,
             top: '100%',
@@ -165,7 +165,7 @@ const CustomSelect = ({
           ) : (
             options.map((option, index) => {
               const isSelected = option.value === value;
-              const isHighlighted = index === highlightedIndex;
+              const isHighlighted = index === highlightedIndex && !isSelected;
               
               return (
                 <button
@@ -173,16 +173,19 @@ const CustomSelect = ({
                   type="button"
                   onClick={() => handleSelect(option.value)}
                   onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
-                    isSelected || isHighlighted
-                      ? 'bg-primary-500 text-white'
-                      : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                  } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    isSelected
+                      ? 'bg-blue-500 text-white font-medium'
+                      : isHighlighted
+                      ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
                   style={{
                     fontSize: '0.875rem',
-                    fontWeight: 500,
+                    fontWeight: isSelected ? 500 : 400,
                     display: 'block',
                     width: '100%',
+                    lineHeight: '1.5',
                   }}
                 >
                   {option.label}

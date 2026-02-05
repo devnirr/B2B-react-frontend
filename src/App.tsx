@@ -11,6 +11,7 @@ import Products from './pages/Products';
 // import Collections from './pages/Collections'; // Replaced by CollectionsDrops
 import Inventory from './pages/Inventory';
 import Warehouses from './pages/Warehouses';
+import WarehousesLocations from './pages/WarehousesLocations';
 import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
@@ -63,6 +64,13 @@ import CustomerProfile from './pages/CustomerProfile';
 import B2BTerms from './pages/B2BTerms';
 import Service from './pages/Service';
 import ProductionMRP from './pages/ProductionMRP';
+import ProductionOrders from './pages/ProductionOrders';
+import LandedCost from './pages/LandedCost';
+import VendorsFactories from './pages/VendorsFactories';
+import StockControl from './pages/StockControl';
+import Scanning from './pages/Scanning';
+import Counting from './pages/Counting';
+import PickPackShip from './pages/PickPackShip';
 import InventoryWarehouse from './pages/InventoryWarehouse';
 import OrdersFulfillment from './pages/OrdersFulfillment';
 import ReturnsRMA from './pages/ReturnsRMA';
@@ -83,6 +91,7 @@ import OrganizationSettings from './pages/OrganizationSettings';
 import SystemSettings from './pages/SystemSettings';
 import Security from './pages/Security';
 import DataExports from './pages/DataExports';
+import ExecutiveOverview from './pages/ExecutiveOverview';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -543,11 +552,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  {/* <ExecutiveOverview /> */}
-                  <div className="p-6">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Executive Overview</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">Page coming soon...</p>
-                  </div>
+                  <ExecutiveOverview />
                 </Layout>
               </ProtectedRoute>
             }
@@ -758,6 +763,36 @@ function App() {
             }
           />
           <Route
+            path="/vendors-factories"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <VendorsFactories />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production-orders"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductionOrders />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/landed-cost"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LandedCost />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/inventory-warehouse"
             element={
               <ProtectedRoute>
@@ -768,11 +803,61 @@ function App() {
             }
           />
           <Route
+            path="/warehouses-locations"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <WarehousesLocations />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stock-control"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <StockControl />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scanning"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Scanning />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/counting"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Counting />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/orders-fulfillment"
             element={
               <ProtectedRoute>
                 <Layout>
                   <OrdersFulfillment />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pick-pack-ship"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PickPackShip />
                 </Layout>
               </ProtectedRoute>
             }
