@@ -593,15 +593,6 @@ export default function MyTasks() {
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating your first task.'}
             </p>
-            {!searchQuery && filterStatus === 'all' && filterPriority === 'all' && (
-              <button
-                onClick={openModal}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create Task
-              </button>
-            )}
           </div>
         ) : (
           <>
@@ -1257,7 +1248,7 @@ function TaskModal({
                       </button>
                       
                       {isCalendarOpen && (
-                        <div className="custom-dropdown-menu absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700" style={{ zIndex: 10001 }}>
+                        <div className="custom-dropdown-menu absolute bottom-full left-0 mb-1 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700" style={{ zIndex: 10001 }}>
                           {/* Calendar Header */}
                           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                             <div className="flex items-center justify-between mb-2">
@@ -1332,7 +1323,7 @@ function TaskModal({
                                       isSelectedDay
                                         ? 'bg-primary-600 text-white'
                                         : isTodayDay
-                                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                                          ? 'bg-primary-200 dark:bg-primary text-primary-600 dark:text-primary-200 font-semibold'
                                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                     }`}
                                   >

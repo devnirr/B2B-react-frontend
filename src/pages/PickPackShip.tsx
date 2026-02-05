@@ -19,6 +19,8 @@ import {
   Box,
   Tag,
   Barcode,
+  X,
+  Package,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -268,40 +270,79 @@ const CustomSelect = ({
             maxHeight: '400px',
           }}
         >
-          {options.map((option, index) => {
-            const isSelected = option.value === value;
-            const isHighlighted = index === highlightedIndex && !isSelected;
-            
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleSelect(option.value)}
-                onMouseEnter={() => setHighlightedIndex(index)}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                  isSelected
-                    ? 'bg-blue-500 text-white font-medium'
-                    : isHighlighted
-                    ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                }`}
-                style={{
-                  fontSize: '0.875rem',
-                  fontWeight: isSelected ? 500 : 400,
-                  display: 'block',
-                  width: '100%',
-                  lineHeight: '1.5',
-                }}
-              >
-                {option.label}
-              </button>
-            );
-          })}
+          {options.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                <Package className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No data available</p>
+            </div>
+          ) : (
+            options.map((option, index) => {
+              const isSelected = option.value === value;
+              const isHighlighted = index === highlightedIndex && !isSelected;
+              
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option.value)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    isSelected
+                      ? 'bg-blue-500 text-white font-medium'
+                      : isHighlighted
+                      ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: isSelected ? 500 : 400,
+                    display: 'block',
+                    width: '100%',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })
+          )}
         </div>
       )}
     </div>
   );
 };
+
+interface Order {
+  id: number;
+  orderNumber: string;
+  customerId: number;
+  customer?: {
+    id: number;
+    name: string;
+  };
+  status: string;
+  totalAmount: number;
+  currency: string;
+  orderDate: string;
+  orderLines?: OrderLine[];
+}
+
+interface OrderLine {
+  id: number;
+  productId: number;
+  product?: {
+    id: number;
+    name: string;
+    sku: string;
+  };
+  quantity: number;
+  fulfilledQty: number;
+  unitPrice: number;
+  size?: string;
+  color?: string;
+}
 
 export default function PickPackShip() {
   const [activeTab, setActiveTab] = useState<'pick-lists' | 'pack-slips' | 'shipping-labels'>('pick-lists');
@@ -310,18 +351,21 @@ export default function PickPackShip() {
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [isCreatePickListModalOpen, setIsCreatePickListModalOpen] = useState(false);
+  const [isCreatePackSlipModalOpen, setIsCreatePackSlipModalOpen] = useState(false);
+  const [isCreateShippingLabelModalOpen, setIsCreateShippingLabelModalOpen] = useState(false);
 
   // Local storage keys
   const PICK_LISTS_KEY = 'pick_pack_ship_pick_lists';
   const PACK_SLIPS_KEY = 'pick_pack_ship_pack_slips';
   const SHIPPING_LABELS_KEY = 'pick_pack_ship_shipping_labels';
 
-  // Fetch orders (for future use when creating pick lists/pack slips/shipping labels)
-  const { isLoading: isLoadingOrders } = useQuery({
-    queryKey: ['orders'],
+  // Fetch orders for creating pick lists
+  const { data: ordersData, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['orders', 'pick-pack-ship'],
     queryFn: async () => {
       try {
-        const response = await api.get('/orders');
+        const response = await api.get('/orders?skip=0&take=1000');
         return response.data || [];
       } catch (error) {
         console.error('Error fetching orders:', error);
@@ -329,6 +373,15 @@ export default function PickPackShip() {
       }
     },
   });
+
+  const orders: Order[] = useMemo(() => {
+    const data = Array.isArray(ordersData) ? ordersData : (ordersData?.data || []);
+    return data.filter((order: any) => 
+      order.status === 'CONFIRMED' || 
+      order.status === 'PROCESSING' || 
+      order.status === 'PARTIALLY_FULFILLED'
+    );
+  }, [ordersData]);
 
   // Orders are available for creating pick lists, pack slips, and shipping labels
   // const orders: Order[] = useMemo(() => {
@@ -392,30 +445,80 @@ export default function PickPackShip() {
     }
   }, []);
 
-  // Save functions (used when creating/updating items)
-  // const savePickLists = (lists: PickList[]) => {
-  //   try {
-  //     localStorage.setItem(PICK_LISTS_KEY, JSON.stringify(lists));
-  //   } catch (error) {
-  //     console.error('Error saving pick lists:', error);
-  //   }
-  // };
+  // Save functions
+  const savePickLists = (lists: PickList[]) => {
+    try {
+      localStorage.setItem(PICK_LISTS_KEY, JSON.stringify(lists));
+      setPickLists(lists);
+    } catch (error) {
+      console.error('Error saving pick lists:', error);
+      toast.error('Failed to save pick lists');
+    }
+  };
 
-  // const savePackSlips = (slips: PackSlip[]) => {
-  //   try {
-  //     localStorage.setItem(PACK_SLIPS_KEY, JSON.stringify(slips));
-  //   } catch (error) {
-  //     console.error('Error saving pack slips:', error);
-  //   }
-  // };
+  const handleCreatePickList = (pickListData: Omit<PickList, 'id' | 'pickListNumber' | 'createdAt'>) => {
+    const pickListNumber = `PL-${Date.now()}`;
+    const newPickList: PickList = {
+      ...pickListData,
+      id: Date.now(),
+      pickListNumber,
+      createdAt: new Date().toISOString(),
+      status: 'DRAFT',
+    };
+    const updatedPickLists = [...pickLists, newPickList];
+    savePickLists(updatedPickLists);
+    toast.success('Pick list created successfully');
+    setIsCreatePickListModalOpen(false);
+  };
 
-  // const saveShippingLabels = (labels: ShippingLabel[]) => {
-  //   try {
-  //     localStorage.setItem(SHIPPING_LABELS_KEY, JSON.stringify(labels));
-  //   } catch (error) {
-  //     console.error('Error saving shipping labels:', error);
-  //   }
-  // };
+  const savePackSlips = (slips: PackSlip[]) => {
+    try {
+      localStorage.setItem(PACK_SLIPS_KEY, JSON.stringify(slips));
+      setPackSlips(slips);
+    } catch (error) {
+      console.error('Error saving pack slips:', error);
+      toast.error('Failed to save pack slips');
+    }
+  };
+
+  const handleCreatePackSlip = (packSlipData: Omit<PackSlip, 'id' | 'packSlipNumber' | 'createdAt'>) => {
+    const packSlipNumber = `PS-${Date.now()}`;
+    const newPackSlip: PackSlip = {
+      ...packSlipData,
+      id: Date.now(),
+      packSlipNumber,
+      createdAt: new Date().toISOString(),
+      status: 'DRAFT',
+    };
+    const updatedPackSlips = [...packSlips, newPackSlip];
+    savePackSlips(updatedPackSlips);
+    toast.success('Pack slip created successfully');
+    setIsCreatePackSlipModalOpen(false);
+  };
+
+  const saveShippingLabels = (labels: ShippingLabel[]) => {
+    try {
+      localStorage.setItem(SHIPPING_LABELS_KEY, JSON.stringify(labels));
+      setShippingLabels(labels);
+    } catch (error) {
+      console.error('Error saving shipping labels:', error);
+      toast.error('Failed to save shipping labels');
+    }
+  };
+
+  const handleCreateShippingLabel = (labelData: Omit<ShippingLabel, 'id' | 'labelNumber' | 'createdAt'>) => {
+    const labelNumber = `SL-${Date.now()}`;
+    const newShippingLabel: ShippingLabel = {
+      ...labelData,
+      id: Date.now(),
+      labelNumber,
+      createdAt: new Date().toISOString(),
+    };
+    const updatedLabels = [...shippingLabels, newShippingLabel];
+    saveShippingLabels(updatedLabels);
+    toast.success('Shipping label created successfully');
+    setIsCreateShippingLabelModalOpen(false);
+  };
 
   // Filter pick lists
   const filteredPickLists = useMemo(() => {
@@ -766,9 +869,16 @@ export default function PickPackShip() {
 
         {/* Tab Content */}
         <div className="p-6">
-          {/* Search and Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="md:col-span-2 relative">
+          {/* Section Title */}
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {activeTab === 'pick-lists' ? 'Pick Lists' : activeTab === 'pack-slips' ? 'Pack Slips' : 'Shipping Labels'}
+            </h3>
+          </div>
+
+          {/* Search, Filters, and Create Button */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6 items-start md:items-center">
+            <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
@@ -781,7 +891,22 @@ export default function PickPackShip() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            <div>
+            {(activeTab === 'pick-lists' || activeTab === 'pack-slips') && (
+              <div className="w-full md:w-auto md:min-w-[180px]">
+                <CustomSelect
+                  value={warehouseFilter}
+                  onChange={(value) => {
+                    setWarehouseFilter(value);
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: 'all', label: 'All Warehouses' },
+                    ...warehouses.map((w) => ({ value: w.id.toString(), label: w.name })),
+                  ]}
+                />
+              </div>
+            )}
+            <div className="w-full md:w-auto md:min-w-[180px]">
               <CustomSelect
                 value={statusFilter}
                 onChange={(value) => {
@@ -813,44 +938,33 @@ export default function PickPackShip() {
                 ]}
               />
             </div>
-            {(activeTab === 'pick-lists' || activeTab === 'pack-slips') && (
-              <div>
-                <CustomSelect
-                  value={warehouseFilter}
-                  onChange={(value) => {
-                    setWarehouseFilter(value);
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: 'all', label: 'All Warehouses' },
-                    ...warehouses.map((w) => ({ value: w.id.toString(), label: w.name })),
-                  ]}
-                />
-              </div>
+            {activeTab === 'pick-lists' && (
+              <button
+                onClick={() => setIsCreatePickListModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap w-full md:w-auto justify-center"
+              >
+                <Plus className="w-4 h-4" />
+                Create Pick List
+              </button>
             )}
-          </div>
-
-          {/* Header with Create Button */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {activeTab === 'pick-lists' ? 'Pick Lists' : activeTab === 'pack-slips' ? 'Pack Slips' : 'Shipping Labels'}
-            </h3>
-            <button
-              onClick={() => {
-                if (activeTab === 'pick-lists') {
-                  // Create pick list functionality will be added
-                  toast.success('Create pick list feature coming soon');
-                } else if (activeTab === 'pack-slips') {
-                  toast.success('Create pack slip feature coming soon');
-                } else {
-                  toast.success('Create shipping label feature coming soon');
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Create {activeTab === 'pick-lists' ? 'Pick List' : activeTab === 'pack-slips' ? 'Pack Slip' : 'Shipping Label'}
-            </button>
+            {activeTab === 'pack-slips' && (
+              <button
+                onClick={() => setIsCreatePackSlipModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap w-full md:w-auto justify-center"
+              >
+                <Plus className="w-4 h-4" />
+                Create Pack Slip
+              </button>
+            )}
+            {activeTab === 'shipping-labels' && (
+              <button
+                onClick={() => setIsCreateShippingLabelModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap w-full md:w-auto justify-center"
+              >
+                <Plus className="w-4 h-4" />
+                Create Shipping Label
+              </button>
+            )}
           </div>
 
           {/* Table */}
@@ -864,23 +978,6 @@ export default function PickPackShip() {
                   ? 'No matching items found'
                   : `No ${activeTab === 'pick-lists' ? 'pick lists' : activeTab === 'pack-slips' ? 'pack slips' : 'shipping labels'} found`}
               </p>
-              {!searchQuery && statusFilter === 'all' && warehouseFilter === 'all' && (
-                <button
-                  onClick={() => {
-                    if (activeTab === 'pick-lists') {
-                      toast.success('Create pick list feature coming soon');
-                    } else if (activeTab === 'pack-slips') {
-                      toast.success('Create pack slip feature coming soon');
-                    } else {
-                      toast.success('Create shipping label feature coming soon');
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create First {activeTab === 'pick-lists' ? 'Pick List' : activeTab === 'pack-slips' ? 'Pack Slip' : 'Shipping Label'}
-                </button>
-              )}
             </div>
           ) : (
             <>
@@ -1204,6 +1301,1283 @@ export default function PickPackShip() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Create Pick List Modal */}
+      {isCreatePickListModalOpen && (
+        <CreatePickListModal
+          orders={orders}
+          warehouses={warehouses}
+          onClose={() => setIsCreatePickListModalOpen(false)}
+          onSubmit={handleCreatePickList}
+        />
+      )}
+
+      {isCreatePackSlipModalOpen && (
+        <CreatePackSlipModal
+          orders={orders}
+          warehouses={warehouses}
+          pickLists={pickLists}
+          onClose={() => setIsCreatePackSlipModalOpen(false)}
+          onSubmit={handleCreatePackSlip}
+        />
+      )}
+
+      {isCreateShippingLabelModalOpen && (
+        <CreateShippingLabelModal
+          orders={orders}
+          packSlips={packSlips}
+          warehouses={warehouses}
+          onClose={() => setIsCreateShippingLabelModalOpen(false)}
+          onSubmit={handleCreateShippingLabel}
+        />
+      )}
+    </div>
+  );
+}
+
+// Create Pick List Modal Component
+function CreatePickListModal({
+  orders,
+  warehouses,
+  onClose,
+  onSubmit,
+}: {
+  orders: Order[];
+  warehouses: Warehouse[];
+  onClose: () => void;
+  onSubmit: (data: Omit<PickList, 'id' | 'pickListNumber' | 'createdAt'>) => void;
+}) {
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Record<number, number>>({});
+
+  const selectedOrder = useMemo(() => {
+    return orders.find((o) => o.id === Number(selectedOrderId));
+  }, [orders, selectedOrderId]);
+
+  const availableItems = useMemo(() => {
+    if (!selectedOrder || !selectedOrder.orderLines) return [];
+    return selectedOrder.orderLines.filter((line) => {
+      const remainingQty = line.quantity - line.fulfilledQty;
+      return remainingQty > 0;
+    });
+  }, [selectedOrder]);
+
+  const handleItemToggle = (orderLineId: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (newItems[orderLineId]) {
+        delete newItems[orderLineId];
+      } else {
+        newItems[orderLineId] = maxQuantity;
+      }
+      return newItems;
+    });
+  };
+
+  const handleQuantityChange = (orderLineId: number, quantity: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (quantity <= 0) {
+        delete newItems[orderLineId];
+      } else {
+        newItems[orderLineId] = Math.min(quantity, maxQuantity);
+      }
+      return newItems;
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedOrderId || !selectedWarehouseId) {
+      toast.error('Please select an order and warehouse');
+      return;
+    }
+
+    if (Object.keys(selectedItems).length === 0) {
+      toast.error('Please select at least one item to pick');
+      return;
+    }
+
+    const selectedWarehouse = warehouses.find((w) => w.id === Number(selectedWarehouseId));
+    const pickListItems: PickListItem[] = Object.entries(selectedItems).map(([orderLineId, quantity]) => {
+      const orderLine = selectedOrder?.orderLines?.find((l) => l.id === Number(orderLineId));
+      return {
+        id: Date.now() + Number(orderLineId),
+        orderLineId: Number(orderLineId),
+        productId: orderLine?.productId || 0,
+        productName: orderLine?.product?.name,
+        sku: orderLine?.product?.sku,
+        quantity,
+        pickedQuantity: 0,
+        status: 'PENDING',
+      };
+    });
+
+    onSubmit({
+      orderId: Number(selectedOrderId),
+      orderNumber: selectedOrder?.orderNumber,
+      warehouseId: Number(selectedWarehouseId),
+      warehouseName: selectedWarehouse?.name,
+      assignedTo: assignedTo || undefined,
+      items: pickListItems,
+      notes: notes || undefined,
+      status: 'DRAFT',
+    });
+  };
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Pick List</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Order Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Order *
+            </label>
+            <CustomSelect
+              value={selectedOrderId}
+              onChange={setSelectedOrderId}
+              options={orders.map((order) => ({
+                value: order.id.toString(),
+                label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
+              }))}
+              placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
+            />
+            {selectedOrder && (
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Customer:</span> {selectedOrder.customer?.name || 'Unknown'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Order Date:</span>{' '}
+                  {new Date(selectedOrder.orderDate).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Status:</span> {selectedOrder.status}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Warehouse Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Warehouse *
+            </label>
+            <CustomSelect
+              value={selectedWarehouseId}
+              onChange={setSelectedWarehouseId}
+              options={warehouses.map((warehouse) => ({
+                value: warehouse.id.toString(),
+                label: warehouse.name,
+              }))}
+              placeholder={warehouses.length === 0 ? 'No warehouses available' : 'Select a warehouse...'}
+            />
+          </div>
+
+          {/* Order Items */}
+          {selectedOrder && availableItems.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Select Items to Pick *
+              </label>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">
+                          <input
+                            type="checkbox"
+                            checked={availableItems.length > 0 && availableItems.every((item) => selectedItems[item.id])}
+                            onChange={() => {
+                              if (availableItems.every((item) => selectedItems[item.id])) {
+                                setSelectedItems({});
+                              } else {
+                                const allItems: Record<number, number> = {};
+                                availableItems.forEach((item) => {
+                                  const remainingQty = item.quantity - item.fulfilledQty;
+                                  allItems[item.id] = remainingQty;
+                                });
+                                setSelectedItems(allItems);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Product
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          SKU
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Ordered
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Fulfilled
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Available
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Pick Qty
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {availableItems.map((item) => {
+                        const remainingQty = item.quantity - item.fulfilledQty;
+                        const isSelected = !!selectedItems[item.id];
+                        const pickQty = selectedItems[item.id] || 0;
+
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleItemToggle(item.id, remainingQty)}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                              {item.product?.name || 'Unknown Product'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {item.product?.sku || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {item.fulfilledQty}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                              {remainingQty}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isSelected ? (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={remainingQty}
+                                  value={pickQty}
+                                  onChange={(e) =>
+                                    handleQuantityChange(item.id, parseInt(e.target.value) || 0, remainingQty)
+                                  }
+                                  className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {Object.keys(selectedItems).length > 0 && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {Object.keys(selectedItems).length} item(s) selected
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedOrder && availableItems.length === 0 && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                This order has no items available for picking (all items are already fulfilled).
+              </p>
+            </div>
+          )}
+
+          {/* Assigned To */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Assigned To
+            </label>
+            <input
+              type="text"
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              placeholder="Enter assignee name (optional)"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any notes or instructions (optional)"
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedOrderId || !selectedWarehouseId || Object.keys(selectedItems).length === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Create Pick List
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Create Pack Slip Modal Component
+function CreatePackSlipModal({
+  orders,
+  warehouses,
+  pickLists,
+  onClose,
+  onSubmit,
+}: {
+  orders: Order[];
+  warehouses: Warehouse[];
+  pickLists: PickList[];
+  onClose: () => void;
+  onSubmit: (data: Omit<PackSlip, 'id' | 'packSlipNumber' | 'createdAt'>) => void;
+}) {
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedPickListId, setSelectedPickListId] = useState<string>('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+  const [packedBy, setPackedBy] = useState('');
+  const [packageCount, setPackageCount] = useState<number>(1);
+  const [weight, setWeight] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Record<number, number>>({});
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const selectedOrder = useMemo(() => {
+    return orders.find((o) => o.id === Number(selectedOrderId));
+  }, [orders, selectedOrderId]);
+
+  const selectedPickList = useMemo(() => {
+    return pickLists.find((pl) => pl.id === Number(selectedPickListId));
+  }, [pickLists, selectedPickListId]);
+
+  // Get available items from order or pick list
+  const availableItems = useMemo(() => {
+    if (selectedPickList && selectedPickList.items) {
+      // If pick list is selected, use items from pick list
+      return selectedPickList.items.filter((item) => {
+        const pickedQty = item.pickedQuantity || 0;
+        return pickedQty > 0;
+      });
+    } else if (selectedOrder && selectedOrder.orderLines) {
+      // Otherwise use order lines
+      return selectedOrder.orderLines.filter((line) => {
+        const remainingQty = line.quantity - line.fulfilledQty;
+        return remainingQty > 0;
+      });
+    }
+    return [];
+  }, [selectedOrder, selectedPickList]);
+
+  const handleItemToggle = (itemId: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (newItems[itemId]) {
+        delete newItems[itemId];
+      } else {
+        newItems[itemId] = maxQuantity;
+      }
+      return newItems;
+    });
+  };
+
+  const handleQuantityChange = (itemId: number, quantity: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (quantity <= 0) {
+        delete newItems[itemId];
+      } else {
+        newItems[itemId] = Math.min(quantity, maxQuantity);
+      }
+      return newItems;
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedOrderId || !selectedWarehouseId) {
+      toast.error('Please select an order and warehouse');
+      return;
+    }
+
+    if (Object.keys(selectedItems).length === 0) {
+      toast.error('Please select at least one item to pack');
+      return;
+    }
+
+    const selectedWarehouse = warehouses.find((w) => w.id === Number(selectedWarehouseId));
+    
+    let packSlipItems: PackSlipItem[] = [];
+    
+    if (selectedPickList) {
+      // Use items from pick list
+      packSlipItems = Object.entries(selectedItems).map(([itemId, quantity]) => {
+        const pickListItem = selectedPickList.items.find((item) => item.id === Number(itemId));
+        return {
+          id: Date.now() + Number(itemId),
+          orderLineId: pickListItem?.orderLineId || 0,
+          productId: pickListItem?.productId || 0,
+          productName: pickListItem?.productName,
+          sku: pickListItem?.sku,
+          quantity,
+          packedQuantity: 0,
+        };
+      });
+    } else if (selectedOrder) {
+      // Use items from order
+      packSlipItems = Object.entries(selectedItems).map(([orderLineId, quantity]) => {
+        const orderLine = selectedOrder.orderLines?.find((l) => l.id === Number(orderLineId));
+        return {
+          id: Date.now() + Number(orderLineId),
+          orderLineId: Number(orderLineId),
+          productId: orderLine?.productId || 0,
+          productName: orderLine?.product?.name,
+          sku: orderLine?.product?.sku,
+          quantity,
+          packedQuantity: 0,
+        };
+      });
+    }
+
+    onSubmit({
+      orderId: Number(selectedOrderId),
+      orderNumber: selectedOrder?.orderNumber,
+      pickListId: selectedPickListId ? Number(selectedPickListId) : undefined,
+      warehouseId: Number(selectedWarehouseId),
+      warehouseName: selectedWarehouse?.name,
+      packedBy: packedBy || undefined,
+      items: packSlipItems,
+      packageCount: packageCount || 1,
+      weight: weight ? parseFloat(weight) : undefined,
+      notes: notes || undefined,
+      status: 'DRAFT',
+    });
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Pack Slip</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Order Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Order *
+            </label>
+            <CustomSelect
+              value={selectedOrderId}
+              onChange={setSelectedOrderId}
+              options={
+                orders.length === 0
+                  ? []
+                  : orders.map((order) => ({
+                      value: order.id.toString(),
+                      label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
+                    }))
+              }
+              placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
+            />
+            {selectedOrder && (
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Customer:</span> {selectedOrder.customer?.name || 'Unknown'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Order Date:</span>{' '}
+                  {new Date(selectedOrder.orderDate).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Status:</span> {selectedOrder.status}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Pick List Selection (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Pick List (Optional)
+            </label>
+            <CustomSelect
+              value={selectedPickListId}
+              onChange={setSelectedPickListId}
+              options={pickLists
+                .filter((pl) => pl.orderId === Number(selectedOrderId) || !selectedOrderId)
+                .map((pickList) => ({
+                  value: pickList.id?.toString() || '',
+                  label: `${pickList.pickListNumber} - ${pickList.warehouseName || 'Unknown Warehouse'}`,
+                }))}
+              placeholder={pickLists.length === 0 ? 'No pick lists available' : 'Select a pick list (optional)...'}
+            />
+            {selectedPickList && (
+              <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <span className="font-medium">Pick List:</span> {selectedPickList.pickListNumber}
+                </p>
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <span className="font-medium">Status:</span> {selectedPickList.status}
+                </p>
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <span className="font-medium">Items:</span> {selectedPickList.items?.length || 0}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Warehouse Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Warehouse *
+            </label>
+            <CustomSelect
+              value={selectedWarehouseId}
+              onChange={setSelectedWarehouseId}
+              options={
+                warehouses.length === 0
+                  ? []
+                  : warehouses.map((warehouse) => ({
+                      value: warehouse.id.toString(),
+                      label: warehouse.name,
+                    }))
+              }
+              placeholder={warehouses.length === 0 ? 'No warehouses available' : 'Select a warehouse...'}
+            />
+          </div>
+
+          {/* Order Items */}
+          {availableItems.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Select Items to Pack *
+              </label>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">
+                          <input
+                            type="checkbox"
+                            checked={availableItems.length > 0 && availableItems.every((item) => {
+                              const itemId = 'id' in item ? item.id : item.orderLineId || item.id;
+                              return selectedItems[itemId as number];
+                            })}
+                            onChange={() => {
+                              const allSelected = availableItems.every((item) => {
+                                const itemId = 'id' in item ? item.id : item.orderLineId || item.id;
+                                return selectedItems[itemId as number];
+                              });
+                              if (allSelected) {
+                                setSelectedItems({});
+                              } else {
+                                const allItems: Record<number, number> = {};
+                                availableItems.forEach((item) => {
+                                  const itemId = ('id' in item ? item.id : item.orderLineId || item.id) as number;
+                                  const maxQty = selectedPickList 
+                                    ? (item as PickListItem).pickedQuantity || (item as PickListItem).quantity
+                                    : (item as OrderLine).quantity - (item as OrderLine).fulfilledQty;
+                                  allItems[itemId] = maxQty;
+                                });
+                                setSelectedItems(allItems);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Product
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          SKU
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          {selectedPickList ? 'Picked' : 'Available'}
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Pack Qty
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {availableItems.map((item) => {
+                        const itemId = ('id' in item ? item.id : item.orderLineId || item.id) as number;
+                        const maxQty = selectedPickList 
+                          ? (item as PickListItem).pickedQuantity || (item as PickListItem).quantity
+                          : (item as OrderLine).quantity - (item as OrderLine).fulfilledQty;
+                        const isSelected = !!selectedItems[itemId];
+                        const packQty = selectedItems[itemId] || 0;
+                        const productName = selectedPickList 
+                          ? (item as PickListItem).productName
+                          : (item as OrderLine).product?.name;
+                        const sku = selectedPickList 
+                          ? (item as PickListItem).sku
+                          : (item as OrderLine).product?.sku;
+
+                        return (
+                          <tr key={itemId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleItemToggle(itemId, maxQty)}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                              {productName || 'Unknown Product'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {sku || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                              {maxQty}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isSelected ? (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={maxQty}
+                                  value={packQty}
+                                  onChange={(e) =>
+                                    handleQuantityChange(itemId, parseInt(e.target.value) || 0, maxQty)
+                                  }
+                                  className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {Object.keys(selectedItems).length > 0 && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {Object.keys(selectedItems).length} item(s) selected
+                </p>
+              )}
+            </div>
+          )}
+
+          {availableItems.length === 0 && (selectedOrder || selectedPickList) && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                {selectedPickList 
+                  ? 'This pick list has no items available for packing.'
+                  : 'This order has no items available for packing (all items are already fulfilled).'}
+              </p>
+            </div>
+          )}
+
+          {/* Package Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Package Count
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={packageCount}
+                onChange={(e) => setPackageCount(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="Enter weight (optional)"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Packed By */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Packed By
+            </label>
+            <input
+              type="text"
+              value={packedBy}
+              onChange={(e) => setPackedBy(e.target.value)}
+              placeholder="Enter packer name (optional)"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any notes or instructions (optional)"
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedOrderId || !selectedWarehouseId || Object.keys(selectedItems).length === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Create Pack Slip
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Create Shipping Label Modal Component
+function CreateShippingLabelModal({
+  orders,
+  packSlips,
+  warehouses,
+  onClose,
+  onSubmit,
+}: {
+  orders: Order[];
+  packSlips: PackSlip[];
+  warehouses: Warehouse[];
+  onClose: () => void;
+  onSubmit: (data: Omit<ShippingLabel, 'id' | 'labelNumber' | 'createdAt'>) => void;
+}) {
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedPackSlipId, setSelectedPackSlipId] = useState<string>('');
+  const [carrier, setCarrier] = useState<'FEDEX' | 'UPS' | 'DHL' | 'USPS' | 'OTHER'>('FEDEX');
+  const [serviceType, setServiceType] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [weight, setWeight] = useState<string>('');
+  const [length, setLength] = useState<string>('');
+  const [width, setWidth] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+
+  // From Address
+  const [fromName, setFromName] = useState('');
+  const [fromAddress, setFromAddress] = useState('');
+  const [fromCity, setFromCity] = useState('');
+  const [fromState, setFromState] = useState('');
+  const [fromPostalCode, setFromPostalCode] = useState('');
+  const [fromCountry, setFromCountry] = useState('');
+
+  // To Address
+  const [toName, setToName] = useState('');
+  const [toAddress, setToAddress] = useState('');
+  const [toCity, setToCity] = useState('');
+  const [toState, setToState] = useState('');
+  const [toPostalCode, setToPostalCode] = useState('');
+  const [toCountry, setToCountry] = useState('');
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const selectedOrder = useMemo(() => {
+    return orders.find((o) => o.id === Number(selectedOrderId));
+  }, [orders, selectedOrderId]);
+
+  const selectedPackSlip = useMemo(() => {
+    return packSlips.find((ps) => ps.id === Number(selectedPackSlipId));
+  }, [packSlips, selectedPackSlipId]);
+
+  // Auto-fill from address from warehouse if available
+  useEffect(() => {
+    if (warehouses.length > 0 && !fromName) {
+      const defaultWarehouse = warehouses[0];
+      setFromName(defaultWarehouse.name || '');
+      setFromAddress(defaultWarehouse.address || '');
+      setFromCity(defaultWarehouse.city || '');
+      setFromCountry(defaultWarehouse.country || '');
+    }
+  }, [warehouses, fromName]);
+
+  // Auto-fill to address from order customer if available
+  useEffect(() => {
+    if (selectedOrder && selectedOrder.customer) {
+      setToName(selectedOrder.customer.name || '');
+    }
+  }, [selectedOrder]);
+
+  // Auto-fill weight from pack slip if available
+  useEffect(() => {
+    if (selectedPackSlip && selectedPackSlip.weight) {
+      setWeight(selectedPackSlip.weight.toString());
+    }
+  }, [selectedPackSlip]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedOrderId) {
+      toast.error('Please select an order');
+      return;
+    }
+
+    if (!fromName || !fromAddress || !fromCity || !fromPostalCode || !fromCountry) {
+      toast.error('Please fill in all required from address fields');
+      return;
+    }
+
+    if (!toName || !toAddress || !toCity || !toPostalCode || !toCountry) {
+      toast.error('Please fill in all required to address fields');
+      return;
+    }
+
+    onSubmit({
+      orderId: Number(selectedOrderId),
+      orderNumber: selectedOrder?.orderNumber,
+      packSlipId: selectedPackSlipId ? Number(selectedPackSlipId) : undefined,
+      carrier,
+      serviceType: serviceType || undefined,
+      trackingNumber: trackingNumber || undefined,
+      fromAddress: {
+        name: fromName,
+        address: fromAddress,
+        city: fromCity,
+        state: fromState || undefined,
+        postalCode: fromPostalCode,
+        country: fromCountry,
+      },
+      toAddress: {
+        name: toName,
+        address: toAddress,
+        city: toCity,
+        state: toState || undefined,
+        postalCode: toPostalCode,
+        country: toCountry,
+      },
+      weight: weight ? parseFloat(weight) : undefined,
+      dimensions: length || width || height
+        ? {
+            length: length ? parseFloat(length) : undefined,
+            width: width ? parseFloat(width) : undefined,
+            height: height ? parseFloat(height) : undefined,
+          }
+        : undefined,
+      status: 'DRAFT',
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Shipping Label</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Order Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Order *
+            </label>
+            <CustomSelect
+              value={selectedOrderId}
+              onChange={setSelectedOrderId}
+              options={
+                orders.length === 0
+                  ? []
+                  : orders.map((order) => ({
+                      value: order.id.toString(),
+                      label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
+                    }))
+              }
+              placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
+            />
+          </div>
+
+          {/* Pack Slip Selection (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Pack Slip (Optional)
+            </label>
+            <CustomSelect
+              value={selectedPackSlipId}
+              onChange={setSelectedPackSlipId}
+              options={packSlips
+                .filter((ps) => ps.orderId === Number(selectedOrderId) || !selectedOrderId)
+                .map((packSlip) => ({
+                  value: packSlip.id?.toString() || '',
+                  label: `${packSlip.packSlipNumber} - ${packSlip.warehouseName || 'Unknown Warehouse'}`,
+                }))}
+              placeholder={packSlips.length === 0 ? 'No pack slips available' : 'Select a pack slip (optional)...'}
+            />
+          </div>
+
+          {/* Carrier and Service */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Carrier *
+              </label>
+              <CustomSelect
+                value={carrier}
+                onChange={(value) => setCarrier(value as 'FEDEX' | 'UPS' | 'DHL' | 'USPS' | 'OTHER')}
+                options={[
+                  { value: 'FEDEX', label: 'FedEx' },
+                  { value: 'UPS', label: 'UPS' },
+                  { value: 'DHL', label: 'DHL' },
+                  { value: 'USPS', label: 'USPS' },
+                  { value: 'OTHER', label: 'Other' },
+                ]}
+                placeholder="Select carrier..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Service Type
+              </label>
+              <input
+                type="text"
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+                placeholder="e.g., Ground, Express, Overnight"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Tracking Number */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tracking Number
+            </label>
+            <input
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="Enter tracking number (optional)"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Weight and Dimensions */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="Weight"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Length (cm)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                placeholder="Length"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Width (cm)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={width}
+                onChange={(e) => setWidth(e.target.value)}
+                placeholder="Width"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Height (cm)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="Height"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* From Address */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">From Address *</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                <input
+                  type="text"
+                  value={fromName}
+                  onChange={(e) => setFromName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address *</label>
+                <input
+                  type="text"
+                  value={fromAddress}
+                  onChange={(e) => setFromAddress(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City *</label>
+                <input
+                  type="text"
+                  value={fromCity}
+                  onChange={(e) => setFromCity(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
+                <input
+                  type="text"
+                  value={fromState}
+                  onChange={(e) => setFromState(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postal Code *</label>
+                <input
+                  type="text"
+                  value={fromPostalCode}
+                  onChange={(e) => setFromPostalCode(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country *</label>
+                <input
+                  type="text"
+                  value={fromCountry}
+                  onChange={(e) => setFromCountry(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* To Address */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">To Address *</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                <input
+                  type="text"
+                  value={toName}
+                  onChange={(e) => setToName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address *</label>
+                <input
+                  type="text"
+                  value={toAddress}
+                  onChange={(e) => setToAddress(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City *</label>
+                <input
+                  type="text"
+                  value={toCity}
+                  onChange={(e) => setToCity(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
+                <input
+                  type="text"
+                  value={toState}
+                  onChange={(e) => setToState(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postal Code *</label>
+                <input
+                  type="text"
+                  value={toPostalCode}
+                  onChange={(e) => setToPostalCode(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country *</label>
+                <input
+                  type="text"
+                  value={toCountry}
+                  onChange={(e) => setToCountry(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Create Shipping Label
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

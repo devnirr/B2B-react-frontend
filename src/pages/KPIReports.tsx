@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Download, Calendar, Filter, ChevronDown } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -252,6 +253,99 @@ export default function KPIReports() {
     }
   };
 
+  const formatValueForExport = (value: number, format: string) => {
+    switch (format) {
+      case 'currency':
+        return value.toFixed(2);
+      case 'percentage':
+        return value.toFixed(2);
+      default:
+        return value.toString();
+    }
+  };
+
+  const handleExportReport = () => {
+    try {
+      // Get date range label
+      const dateRangeLabel = 
+        dateRange === '7d' ? 'Last 7 Days' :
+        dateRange === '30d' ? 'Last 30 Days' :
+        dateRange === '90d' ? 'Last 90 Days' :
+        dateRange === '1y' ? 'Last Year' :
+        'All Time';
+
+      // Build CSV content
+      const csvRows: string[] = [];
+      
+      // Header section
+      csvRows.push('KPI Reports Export');
+      csvRows.push(`Date Range: ${dateRangeLabel}`);
+      csvRows.push(`Export Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+      csvRows.push(`Period: ${startDate} to ${endDate}`);
+      csvRows.push(''); // Empty row
+      
+      // KPI Summary section
+      csvRows.push('KPI Summary');
+      csvRows.push(['KPI', 'Current Value', 'Growth (%)', 'Status'].join(','));
+      
+      Object.entries(kpis).forEach(([key, kpi]) => {
+        const status = kpi.growth > 0 ? 'Positive' : kpi.growth < 0 ? 'Negative' : 'Stable';
+        const growthValue = kpi.growth !== 0 ? kpi.growth.toFixed(2) : '-';
+        csvRows.push([
+          kpi.label,
+          formatValueForExport(kpi.value, kpi.format),
+          growthValue,
+          status,
+        ].join(','));
+      });
+      
+      csvRows.push(''); // Empty row
+      
+      // Monthly Trends section
+      if (selectedKPIs.length > 0 && monthlyTrends.categories.length > 0) {
+        csvRows.push('Monthly Trends');
+        const headerRow = ['Month', ...selectedKPIs.map(kpi => kpis[kpi as keyof typeof kpis]?.label || kpi)].join(',');
+        csvRows.push(headerRow);
+        
+        monthlyTrends.categories.forEach((month, index) => {
+          const rowData = [month];
+          selectedKPIs.forEach(kpi => {
+            let value = 0;
+            if (kpi === 'revenue') {
+              value = monthlyTrends.revenue[index] || 0;
+            } else if (kpi === 'orders') {
+              value = monthlyTrends.orders[index] || 0;
+            } else if (kpi === 'customers') {
+              value = monthlyTrends.customers[index] || 0;
+            } else {
+              // For other KPIs, use revenue as default or calculate if needed
+              value = monthlyTrends.revenue[index] || 0;
+            }
+            rowData.push(formatValueForExport(value, kpis[kpi as keyof typeof kpis]?.format || 'number'));
+          });
+          csvRows.push(rowData.join(','));
+        });
+      }
+      
+      // Create and download CSV
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `kpi-report-${dateRangeLabel.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('KPI report exported successfully!');
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Failed to export report');
+    }
+  };
+
   // Chart configuration
   const kpiChartConfig = {
     series: selectedKPIs.map(kpi => ({
@@ -415,7 +509,10 @@ export default function KPIReports() {
                 </div>
               )}
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+            <button 
+              onClick={handleExportReport}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
               <Download className="w-5 h-5" />
               Export Report
             </button>

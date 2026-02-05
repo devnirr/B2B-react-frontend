@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Package, Plus, X, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox } from 'lucide-react';
+import { Package, Plus, X, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, AlertTriangle, Upload, Inbox, Eye, ChevronLeft } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { generateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
@@ -122,8 +122,8 @@ const CustomSelect = ({
                   onClick={() => handleSelect(option.value)}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${isSelected || isHighlighted
-                      ? 'bg-primary-500 text-white'
-                      : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                     } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
                   style={{
                     fontSize: '0.875rem',
@@ -211,6 +211,8 @@ export default function Products() {
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'table' | 'variants'>('table'); // Default: table view
   const [activeTab, setActiveTab] = useState<'products' | 'attributes' | 'bundles'>('products'); // Tab state for Catalog sections
@@ -221,7 +223,7 @@ export default function Products() {
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
-    if (isModalOpen || isEditModalOpen || isDeleteModalOpen) {
+    if (isModalOpen || isEditModalOpen || isDeleteModalOpen || isViewModalOpen) {
       document.body.classList.add('modal-open');
       // Trigger show animation after a brief delay
       requestAnimationFrame(() => {
@@ -229,6 +231,7 @@ export default function Products() {
           if (isModalOpen) setIsModalShowing(true);
           if (isEditModalOpen) setIsEditModalShowing(true);
           if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+          if (isViewModalOpen) setIsViewModalShowing(true);
         });
       });
     } else {
@@ -236,8 +239,9 @@ export default function Products() {
       setIsModalShowing(false);
       setIsEditModalShowing(false);
       setIsDeleteModalShowing(false);
+      setIsViewModalShowing(false);
     }
-  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
+  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isViewModalOpen]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', page],
@@ -447,6 +451,14 @@ export default function Products() {
     }, 300);
   };
 
+  const closeViewModal = () => {
+    setIsViewModalShowing(false);
+    setTimeout(() => {
+      setIsViewModalOpen(false);
+      setSelectedProduct(null);
+    }, 300);
+  };
+
   if (isLoading) {
     return <SkeletonPage />;
   }
@@ -468,31 +480,28 @@ export default function Products() {
         <nav className="flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('products')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'products'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
           >
             Products (Variants)
           </button>
           <button
             onClick={() => setActiveTab('attributes')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'attributes'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'attributes'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
           >
             Attributes & Taxonomy
           </button>
           <button
             onClick={() => setActiveTab('bundles')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'bundles'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'bundles'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
           >
             Bundles & Kits
           </button>
@@ -507,21 +516,19 @@ export default function Products() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${viewMode === 'table'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 Table View
               </button>
               <button
                 onClick={() => setViewMode('variants')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  viewMode === 'variants'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${viewMode === 'variants'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 Variant View (Style → Color → Size)
               </button>
@@ -553,10 +560,10 @@ export default function Products() {
                 {variantGroups.map((styleGroup, styleIdx) => {
                   const styleKey = styleGroup.style;
                   const isExpanded = expandedStyles.has(styleKey);
-                  
+
                   return (
                     <div key={styleIdx} className="mb-8 last:mb-0">
-                      <h3 
+                      <h3
                         onClick={() => {
                           const newExpanded = new Set(expandedStyles);
                           if (newExpanded.has(styleKey)) {
@@ -578,10 +585,10 @@ export default function Products() {
                       {isExpanded && Object.values(styleGroup.colors).map((colorGroup, colorIdx) => {
                         const colorKey = `${styleKey}-${colorGroup.color}`;
                         const isColorExpanded = expandedColors.has(colorKey);
-                        
+
                         return (
                           <div key={colorIdx} className="ml-4 mb-6">
-                            <h4 
+                            <h4
                               onClick={() => {
                                 const newExpanded = new Set(expandedColors);
                                 if (newExpanded.has(colorKey)) {
@@ -603,10 +610,10 @@ export default function Products() {
                             {isColorExpanded && Object.values(colorGroup.sizes).map((sizeGroup, sizeIdx) => {
                               const sizeKey = `${colorKey}-${sizeGroup.size}`;
                               const isSizeExpanded = expandedSizes.has(sizeKey);
-                              
+
                               return (
                                 <div key={sizeIdx} className="ml-4 mb-4">
-                                  <h5 
+                                  <h5
                                     onClick={() => {
                                       const newExpanded = new Set(expandedSizes);
                                       if (newExpanded.has(sizeKey)) {
@@ -628,46 +635,46 @@ export default function Products() {
                                   {isSizeExpanded && (
                                     <div className="ml-4 space-y-2">
                                       {sizeGroup.variants.map((variant: any) => (
-                                <div
-                                  key={variant.variantKey}
-                                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                >
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {variant.name}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        SKU: {variant.sku}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        Collection: {variant.collection?.name || '-'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedProduct(variant);
-                                        setIsEditModalOpen(true);
-                                      }}
-                                      className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                                      title="Edit"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedProduct(variant);
-                                        setIsDeleteModalOpen(true);
-                                      }}
-                                      className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
+                                        <div
+                                          key={variant.variantKey}
+                                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                        >
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-3">
+                                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {variant.name}
+                                              </span>
+                                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                SKU: {variant.sku}
+                                              </span>
+                                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                Collection: {variant.collection?.name || '-'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setSelectedProduct(variant);
+                                                setIsEditModalOpen(true);
+                                              }}
+                                              className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                                              title="Edit"
+                                            >
+                                              <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedProduct(variant);
+                                                setIsDeleteModalOpen(true);
+                                              }}
+                                              className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                              title="Delete"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          </div>
+                                        </div>
                                       ))}
                                     </div>
                                   )}
@@ -677,8 +684,8 @@ export default function Products() {
                           </div>
                         );
                       })}
-                  </div>
-                );
+                    </div>
+                  );
                 })}
               </div>
             )
@@ -686,80 +693,173 @@ export default function Products() {
             /* Table View */
             !data?.data || data.data.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-              <Package className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No catalogs found</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
-              Get started by adding your first product to the inventory.
-            </p>
-            <ButtonWithWaves onClick={openModal}>
-              <Plus className="w-5 h-5" />
-              Add Catalog
-            </ButtonWithWaves>
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Collection</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Sizes</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Colors</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {data.data.map((product: any) => (
-                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {product.sku}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {product.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {product.collection?.name || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {product.sizes?.join(', ') || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                    {product.colors?.join(', ') || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="p-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <Package className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No catalogs found</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
+                  Get started by adding your first product to the inventory.
+                </p>
+                <ButtonWithWaves onClick={openModal}>
+                  <Plus className="w-5 h-5" />
+                  Add Catalog
+                </ButtonWithWaves>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-5">
+                {data.data.map((product: any) => (
+                  <div
+                    key={product.id}
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow group"
+                  >
+                    {/* Product Image */}
+                    <div className="relative aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                      {product.images && product.images.length > 0 ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                        </div>
+                      )}
+                      {/* Action buttons overlay */}
+                      <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setIsViewModalOpen(true);
+                          }}
+                          className="p-2 bg-white dark:bg-gray-800 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 rounded-lg shadow-md hover:shadow-lg transition-all"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-2 bg-white dark:bg-gray-800 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 rounded-lg shadow-md hover:shadow-lg transition-all"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-2 bg-white dark:bg-gray-800 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-lg shadow-md hover:shadow-lg transition-all"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {/* Image count badge */}
+                      {product.images && product.images.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                          +{product.images.length - 1}
+                        </div>
+                      )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )
+
+                    {/* Product Info */}
+                    <div className="p-4">
+                      <div className="mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">
+                          Name: {product.name}
+                        </h3>
+                      </div>
+
+                      <div className="mb-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">SKU: {product.sku}</p>
+
+                        {/* Collection */}
+                        {product.collection?.name && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">Collection:</span>
+                            <span className="text-xs font-medium text-gray-900 dark:text-white ml-1">
+                              {product.collection.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* EAN */}
+                      {product.ean && (
+                        <div className="mb-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">EAN: {product.ean}</p>
+                        </div>
+                      )}
+
+                      {/* Sizes and Colors */}
+                      <div className="space-y-1.5">
+                        {product.sizes && product.sizes.length > 0 && (
+                          <div className="flex items-start gap-1 flex-wrap">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Sizes:</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {product.sizes.map((size: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                >
+                                  {size}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {product.colors && product.colors.length > 0 && (
+                          <div className="flex items-start gap-1 flex-wrap">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Colors:</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {product.colors.map((color: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                >
+                                  {color}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Materials */}
+                        {product.materials && (
+                          <div className="flex items-start gap-1 flex-wrap">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">Materials:</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {Array.isArray(product.materials) ? (
+                                product.materials.map((material: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                  >
+                                    {material}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                                  {product.materials}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
-          
-          {/* Pagination - Only show in table view */}
+
+          {/* Pagination */}
           {viewMode === 'table' && data?.data && data.data.length > 0 && (
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
               <div className="text-sm text-gray-600 dark:text-white">
@@ -949,6 +1049,15 @@ export default function Products() {
           isShowing={isDeleteModalShowing}
         />
       )}
+
+      {/* View Product Modal */}
+      {isViewModalOpen && selectedProduct && (
+        <ViewProductModal
+          product={selectedProduct}
+          onClose={closeViewModal}
+          isShowing={isViewModalShowing}
+        />
+      )}
     </div>
   );
 }
@@ -1120,7 +1229,7 @@ function AddProductModal({
       setSizesInputValue('');
       setShowSizesSuggestions(false);
       setSizesSuggestions([]);
-      
+
       // Update form data with comma-separated string
       handleChange('sizes', newSizes.join(', '));
     }
@@ -1135,10 +1244,10 @@ function AddProductModal({
   const handleRemoveSize = (sizeToRemove: string) => {
     const newSizes = selectedSizes.filter(size => size !== sizeToRemove);
     setSelectedSizes(newSizes);
-    
+
     // Update form data with comma-separated string
     handleChange('sizes', newSizes.join(', '));
-    
+
     // Focus back on input
     if (sizesInputRef.current) {
       sizesInputRef.current.focus();
@@ -1188,7 +1297,7 @@ function AddProductModal({
       setColorsInputValue('');
       setShowColorsSuggestions(false);
       setColorsSuggestions([]);
-      
+
       // Update form data with comma-separated string
       handleChange('colors', newColors.join(', '));
     }
@@ -1203,10 +1312,10 @@ function AddProductModal({
   const handleRemoveColor = (colorToRemove: string) => {
     const newColors = selectedColors.filter(color => color !== colorToRemove);
     setSelectedColors(newColors);
-    
+
     // Update form data with comma-separated string
     handleChange('colors', newColors.join(', '));
-    
+
     // Focus back on input
     if (colorsInputRef.current) {
       colorsInputRef.current.focus();
@@ -1256,7 +1365,7 @@ function AddProductModal({
       setMaterialsInputValue('');
       setShowMaterialsSuggestions(false);
       setMaterialsSuggestions([]);
-      
+
       // Update form data with comma-separated string
       handleChange('materials', newMaterials.join(', '));
     }
@@ -1271,10 +1380,10 @@ function AddProductModal({
   const handleRemoveMaterial = (materialToRemove: string) => {
     const newMaterials = selectedMaterials.filter(material => material !== materialToRemove);
     setSelectedMaterials(newMaterials);
-    
+
     // Update form data with comma-separated string
     handleChange('materials', newMaterials.join(', '));
-    
+
     // Focus back on input
     if (materialsInputRef.current) {
       materialsInputRef.current.focus();
@@ -1596,16 +1705,15 @@ function AddProductModal({
                         Sizes <span className="text-red-500">*</span>
                       </label>
                       <div
-                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
-                          errors.sizes ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.sizes ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         onClick={() => sizesInputRef.current?.focus()}
                       >
                         {/* Size Tags */}
                         {selectedSizes.map((size, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
                           >
                             {size}
                             <button
@@ -1621,7 +1729,7 @@ function AddProductModal({
                             </button>
                           </span>
                         ))}
-                        
+
                         {/* Input Field */}
                         <input
                           ref={sizesInputRef}
@@ -1673,16 +1781,15 @@ function AddProductModal({
                         Colors <span className="text-red-500">*</span>
                       </label>
                       <div
-                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
-                          errors.colors ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.colors ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         onClick={() => colorsInputRef.current?.focus()}
                       >
                         {/* Color Tags */}
                         {selectedColors.map((color, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
                           >
                             {color}
                             <button
@@ -1698,7 +1805,7 @@ function AddProductModal({
                             </button>
                           </span>
                         ))}
-                        
+
                         {/* Input Field */}
                         <input
                           ref={colorsInputRef}
@@ -1750,16 +1857,15 @@ function AddProductModal({
                         Materials <span className="text-red-500">*</span>
                       </label>
                       <div
-                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${
-                          errors.materials ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`min-h-[42px] w-full px-2 py-1 border rounded-lg focus-within:ring-2 focus-within:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 flex flex-wrap items-center gap-2 ${errors.materials ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         onClick={() => materialsInputRef.current?.focus()}
                       >
                         {/* Material Tags */}
                         {selectedMaterials.map((material, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-md text-sm font-medium"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-md text-sm font-medium"
                           >
                             {material}
                             <button
@@ -1775,7 +1881,7 @@ function AddProductModal({
                             </button>
                           </span>
                         ))}
-                        
+
                         {/* Input Field */}
                         <input
                           ref={materialsInputRef}
@@ -1874,9 +1980,8 @@ function AddProductModal({
                             });
                           }
                         }}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                          errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}
                         placeholder="Enter EAN (13 digits)"
                         maxLength={13}
                       />
@@ -2550,9 +2655,8 @@ function EditProductModal({
                           });
                         }
                       }}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${
-                        errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.ean ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                       placeholder="Enter EAN (13 digits)"
                       maxLength={13}
                     />
@@ -3561,6 +3665,333 @@ function BundleModal({ bundle, products, onClose, onSave }: {
         </div>
       </div>
     </div>
+  );
+}
+
+// View Product Modal Component
+function ViewProductModal({
+  product,
+  onClose,
+  isShowing,
+}: {
+  product: any;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const images = product.images || [];
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Scroll active thumbnail into view
+  useEffect(() => {
+    if (thumbnailRefs.current[currentImageIndex] && thumbnailContainerRef.current) {
+      const thumbnail = thumbnailRefs.current[currentImageIndex];
+      const container = thumbnailContainerRef.current;
+      
+      if (thumbnail) {
+        const containerRect = container.getBoundingClientRect();
+        const thumbnailRect = thumbnail.getBoundingClientRect();
+        
+        // Check if thumbnail is not fully visible
+        const isVisible = 
+          thumbnailRect.left >= containerRect.left &&
+          thumbnailRect.right <= containerRect.right;
+        
+        if (!isVisible) {
+          thumbnail.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center',
+          });
+        }
+      }
+    }
+  }, [currentImageIndex, images.length]);
+
+  useEffect(() => {
+    if (isShowing) {
+      setCurrentImageIndex(0);
+      // Reset thumbnail refs array
+      thumbnailRefs.current = [];
+    }
+  }, [isShowing]);
+
+  return (
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={handleBackdropClick}
+      />
+
+      {/* Modal */}
+      <div
+        ref={modalRef}
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="viewProductModalLabel"
+        tabIndex={-1}
+        style={{ zIndex: 1050 }}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '1100px' }}
+        >
+          <div className="modal-content w-full flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="modal-header border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6 py-4">
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xl font-semibold text-gray-900 dark:text-white">
+                  View Product
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="modal-body p-0 overflow-hidden" style={{ maxHeight: '85vh' }}>
+              <div className="flex flex-col lg:flex-row h-full">
+                {/* Left Side - Images */}
+                <div className="lg:w-1/2 p-6 bg-gray-50 dark:bg-gray-900/50 border-r border-gray-200 dark:border-gray-700">
+                  {images.length > 0 ? (
+                    <div className="sticky top-6">
+                      {/* Main Image Slider */}
+                      <div className="relative w-full aspect-square bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <img
+                          src={images[currentImageIndex]}
+                          alt={`Product image ${currentImageIndex + 1}`}
+                          className="w-full h-full object-contain transition-opacity duration-300"
+                        />
+
+                        {/* Navigation Arrows */}
+                        {images.length > 1 && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                prevImage();
+                              }}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/95 dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-xl transition-all z-10 backdrop-blur-sm border border-gray-200 dark:border-gray-700"
+                              aria-label="Previous image"
+                            >
+                              <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                nextImage();
+                              }}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/95 dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-xl transition-all z-10 backdrop-blur-sm border border-gray-200 dark:border-gray-700"
+                              aria-label="Next image"
+                            >
+                              <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Image Counter */}
+                        {images.length > 1 && (
+                          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                            {currentImageIndex + 1} / {images.length}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Thumbnail Navigation */}
+                      {images.length > 1 && (
+                        <div 
+                          ref={thumbnailContainerRef}
+                          className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+                        >
+                          {images.map((image: string, index: number) => (
+                            <button
+                              key={index}
+                              ref={(el) => {
+                                thumbnailRefs.current[index] = el;
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goToImage(index);
+                              }}
+                              className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex
+                                ? 'border-primary-500 dark:border-primary-400 ring-2 ring-primary-500/30 shadow-md scale-105'
+                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 opacity-70 hover:opacity-100'
+                                }`}
+                            >
+                              <img
+                                src={image}
+                                alt={`Thumbnail ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-square bg-white dark:bg-gray-800 rounded-xl shadow-lg flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                      <div className="text-center">
+                        <Package className="w-20 h-20 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                        <p className="text-sm text-gray-400 dark:text-gray-500">No images available</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Side - Product Details */}
+                <div className="lg:w-1/2 ml-5 overflow-y-auto" style={{ maxHeight: '85vh' }}>
+                  <div className="space-y-6">
+                    {/* Basic Information Card */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <h6 className="text-base font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                        Basic Information
+                      </h6>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Name</label>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{product.name || '-'}</p>
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">SKU</label>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white font-mono">{product.sku || '-'}</p>
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">EAN</label>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white font-mono">{product.ean || '-'}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mt-5">
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Style</label>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{product.style || '-'}</p>
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Collection</label>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{product.collection?.name || '-'}</p>
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Base Price</label>
+                          <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                            {product.basePrice ? `$${Number(product.basePrice).toFixed(2)}` : '-'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Attributes Card */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <h6 className="text-base font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                        Attributes
+                      </h6>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Sizes</label>
+                          <div className="flex flex-wrap gap-2">
+                            {product.sizes && product.sizes.length > 0 ? (
+                              product.sizes.map((size: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg border border-primary-200 dark:border-primary-800"
+                                >
+                                  {size}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-gray-400 dark:text-gray-500 italic">No sizes available</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Colors</label>
+                          <div className="flex flex-wrap gap-2">
+                            {product.colors && product.colors.length > 0 ? (
+                              product.colors.map((color: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-800"
+                                >
+                                  {color}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-gray-400 dark:text-gray-500 italic">No colors available</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Materials</label>
+                          <div className="flex flex-wrap gap-2">
+                            {product.materials ? (
+                              Array.isArray(product.materials) ? (
+                                product.materials.map((material: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-800"
+                                  >
+                                    {material}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-800">
+                                  {product.materials}
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-sm text-gray-400 dark:text-gray-500 italic">No materials available</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description Card */}
+                    {product.description && (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h6 className="text-base font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                          Description
+                        </h6>
+                        <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{product.description}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div >
+    </>
   );
 }
 
