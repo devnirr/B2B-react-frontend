@@ -105,6 +105,21 @@ const navbarLabels: Record<string, string> = {
   dashboard: 'DASHBOARDS',
 };
 
+// Navbar category icons (matching Layout.tsx)
+const navbarIcons: Record<string, string> = {
+  dashboards: 'fi fi-rr-house-blank',
+  product: 'fi fi-rr-box',
+  sales: 'fi fi-rr-shopping-cart',
+  marketing: 'fi fi-rr-chart-histogram',
+  'customer-experience': 'fi fi-rr-users',
+  operations: 'fi fi-rr-warehouse-alt',
+  'planning-intelligence': 'fi fi-rr-brain',
+  finance: 'fi fi-rr-dollar',
+  admin: 'fi fi-rr-settings',
+  // Legacy
+  dashboard: 'fi fi-rr-house-blank',
+};
+
 export default function Breadcrumb({ currentPage }: BreadcrumbProps) {
   const location = useLocation();
 
@@ -118,6 +133,7 @@ export default function Breadcrumb({ currentPage }: BreadcrumbProps) {
       if (item) {
         return {
           category: navbarLabels[category] || category.toUpperCase(),
+          categoryId: category,
           page: item.label,
         };
       }
@@ -126,18 +142,23 @@ export default function Breadcrumb({ currentPage }: BreadcrumbProps) {
     // Fallback: use currentPage if provided, or extract from path
     return {
       category: null,
+      categoryId: null,
       page: currentPage || path.split('/').pop()?.replace(/-/g, ' ') || 'Page',
     };
   };
 
-  const { category, page } = findBreadcrumbPath();
+  const { category, categoryId, page } = findBreadcrumbPath();
+  const navbarIcon = categoryId ? navbarIcons[categoryId] : null;
 
   return (
     <nav aria-label="breadcrumb" className="mb-4">
       <ol className="breadcrumb mb-0 flex items-center gap-2 text-sm">
         {category ? (
           <>
-            <li className="breadcrumb-item">
+            <li className="breadcrumb-item flex items-center gap-2">
+              {navbarIcon && (
+                <i className={`${navbarIcon} text-gray-600 dark:text-gray-400`} style={{ fontSize: '16px' }}></i>
+              )}
               <span className="text-gray-600 dark:text-gray-400">{category}</span>
             </li>
             <li className="breadcrumb-item text-gray-400 dark:text-gray-500">/</li>
@@ -152,8 +173,8 @@ export default function Breadcrumb({ currentPage }: BreadcrumbProps) {
                 to="/dashboard" 
                 className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
               >
-                <i className="fi fi-rr-home text-xs"></i>
-                <span>Home</span>
+                <i className="fi fi-rr-house-blank text-gray-600 dark:text-gray-400"></i>
+                <span className="text-gray-600 dark:text-gray-400">Home</span>
               </Link>
             </li>
             <li className="breadcrumb-item text-gray-400 dark:text-gray-500">/</li>

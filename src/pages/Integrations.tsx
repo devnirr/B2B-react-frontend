@@ -22,6 +22,8 @@ import {
   RefreshCw,
   Trash2,
   Copy,
+  Pencil,
+  AlertTriangle,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -102,8 +104,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center justify-between cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${isOpen
-            ? 'border-primary-500 ring-2 ring-primary-500/20'
-            : 'hover:border-gray-400 dark:hover:border-gray-500'
+          ? 'border-primary-500 ring-2 ring-primary-500/20'
+          : 'hover:border-gray-400 dark:hover:border-gray-500'
           }`}
       >
         <span>{selectedOption?.label || placeholder || 'Select...'}</span>
@@ -124,8 +126,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${option.value === value
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
             >
               {option.label}
@@ -170,8 +172,8 @@ export default function Integrations() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -640,7 +642,7 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Main Shopify Store"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -812,7 +814,8 @@ function ChannelDetailsModal({ channel, onClose, onUpdate, onDelete }: ChannelDe
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., Main Shopify Store"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -948,8 +951,11 @@ function ChannelDetailsModal({ channel, onClose, onUpdate, onDelete }: ChannelDe
 function ApiKeysWebhooksSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [keyToEdit, setKeyToEdit] = useState<ApiKey | null>(null);
+  const [keyToView, setKeyToView] = useState<ApiKey | null>(null);
+  const [keyToDelete, setKeyToDelete] = useState<ApiKey | null>(null);
+  const [isDeleteKeyModalShowing, setIsDeleteKeyModalShowing] = useState(false);
 
   // Load API keys from localStorage
   const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => {
@@ -1031,7 +1037,7 @@ function ApiKeysWebhooksSection() {
     const newKey: ApiKey = {
       id: Date.now(),
       ...keyData,
-      key: keyData.type === 'api-key' 
+      key: keyData.type === 'api-key'
         ? `api_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
         : `wh_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
       createdAt: new Date().toISOString(),
@@ -1053,6 +1059,14 @@ function ApiKeysWebhooksSection() {
   const handleDeleteKey = (keyId: string | number) => {
     setApiKeys(apiKeys.filter((key) => key.id !== keyId));
     toast.success('Key deleted successfully!');
+    setIsDeleteKeyModalShowing(false);
+    setKeyToDelete(null);
+  };
+
+  const handleConfirmDeleteKey = () => {
+    if (keyToDelete) {
+      handleDeleteKey(keyToDelete.id);
+    }
   };
 
   const handleCopyKey = (key: string) => {
@@ -1131,7 +1145,7 @@ function ApiKeysWebhooksSection() {
               placeholder="Search by name, description, or key..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -1149,9 +1163,9 @@ function ApiKeysWebhooksSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Key
             </button>
           </div>
@@ -1204,8 +1218,7 @@ function ApiKeysWebhooksSection() {
                 filteredKeys.map((key) => (
                   <tr
                     key={key.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                    onClick={() => setSelectedKey(key)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -1220,11 +1233,10 @@ function ApiKeysWebhooksSection() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        key.type === 'api-key'
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${key.type === 'api-key'
                           ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                           : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                      }`}>
+                        }`}>
                         {key.type === 'api-key' ? 'API Key' : 'Webhook'}
                       </span>
                     </td>
@@ -1257,11 +1269,10 @@ function ApiKeysWebhooksSection() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        key.isActive
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${key.isActive
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                           : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                        }`}>
                         {key.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -1270,18 +1281,31 @@ function ApiKeysWebhooksSection() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedKey(key);
+                            setKeyToView(key);
                           }}
                           className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                          title="View"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteKey(key.id);
+                            setKeyToEdit(key);
+                          }}
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setKeyToDelete(key);
+                            setIsDeleteKeyModalShowing(true);
                           }}
                           className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1303,15 +1327,36 @@ function ApiKeysWebhooksSection() {
         />
       )}
 
-      {/* API Key Details Modal */}
-      {selectedKey && (
-        <ApiKeyDetailsModal
-          key={selectedKey.id}
-          apiKey={selectedKey}
-          onClose={() => setSelectedKey(null)}
-          onUpdate={handleUpdateKey}
-          onDelete={handleDeleteKey}
+      {/* API Key View Modal */}
+      {keyToView && (
+        <ApiKeyViewModal
+          apiKey={keyToView}
+          onClose={() => setKeyToView(null)}
           onCopy={handleCopyKey}
+        />
+      )}
+
+      {/* API Key Edit Modal */}
+      {keyToEdit && (
+        <ApiKeyEditModal
+          key={keyToEdit.id}
+          apiKey={keyToEdit}
+          onClose={() => setKeyToEdit(null)}
+          onUpdate={handleUpdateKey}
+          onCopy={handleCopyKey}
+        />
+      )}
+
+      {/* Delete API Key Modal */}
+      {keyToDelete && (
+        <DeleteApiKeyModal
+          apiKey={keyToDelete}
+          onClose={() => {
+            setIsDeleteKeyModalShowing(false);
+            setKeyToDelete(null);
+          }}
+          onConfirm={handleConfirmDeleteKey}
+          isShowing={isDeleteKeyModalShowing}
         />
       )}
     </div>
@@ -1370,10 +1415,10 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New {type === 'api-key' ? 'API Key' : 'Webhook'}</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New {type === 'api-key' ? 'API Key' : 'Webhook'}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
@@ -1389,7 +1434,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Shopify API Key"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -1436,7 +1481,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the purpose of this key or webhook..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1444,7 +1489,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
               Permissions
             </label>
-            <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
+            <div className="max-h-55 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 text-[14px] grid grid-cols-2">
               {availablePermissions.map((permission) => (
                 <label
                   key={permission}
@@ -1467,7 +1512,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
             </p>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               type="button"
               onClick={onClose}
@@ -1477,7 +1522,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="px-4 py-2 text-[14px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               Create {type === 'api-key' ? 'API Key' : 'Webhook'}
             </button>
@@ -1488,16 +1533,175 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
   );
 }
 
-// API Key Details Modal
-interface ApiKeyDetailsModalProps {
+// API Key View Modal (Read-only)
+interface ApiKeyViewModalProps {
   apiKey: ApiKey;
   onClose: () => void;
-  onUpdate: (keyId: string | number, updates: any) => void;
-  onDelete: (keyId: string | number) => void;
   onCopy: (key: string) => void;
 }
 
-function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: ApiKeyDetailsModalProps) {
+function ApiKeyViewModal({ apiKey, onClose, onCopy }: ApiKeyViewModalProps) {
+  const [showKey, setShowKey] = useState(false);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">{apiKey.type === 'api-key' ? 'API Key' : 'Webhook'} Details</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{apiKey.name}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Name
+              </label>
+              <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white">
+                {apiKey.name}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {apiKey.type === 'api-key' ? 'API Key' : 'Webhook URL'}
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono text-gray-900 dark:text-white">
+                  {showKey ? apiKey.key : '••••••••••••••••••••'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCopy(apiKey.key)}
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Description
+            </label>
+            <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white min-h-[80px]">
+              {apiKey.description || 'No description'}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Type
+            </label>
+            <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white">
+              {apiKey.type === 'api-key' ? 'API Key' : 'Webhook'}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Permissions
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {apiKey.permissions.length > 0 ? (
+                apiKey.permissions.map((permission) => (
+                  <span
+                    key={permission}
+                    className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg text-sm"
+                  >
+                    {permission.replace(/_/g, ' ')}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-gray-500 dark:text-gray-400">No permissions</span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status
+              </label>
+              <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px]">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  apiKey.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                }`}>
+                  {apiKey.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            {apiKey.lastUsed && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Last Used
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white">
+                  {new Date(apiKey.lastUsed).toLocaleString()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {apiKey.expiresAt && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Expires At
+              </label>
+              <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white">
+                {new Date(apiKey.expiresAt).toLocaleString()}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 px-6 pb-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[14px] text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// API Key Edit Modal
+interface ApiKeyEditModalProps {
+  apiKey: ApiKey;
+  onClose: () => void;
+  onUpdate: (keyId: string | number, updates: any) => void;
+  onCopy: (key: string) => void;
+}
+
+function ApiKeyEditModal({ apiKey, onClose, onUpdate, onCopy }: ApiKeyEditModalProps) {
   const [name, setName] = useState(apiKey.name);
   const [description, setDescription] = useState(apiKey.description);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(apiKey.permissions);
@@ -1528,12 +1732,6 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this key?')) {
-      onDelete(apiKey.id);
-      onClose();
-    }
-  };
 
   return (
     <div
@@ -1546,52 +1744,55 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{apiKey.type === 'api-key' ? 'API Key' : 'Webhook'} Details</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">{apiKey.type === 'api-key' ? 'API Key' : 'Webhook'} Details</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{apiKey.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Main Shopify Store"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {apiKey.type === 'api-key' ? 'API Key' : 'Webhook URL'}
-            </label>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono text-gray-900 dark:text-white">
-                {showKey ? apiKey.key : '••••••••••••••••••••'}
-              </code>
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onCopy(apiKey.key)}
-                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {apiKey.type === 'api-key' ? 'API Key' : 'Webhook URL'}
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono text-gray-900 dark:text-white">
+                  {showKey ? apiKey.key : '••••••••••••••••••••'}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCopy(apiKey.key)}
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1603,7 +1804,8 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Describe the purpose of this key or webhook..."
             />
           </div>
 
@@ -1636,7 +1838,7 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
               Permissions
             </label>
-            <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
+            <div className="max-h-48 overflow-y-auto border grid grid-cols-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 text-[14px]">
               {availablePermissions.map((permission) => (
                 <label
                   key={permission}
@@ -1659,7 +1861,7 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
             </p>
           </div>
 
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 gap-10 text-[14px] grid grid-cols-2">
             {apiKey.lastUsed && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Last Used</span>
@@ -1692,13 +1894,7 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -1715,6 +1911,81 @@ function ApiKeyDetailsModal({ apiKey, onClose, onUpdate, onDelete, onCopy }: Api
         </div>
       </div>
     </div>
+  );
+}
+
+// Delete API Key Modal Component
+function DeleteApiKeyModal({
+  apiKey,
+  onClose,
+  onConfirm,
+  isShowing,
+}: {
+  apiKey: ApiKey;
+  onClose: () => void;
+  onConfirm: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteApiKeyModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            <div className="modal-body text-center py-8 px-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+              <h5 id="deleteApiKeyModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
+                Delete {apiKey.type === 'api-key' ? 'API Key' : 'Webhook'}
+              </h5>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{apiKey.name}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete {apiKey.type === 'api-key' ? 'API Key' : 'Webhook'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1924,7 +2195,7 @@ function SyncHealthSection() {
               placeholder="Search by channel name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -1953,9 +2224,9 @@ function SyncHealthSection() {
                 })));
                 toast.success('Sync health refreshed');
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <RefreshCw className="w-5 h-5" />
+              <RefreshCw className="w-4 h-4" />
               Refresh
             </button>
           </div>

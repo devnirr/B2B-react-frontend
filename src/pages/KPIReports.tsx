@@ -427,7 +427,7 @@ export default function KPIReports() {
             <div className="relative" ref={dateRangeRef}>
               <button
                 onClick={() => setIsDateRangeOpen(!isDateRangeOpen)}
-                className="flex items-center justify-between gap-2 px-4 py-2.5 min-w-[160px] border border-primary-500 dark:border-primary-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="flex items-center justify-between gap-2 px-4 py-2 min-w-[160px] border border-primary-500 dark:border-primary-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 <span className="text-sm font-medium">
                   {dateRange === '7d' ? 'Last 7 Days' :
@@ -440,7 +440,7 @@ export default function KPIReports() {
               </button>
               
               {isDateRangeOpen && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-[10001] overflow-hidden">
                   <button
                     onClick={() => {
                       setDateRange('7d');
@@ -449,7 +449,7 @@ export default function KPIReports() {
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
                       dateRange === '7d'
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     Last 7 Days
@@ -462,7 +462,7 @@ export default function KPIReports() {
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
                       dateRange === '30d'
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     Last 30 Days
@@ -475,7 +475,7 @@ export default function KPIReports() {
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
                       dateRange === '90d'
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     Last 90 Days
@@ -488,7 +488,7 @@ export default function KPIReports() {
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
                       dateRange === '1y'
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     Last Year
@@ -501,7 +501,7 @@ export default function KPIReports() {
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
                       dateRange === 'all'
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     All Time
@@ -511,9 +511,9 @@ export default function KPIReports() {
             </div>
             <button 
               onClick={handleExportReport}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4" />
               Export Report
             </button>
           </div>
@@ -576,7 +576,7 @@ export default function KPIReports() {
       {/* KPI Trends Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">KPI Trends</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">KPI Trends</h3>
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <Calendar className="w-4 h-4" />
             <span>Last 12 Months</span>
@@ -595,7 +595,7 @@ export default function KPIReports() {
       {/* Detailed KPI Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">KPI Details</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">KPI Details</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

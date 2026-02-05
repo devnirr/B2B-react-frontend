@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Search, Plus, Shield, Globe, X, Pencil, Trash2, Eye, ChevronDown, Inbox } from 'lucide-react';
+import { Search, Plus, Shield, Globe, X, Pencil, Trash2, Eye, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Calendar, Inbox } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -200,10 +200,41 @@ const CustomSelect = ({
 function DigitalProductPassportSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedPassport, setSelectedPassport] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsModalShowing(false);
+    }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsEditModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsEditModalShowing(false);
+    }
+  }, [isEditModalOpen]);
 
   // Fetch products for dropdown
   const { data: productsData } = useQuery({
@@ -260,9 +291,9 @@ function DigitalProductPassportSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header with Search and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex-1 relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -271,12 +302,12 @@ function DigitalProductPassportSection() {
               placeholder="Search passports..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Passport
@@ -295,15 +326,6 @@ function DigitalProductPassportSection() {
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
               {searchQuery ? 'Try adjusting your search criteria.' : 'Get started by adding your first Digital Product Passport.'}
             </p>
-            {!searchQuery && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Add Passport
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -383,15 +405,24 @@ function DigitalProductPassportSection() {
         </div>
       )}
 
-      {/* Add/Edit Modal - Placeholder for now */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
         <DPPModal
           products={productsData || []}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalShowing(false);
+            setTimeout(() => {
+              setIsModalOpen(false);
+            }, 300);
+          }}
           onSave={() => {
             queryClient.invalidateQueries({ queryKey: ['digital-product-passport'] });
-            setIsModalOpen(false);
+            setIsModalShowing(false);
+            setTimeout(() => {
+              setIsModalOpen(false);
+            }, 300);
           }}
+          isShowing={isModalShowing}
         />
       )}
 
@@ -400,14 +431,21 @@ function DigitalProductPassportSection() {
           passport={selectedPassport}
           products={productsData || []}
           onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedPassport(null);
+            setIsEditModalShowing(false);
+            setTimeout(() => {
+              setIsEditModalOpen(false);
+              setSelectedPassport(null);
+            }, 300);
           }}
           onSave={() => {
             queryClient.invalidateQueries({ queryKey: ['digital-product-passport'] });
-            setIsEditModalOpen(false);
-            setSelectedPassport(null);
+            setIsEditModalShowing(false);
+            setTimeout(() => {
+              setIsEditModalOpen(false);
+              setSelectedPassport(null);
+            }, 300);
           }}
+          isShowing={isEditModalShowing}
         />
       )}
 
@@ -455,8 +493,8 @@ function DigitalProductPassportSection() {
   );
 }
 
-// DPP Modal Component (simplified for now)
-function DPPModal({ passport, products, onClose, onSave }: { passport?: any; products: any[]; onClose: () => void; onSave: () => void }) {
+// DPP Modal Component
+function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport?: any; products: any[]; onClose: () => void; onSave: () => void; isShowing: boolean }) {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     productId: passport?.productId || '',
@@ -470,6 +508,174 @@ function DPPModal({ passport, products, onClose, onSave }: { passport?: any; pro
     recyclability: passport?.recyclability || '',
     repairability: passport?.repairability || '',
   });
+
+  // Calendar state for Production Date
+  const [isProductionCalendarOpen, setIsProductionCalendarOpen] = useState(false);
+  const [productionCalendarDate, setProductionCalendarDate] = useState(() => {
+    if (formData.productionDate) {
+      return new Date(formData.productionDate);
+    }
+    return new Date();
+  });
+  const [productionCalendarPosition, setProductionCalendarPosition] = useState({ top: 0, left: 0 });
+  const productionCalendarRef = useRef<HTMLDivElement>(null);
+  const productionCalendarButtonRef = useRef<HTMLDivElement>(null);
+
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigateProductionMonth = (direction: 'prev' | 'next') => {
+    setProductionCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const navigateProductionYear = (direction: 'prev' | 'next') => {
+    setProductionCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setFullYear(prev.getFullYear() - 1);
+      } else {
+        newDate.setFullYear(prev.getFullYear() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const handleProductionDateSelect = (day: number) => {
+    const selected = new Date(productionCalendarDate.getFullYear(), productionCalendarDate.getMonth(), day);
+    const formattedDate = selected.toISOString().split('T')[0];
+    setFormData({ ...formData, productionDate: formattedDate });
+    setIsProductionCalendarOpen(false);
+  };
+
+  const handleProductionClearDate = () => {
+    setFormData({ ...formData, productionDate: '' });
+    setIsProductionCalendarOpen(false);
+  };
+
+  const handleProductionToday = () => {
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    setFormData({ ...formData, productionDate: formattedDate });
+    setProductionCalendarDate(today);
+    setIsProductionCalendarOpen(false);
+  };
+
+  const isProductionSelected = (day: number) => {
+    if (!formData.productionDate) return false;
+    const selected = new Date(formData.productionDate);
+    return (
+      selected.getDate() === day &&
+      selected.getMonth() === productionCalendarDate.getMonth() &&
+      selected.getFullYear() === productionCalendarDate.getFullYear()
+    );
+  };
+
+  const isToday = (day: number, calendarDate: Date) => {
+    const today = new Date();
+    return (
+      today.getDate() === day &&
+      today.getMonth() === calendarDate.getMonth() &&
+      today.getFullYear() === calendarDate.getFullYear()
+    );
+  };
+
+  // Calculate calendar position
+  const calculateProductionCalendarPosition = () => {
+    if (productionCalendarButtonRef.current) {
+      const rect = productionCalendarButtonRef.current.getBoundingClientRect();
+      const calendarHeight = 400;
+      const calendarWidth = 320;
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+      
+      let top: number;
+      if (openUpward) {
+        top = Math.max(16, rect.top - calendarHeight - 4);
+      } else {
+        top = rect.bottom + 4;
+        if (top + calendarHeight > viewportHeight - 16) {
+          top = viewportHeight - calendarHeight - 16;
+        }
+      }
+      
+      // Align calendar to the left edge of the input field
+      let left = rect.left;
+      
+      // If calendar goes off the right edge, align to the right edge of the input
+      if (left + calendarWidth > viewportWidth - 16) {
+        left = rect.right - calendarWidth;
+      }
+      
+      // Ensure calendar doesn't go off the left edge
+      if (left < 16) {
+        left = 16;
+      }
+      
+      setProductionCalendarPosition({ top, left });
+    }
+  };
+
+  // Update calendar date when formData changes
+  useEffect(() => {
+    if (formData.productionDate) {
+      const date = new Date(formData.productionDate);
+      if (!isNaN(date.getTime())) {
+        setProductionCalendarDate(date);
+      }
+    }
+  }, [formData.productionDate]);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isProductionCalendarOpen) {
+        const target = event.target as Node;
+        const isClickInsideCalendar = productionCalendarRef.current?.contains(target);
+        const isClickInsideInput = productionCalendarButtonRef.current?.contains(target);
+        
+        if (!isClickInsideCalendar && !isClickInsideInput) {
+          setIsProductionCalendarOpen(false);
+        }
+      }
+    };
+
+    const handleResize = () => {
+      if (isProductionCalendarOpen) {
+        calculateProductionCalendarPosition();
+      }
+    };
+
+    if (isProductionCalendarOpen) {
+      calculateProductionCalendarPosition();
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('scroll', handleResize, true);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleResize, true);
+    };
+  }, [isProductionCalendarOpen]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -518,146 +724,340 @@ function DPPModal({ passport, products, onClose, onSave }: { passport?: any; pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {passport ? 'Edit' : 'Add'} Digital Product Passport
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <>
+      {/* Modal Backdrop */}
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '42rem' }}
+        >
+          <div className="modal-content w-full max-h-[90vh] flex flex-col" style={{ overflow: 'visible' }}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h5 className="modal-title text-[16px] font-semibold text-gray-900 dark:text-white">
+                {passport ? 'Edit' : 'Add'} Digital Product Passport
+              </h5>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product *</label>
+                    <CustomSelect
+                      value={formData.productId.toString()}
+                      onChange={(value) => setFormData({ ...formData, productId: value })}
+                      options={products.map((p) => ({ value: p.id.toString(), label: p.name }))}
+                      placeholder="Select product..."
+                      error={!formData.productId}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Passport ID</label>
+                      <input
+                        type="text"
+                        value={formData.passportId}
+                        onChange={(e) => setFormData({ ...formData, passportId: e.target.value })}
+                        placeholder="Enter passport ID"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country of Origin</label>
+                      <input
+                        type="text"
+                        value={formData.countryOfOrigin}
+                        onChange={(e) => setFormData({ ...formData, countryOfOrigin: e.target.value })}
+                        placeholder="Enter country of origin"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Manufacturer Name</label>
+                    <input
+                      type="text"
+                      value={formData.manufacturerName}
+                      onChange={(e) => setFormData({ ...formData, manufacturerName: e.target.value })}
+                      placeholder="Enter manufacturer name"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Manufacturer Address</label>
+                    <textarea
+                      value={formData.manufacturerAddress}
+                      onChange={(e) => setFormData({ ...formData, manufacturerAddress: e.target.value })}
+                      rows={2}
+                      placeholder="Enter manufacturer address"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Production Date</label>
+                      <div className="relative" ref={productionCalendarButtonRef}>
+                        <input
+                          type="text"
+                          value={formData.productionDate ? new Date(formData.productionDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : ''}
+                          onChange={(e) => {
+                            // Allow manual input but keep the date format
+                            const value = e.target.value;
+                            setFormData({ ...formData, productionDate: value });
+                          }}
+                          onClick={() => setIsProductionCalendarOpen(!isProductionCalendarOpen)}
+                          placeholder="mm/dd/yyyy"
+                          className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white cursor-pointer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsProductionCalendarOpen(!isProductionCalendarOpen)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
+                        >
+                          <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        </button>
+
+                        {isProductionCalendarOpen && (
+                          <>
+                            <div className="fixed inset-0 z-[10001]" onClick={() => setIsProductionCalendarOpen(false)} />
+                            <div 
+                              ref={productionCalendarRef}
+                              className="fixed w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 -mt-11 dark:border-gray-700" 
+                              style={{ 
+                                zIndex: 10002,
+                                top: `${productionCalendarPosition.top}px`,
+                                left: `${productionCalendarPosition.left}px`,
+                                maxHeight: '90vh',
+                                overflowY: 'auto'
+                              }}
+                            >
+                              {/* Calendar Header */}
+                              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center justify-between mb-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigateProductionMonth('prev')}
+                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                  >
+                                    <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                                      {productionCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                    </h3>
+                                    <div className="flex flex-col gap-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => navigateProductionYear('next')}
+                                        className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                      >
+                                        <ChevronUp className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => navigateProductionYear('prev')}
+                                        className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                      >
+                                        <ChevronDown className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigateProductionMonth('next')}
+                                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                  >
+                                    <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Calendar Days */}
+                              <div className="p-4">
+                                {/* Day names */}
+                                <div className="grid grid-cols-7 gap-1 mb-2">
+                                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                    <div
+                                      key={day}
+                                      className="text-center text-xs font-medium text-gray-600 dark:text-gray-400 py-1"
+                                    >
+                                      {day}
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Calendar grid */}
+                                <div className="grid grid-cols-7 gap-1">
+                                  {/* Empty cells for days before month starts */}
+                                  {Array.from({ length: getFirstDayOfMonth(productionCalendarDate) }).map((_, index) => (
+                                    <div key={`empty-${index}`} className="aspect-square"></div>
+                                  ))}
+                                  {/* Days of the month */}
+                                  {Array.from({ length: getDaysInMonth(productionCalendarDate) }, (_, i) => i + 1).map((day) => {
+                                    const isSelectedDay = isProductionSelected(day);
+                                    const isTodayDay = isToday(day, productionCalendarDate);
+                                    return (
+                                      <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => handleProductionDateSelect(day)}
+                                        className={`aspect-square rounded text-sm font-medium transition-all ${
+                                          isSelectedDay
+                                            ? 'bg-primary-600 text-white'
+                                            : isTodayDay
+                                              ? 'bg-primary-200 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        }`}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                  {/* Days from next month to fill grid */}
+                                  {(() => {
+                                    const totalCells = getFirstDayOfMonth(productionCalendarDate) + getDaysInMonth(productionCalendarDate);
+                                    const remainingCells = 42 - totalCells;
+                                    return Array.from({ length: remainingCells }, (_, i) => i + 1).map((day) => (
+                                      <div
+                                        key={`next-${day}`}
+                                        className="aspect-square text-sm text-gray-400 dark:text-gray-600"
+                                      >
+                                        {day}
+                                      </div>
+                                    ));
+                                  })()}
+                                </div>
+                              </div>
+
+                              {/* Calendar Footer */}
+                              <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={handleProductionClearDate}
+                                  className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                                >
+                                  Clear
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleProductionToday}
+                                  className="px-4 py-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                                >
+                                  Today
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Carbon Footprint (kg CO2)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.carbonFootprint}
+                        onChange={(e) => setFormData({ ...formData, carbonFootprint: e.target.value })}
+                        placeholder="Enter carbon footprint"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Water Footprint (L)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.waterFootprint}
+                        onChange={(e) => setFormData({ ...formData, waterFootprint: e.target.value })}
+                        placeholder="Enter water footprint"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recyclability</label>
+                      <CustomSelect
+                        value={formData.recyclability}
+                        onChange={(value) => setFormData({ ...formData, recyclability: value })}
+                        options={[
+                          { value: 'Fully Recyclable', label: 'Fully Recyclable' },
+                          { value: 'Partially Recyclable', label: 'Partially Recyclable' },
+                          { value: 'Not Recyclable', label: 'Not Recyclable' },
+                        ]}
+                        placeholder="Select recyclability..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repairability</label>
+                      <CustomSelect
+                        value={formData.repairability}
+                        onChange={(value) => setFormData({ ...formData, repairability: value })}
+                        options={[
+                          { value: 'Easy', label: 'Easy' },
+                          { value: 'Moderate', label: 'Moderate' },
+                          { value: 'Difficult', label: 'Difficult' },
+                        ]}
+                        placeholder="Select repairability..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 text-[14px] py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  disabled={isSaving || createMutation.isPending || updateMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || !formData.productId || createMutation.isPending || updateMutation.isPending}
+                  className="px-5 ml-5 py-2.5 text-[14px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSaving || createMutation.isPending || updateMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    passport ? 'Update' : 'Create'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product *</label>
-            <CustomSelect
-              value={formData.productId.toString()}
-              onChange={(value) => setFormData({ ...formData, productId: value })}
-              options={products.map((p) => ({ value: p.id.toString(), label: p.name }))}
-              placeholder="Select product..."
-              error={!formData.productId}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Passport ID</label>
-              <input
-                type="text"
-                value={formData.passportId}
-                onChange={(e) => setFormData({ ...formData, passportId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country of Origin</label>
-              <input
-                type="text"
-                value={formData.countryOfOrigin}
-                onChange={(e) => setFormData({ ...formData, countryOfOrigin: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Manufacturer Name</label>
-            <input
-              type="text"
-              value={formData.manufacturerName}
-              onChange={(e) => setFormData({ ...formData, manufacturerName: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Manufacturer Address</label>
-            <textarea
-              value={formData.manufacturerAddress}
-              onChange={(e) => setFormData({ ...formData, manufacturerAddress: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Production Date</label>
-              <input
-                type="date"
-                value={formData.productionDate}
-                onChange={(e) => setFormData({ ...formData, productionDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Carbon Footprint (kg CO2)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.carbonFootprint}
-                onChange={(e) => setFormData({ ...formData, carbonFootprint: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Water Footprint (L)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.waterFootprint}
-                onChange={(e) => setFormData({ ...formData, waterFootprint: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recyclability</label>
-              <CustomSelect
-                value={formData.recyclability}
-                onChange={(value) => setFormData({ ...formData, recyclability: value })}
-                options={[
-                  { value: '', label: 'Select...' },
-                  { value: 'Fully Recyclable', label: 'Fully Recyclable' },
-                  { value: 'Partially Recyclable', label: 'Partially Recyclable' },
-                  { value: 'Not Recyclable', label: 'Not Recyclable' },
-                ]}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repairability</label>
-              <CustomSelect
-                value={formData.repairability}
-                onChange={(value) => setFormData({ ...formData, repairability: value })}
-                options={[
-                  { value: '', label: 'Select...' },
-                  { value: 'Easy', label: 'Easy' },
-                  { value: 'Moderate', label: 'Moderate' },
-                  { value: 'Difficult', label: 'Difficult' },
-                ]}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving || !formData.productId || createMutation.isPending || updateMutation.isPending}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving || createMutation.isPending || updateMutation.isPending ? 'Saving...' : passport ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -745,9 +1145,9 @@ function ComplianceEvidenceSection() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header with Search, Filter, and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex-1 relative w-full sm:max-w-md">
@@ -762,7 +1162,7 @@ function ComplianceEvidenceSection() {
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Evidence
@@ -796,15 +1196,6 @@ function ComplianceEvidenceSection() {
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
               {searchQuery || filterType !== 'all' ? 'Try adjusting your search or filter criteria.' : 'Get started by adding your first compliance evidence.'}
             </p>
-            {!searchQuery && filterType === 'all' && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Add Evidence
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -1075,13 +1466,13 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="sticky z-[50] top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
             {evidence ? 'Edit' : 'Add'} Compliance Evidence
           </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors dark:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1107,7 +1498,8 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter evidence name"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -1132,7 +1524,8 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter description"
+              className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1142,7 +1535,8 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
                 type="text"
                 value={formData.issuer}
                 onChange={(e) => setFormData({ ...formData, issuer: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter issuer name"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -1151,7 +1545,8 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
                 type="text"
                 value={formData.certificateNumber}
                 onChange={(e) => setFormData({ ...formData, certificateNumber: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter certificate number"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1182,7 +1577,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               value={formData.documentUrl}
               onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
               placeholder="https://..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div>

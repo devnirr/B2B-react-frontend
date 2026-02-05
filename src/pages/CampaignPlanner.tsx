@@ -154,7 +154,7 @@ const CustomSelect = ({
             <div className="py-1">
               {options.map((option, index) => {
                 const isSelected = option.value === value;
-                
+                const isHighlighted = index === highlightedIndex;
                 
                 return (
                   <button
@@ -426,7 +426,7 @@ export default function CampaignPlanner() {
           </div>
           <button
             onClick={() => handleAddEvent()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
             New Event

@@ -38,11 +38,10 @@ export default function B2BPortal() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -162,7 +161,7 @@ function DigitalLineSheetsSection() {
               placeholder="Search line sheets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
         </div>
@@ -260,22 +259,20 @@ function DigitalLineSheetsSection() {
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setShareMethod('link')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  shareMethod === 'link'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${shareMethod === 'link'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 <LinkIcon className="w-4 h-4" />
                 Link
               </button>
               <button
                 onClick={() => setShareMethod('email')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  shareMethod === 'email'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${shareMethod === 'email'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 <Mail className="w-4 h-4" />
                 Email
@@ -308,7 +305,7 @@ function DigitalLineSheetsSection() {
                   value={emailAddress}
                   onChange={(e) => setEmailAddress(e.target.value)}
                   placeholder="customer@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white mb-3"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white mb-3"
                 />
                 <button
                   onClick={handleShareViaEmail}
@@ -344,20 +341,31 @@ function WholesaleOrderingSection() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
+  const statusOptions = [
+    { value: 'all', label: 'All Statuses' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
+    { value: 'PROCESSING', label: 'Processing' },
+    { value: 'SHIPPED', label: 'Shipped' },
+    { value: 'DELIVERED', label: 'Delivered' },
+    { value: 'CANCELLED', label: 'Cancelled' },
+  ];
+
   // Fetch wholesale orders
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['orders', 'wholesale', searchQuery, statusFilter],
     queryFn: async () => {
       const response = await api.get('/orders?skip=0&take=1000');
-      let orders = (response.data?.data || []).filter((order: any) => 
+      let orders = (response.data?.data || []).filter((order: any) =>
         order.type === 'B2B' || order.type === 'WHOLESALE'
       );
-      
+
       // Filter by status
       if (statusFilter !== 'all') {
         orders = orders.filter((order: any) => order.status === statusFilter);
       }
-      
+
       // Filter by search query
       if (searchQuery) {
         orders = orders.filter((order: any) =>
@@ -365,7 +373,7 @@ function WholesaleOrderingSection() {
           order.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
-      
+
       return orders;
     },
   });
@@ -401,41 +409,36 @@ function WholesaleOrderingSection() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
+            <div className='flex flex-col sm:flex-row items-center justify-between gap-4'>
+              <div className="flex-1 relative w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <CustomSelect
+                  value={statusFilter}
+                  onChange={(value) => setStatusFilter(value)}
+                  options={statusOptions}
+                  placeholder="All Statuses"
+                  className="min-w-[180px]"
+                />
+              </div>
             </div>
             <button
               onClick={() => setIsOrderModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <ShoppingCart className="w-4 h-4" />
               New Order
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Filter by status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="all">All Statuses</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="SHIPPED">Shipped</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
+
         </div>
       </div>
 
@@ -541,21 +544,68 @@ const CustomSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+
+  // Calculate dropdown position
+  const calculateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = Math.min(400, options.length * 42 + 8); // Approximate height
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      // Open upward if not enough space below, otherwise open downward
+      const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+      
+      // Calculate left position to keep dropdown aligned with button
+      let left = rect.left;
+      const dropdownWidth = rect.width;
+      
+      // Ensure dropdown doesn't go off-screen
+      if (left + dropdownWidth > viewportWidth - 16) {
+        left = viewportWidth - dropdownWidth - 16;
+      }
+      if (left < 16) {
+        left = 16;
+      }
+      
+      setDropdownPosition({
+        top: openUpward ? Math.max(16, rect.top - dropdownHeight - 4) : Math.min(rect.bottom + 4, viewportHeight - dropdownHeight - 16),
+        left: left,
+        width: dropdownWidth,
+      });
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      if (
+        selectRef.current && !selectRef.current.contains(event.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
         setHighlightedIndex(-1);
       }
     };
 
     if (isOpen) {
+      calculateDropdownPosition();
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', calculateDropdownPosition);
+      window.addEventListener('scroll', calculateDropdownPosition, true);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('resize', calculateDropdownPosition);
+        window.removeEventListener('scroll', calculateDropdownPosition, true);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, options.length]);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -582,55 +632,62 @@ const CustomSelect = ({
   };
 
   return (
-    <div ref={selectRef} className={`relative ${className}`} style={{ zIndex: isOpen ? 9999 : 'auto' }}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        onKeyDown={handleKeyDown}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between transition-all ${
-          error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-        } ${isOpen ? 'ring-2 ring-primary-500 border-primary-500' : ''} hover:border-gray-400 dark:hover:border-gray-500`}
-        style={{
-          padding: '0.532rem 0.8rem 0.532rem 1.2rem',
-          fontSize: '0.875rem',
-          fontWeight: 500,
-          lineHeight: 1.6,
-          backgroundColor: 'transparent',
-        }}
-      >
-        <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+    <>
+      <div ref={selectRef} className={`relative ${className}`}  style={{ zIndex: isOpen ? 9999 : 'auto' }}>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            if (!isOpen) {
+              calculateDropdownPosition();
+            }
+            setIsOpen(!isOpen);
+          }}
+          onKeyDown={handleKeyDown}
+          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white flex items-center justify-between transition-all ${error ? 'border-red-500' : ''
+            } ${isOpen ? 'ring-2 ring-primary-500 border-primary-500' : ''} hover:border-gray-400 dark:hover:border-gray-500`}
           style={{
-            zIndex: 10000,
-            top: '100%',
-            left: 0,
-            right: 0,
-            minWidth: '100%',
-            maxHeight: '400px',
-            overflowY: 'auto',
-            overflowX: 'hidden',
+            padding: '0.532rem 0.8rem 0.532rem 1.2rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            lineHeight: 1.6,
           }}
         >
+          <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
+          <div
+            ref={dropdownRef}
+            className="fixed bg-gray-800 dark:bg-gray-800 border border-gray-700 dark:border-gray-700 rounded-lg shadow-xl custom-dropdown-menu"
+            style={{
+              zIndex: 10002,
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`,
+              maxHeight: '400px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}
+          >
           {options.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4">
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
-                <Inbox className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+              <div className="w-12 h-12 bg-gray-700 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                <Inbox className="w-6 h-6 text-gray-400 dark:text-gray-400" />
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">No data available</p>
+              <p className="text-sm text-gray-400 dark:text-gray-400">No data available</p>
             </div>
           ) : (
             options.map((option, index) => {
               const isSelected = option.value === value;
-              
 
               return (
                 <button
@@ -655,9 +712,10 @@ const CustomSelect = ({
               );
             })
           )}
-        </div>
+          </div>
+        </>
       )}
-    </div>
+    </>
   );
 };
 
@@ -842,12 +900,12 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between z-10">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
             {order ? 'Order Details' : 'New Wholesale Order'}
           </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:text-white hover:text-gray-700 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -884,7 +942,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                     placeholder="Search products by name or SKU..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
                 <div className="w-64">
@@ -898,7 +956,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                 <button
                   type="button"
                   onClick={handleAddProduct}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add
@@ -933,43 +991,39 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                             <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{line.sku}</td>
                             <td className="px-4 py-3">
                               {product?.sizes && product.sizes.length > 0 ? (
-                                <select
+                                <CustomSelect
                                   value={line.size || ''}
-                                  onChange={(e) => handleUpdateLine(index, 'size', e.target.value)}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                                >
-                                  {product.sizes.map((size: string) => (
-                                    <option key={size} value={size}>{size}</option>
-                                  ))}
-                                </select>
+                                  onChange={(value) => handleUpdateLine(index, 'size', value)}
+                                  options={product.sizes.map((size: string) => ({ value: size, label: size }))}
+                                  placeholder="Select size"
+                                  className="min-w-[100px]"
+                                />
                               ) : (
                                 <input
                                   type="text"
                                   value={line.size || ''}
                                   onChange={(e) => handleUpdateLine(index, 'size', e.target.value)}
                                   placeholder="Size"
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                                  className="w-full ::placeholder-[12px] text-[14px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                                 />
                               )}
                             </td>
                             <td className="px-4 py-3">
                               {product?.colors && product.colors.length > 0 ? (
-                                <select
+                                <CustomSelect
                                   value={line.color || ''}
-                                  onChange={(e) => handleUpdateLine(index, 'color', e.target.value)}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                                >
-                                  {product.colors.map((color: string) => (
-                                    <option key={color} value={color}>{color}</option>
-                                  ))}
-                                </select>
+                                  onChange={(value) => handleUpdateLine(index, 'color', value)}
+                                  options={product.colors.map((color: string) => ({ value: color, label: color }))}
+                                  placeholder="Select color"
+                                  className="min-w-[100px]"
+                                />
                               ) : (
                                 <input
                                   type="text"
                                   value={line.color || ''}
                                   onChange={(e) => handleUpdateLine(index, 'color', e.target.value)}
                                   placeholder="Color"
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                                  className="w-full ::placeholder-[12px] text-[14px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                                 />
                               )}
                             </td>
@@ -1037,7 +1091,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                   value={formData.shippingAddress}
                   onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Enter shipping address..."
                 />
               </div>
@@ -1049,7 +1103,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                   value={formData.billingAddress}
                   onChange={(e) => setFormData({ ...formData, billingAddress: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Enter billing address..."
                 />
               </div>
@@ -1063,13 +1117,13 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Additional notes about this order..."
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex text-[14px] items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={onClose}
@@ -1103,7 +1157,7 @@ function CustomerSelfServiceSection() {
     queryFn: async () => {
       const response = await api.get('/orders?skip=0&take=1000');
       let orders = response.data?.data || [];
-      
+
       // Filter by search query
       if (searchQuery) {
         orders = orders.filter((order: any) =>
@@ -1111,7 +1165,7 @@ function CustomerSelfServiceSection() {
           order.status?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
-      
+
       return orders;
     },
   });
@@ -1122,7 +1176,7 @@ function CustomerSelfServiceSection() {
     queryFn: async () => {
       const response = await api.get('/returns?skip=0&take=1000');
       let returns = response.data?.data || [];
-      
+
       // Filter by search query
       if (searchQuery) {
         returns = returns.filter((returnItem: any) =>
@@ -1130,7 +1184,7 @@ function CustomerSelfServiceSection() {
           returnItem.status?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
-      
+
       return returns;
     },
   });
@@ -1170,11 +1224,10 @@ function CustomerSelfServiceSection() {
           <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setActiveView('orders')}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                activeView === 'orders'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeView === 'orders'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
@@ -1183,11 +1236,10 @@ function CustomerSelfServiceSection() {
             </button>
             <button
               onClick={() => setActiveView('invoices')}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                activeView === 'invoices'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeView === 'invoices'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
@@ -1196,11 +1248,10 @@ function CustomerSelfServiceSection() {
             </button>
             <button
               onClick={() => setActiveView('returns')}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                activeView === 'returns'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-              }`}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeView === 'returns'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
             >
               <div className="flex items-center gap-2">
                 <RotateCcw className="w-4 h-4" />
@@ -1215,7 +1266,7 @@ function CustomerSelfServiceSection() {
               placeholder={`Search ${activeView}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
         </div>
@@ -1323,11 +1374,10 @@ function CustomerSelfServiceSection() {
                         ${parseFloat(order.totalAmount || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          order.status === 'DELIVERED' || order.status === 'FULFILLED'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${order.status === 'DELIVERED' || order.status === 'FULFILLED'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
                           {order.status === 'DELIVERED' || order.status === 'FULFILLED' ? 'Paid' : 'Pending'}
                         </span>
                       </td>

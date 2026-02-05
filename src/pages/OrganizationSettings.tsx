@@ -16,6 +16,8 @@ import {
   Languages,
   Ruler,
   MapPin,
+  AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 
@@ -78,6 +80,8 @@ interface CustomDropdownProps {
 function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [openAbove, setOpenAbove] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -86,31 +90,80 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Calculate dropdown position when opening or window changes
+  useEffect(() => {
+    const calculatePosition = () => {
+      if (isOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        // Calculate approximate dropdown height (each option is ~40px, add padding)
+        const optionHeight = 40;
+        const dropdownHeight = Math.min(options.length * optionHeight + 16, 300);
+        
+        // If not enough space below but enough space above, open upward
+        if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+          setOpenAbove(true);
+        } else {
+          setOpenAbove(false);
+        }
+      }
+    };
+
+    calculatePosition();
+    
+    if (isOpen) {
+      window.addEventListener('resize', calculatePosition);
+      window.addEventListener('scroll', calculatePosition, true);
+      return () => {
+        window.removeEventListener('resize', calculatePosition);
+        window.removeEventListener('scroll', calculatePosition, true);
+      };
+    }
+  }, [isOpen, options.length]);
 
   const selectedOption = options.find(opt => opt.value === value);
 
+  // Calculate max height based on number of options
+  // For small lists (6 or fewer), show all without scrolling
+  // For larger lists, use a reasonable max height
+  const maxHeight = options.length <= 6 ? 'none' : '300px';
+  const shouldScroll = options.length > 6;
+
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative" style={{ zIndex: isOpen ? 10001 : 'auto', position: 'relative' }}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center justify-between cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${isOpen
-            ? 'border-primary-500 ring-2 ring-primary-500/20'
-            : 'hover:border-gray-400 dark:hover:border-gray-500'
+          ? 'border-primary-500 ring-2 ring-primary-500/20'
+          : 'hover:border-gray-400 dark:hover:border-gray-500'
           }`}
       >
         <span>{selectedOption?.label || placeholder || 'Select...'}</span>
         <ChevronDown
-          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''
-            }`}
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isOpen && openAbove ? 'rotate-0' : isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden max-h-[200px] overflow-y-auto">
+        <div 
+          className={`absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden ${
+            openAbove ? 'mb-1 bottom-full' : 'mt-1 top-full'
+          }`}
+          style={{
+            maxHeight: shouldScroll ? maxHeight : 'none',
+            overflowY: shouldScroll ? 'auto' : 'visible',
+          }}
+        >
           {options.map((option) => (
             <button
               key={option.value}
@@ -120,8 +173,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${option.value === value
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
             >
               {option.label}
@@ -165,8 +218,8 @@ export default function OrganizationSettings() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -195,6 +248,10 @@ function MultiBrandMarketSection() {
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [showCreateBrandModal, setShowCreateBrandModal] = useState(false);
   const [showCreateMarketModal, setShowCreateMarketModal] = useState(false);
+  const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
+  const [marketToDelete, setMarketToDelete] = useState<Market | null>(null);
+  const [isDeleteBrandModalShowing, setIsDeleteBrandModalShowing] = useState(false);
+  const [isDeleteMarketModalShowing, setIsDeleteMarketModalShowing] = useState(false);
 
   // Load brands from localStorage
   const [brands, setBrands] = useState<Brand[]>(() => {
@@ -372,6 +429,14 @@ function MultiBrandMarketSection() {
       brandIds: market.brandIds.filter((id) => id !== brandId),
     })));
     toast.success('Brand deleted successfully!');
+    setIsDeleteBrandModalShowing(false);
+    setBrandToDelete(null);
+  };
+
+  const handleConfirmDeleteBrand = () => {
+    if (brandToDelete) {
+      handleDeleteBrand(brandToDelete.id);
+    }
   };
 
   const handleCreateMarket = (marketData: any) => {
@@ -402,6 +467,14 @@ function MultiBrandMarketSection() {
       marketIds: brand.marketIds.filter((id) => id !== marketId),
     })));
     toast.success('Market deleted successfully!');
+    setIsDeleteMarketModalShowing(false);
+    setMarketToDelete(null);
+  };
+
+  const handleConfirmDeleteMarket = () => {
+    if (marketToDelete) {
+      handleDeleteMarket(marketToDelete.id);
+    }
   };
 
   return (
@@ -412,8 +485,8 @@ function MultiBrandMarketSection() {
           <button
             onClick={() => setActiveSubTab('brands')}
             className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeSubTab === 'brands'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
           >
             Brands
@@ -421,8 +494,8 @@ function MultiBrandMarketSection() {
           <button
             onClick={() => setActiveSubTab('markets')}
             className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeSubTab === 'markets'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
           >
             Markets
@@ -474,7 +547,7 @@ function MultiBrandMarketSection() {
                   placeholder="Search by brand name, code, or description..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-10 ::placeholder-[12px] text-[14px] pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -492,9 +565,9 @@ function MultiBrandMarketSection() {
                 </div>
                 <button
                   onClick={() => setShowCreateBrandModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   New Brand
                 </button>
               </div>
@@ -571,11 +644,10 @@ function MultiBrandMarketSection() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            brand.status === 'active'
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${brand.status === 'active'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                          }`}>
+                            }`}>
                             {brand.status}
                           </span>
                         </td>
@@ -593,7 +665,8 @@ function MultiBrandMarketSection() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteBrand(brand.id);
+                                setBrandToDelete(brand);
+                                setIsDeleteBrandModalShowing(true);
                               }}
                               className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             >
@@ -624,8 +697,20 @@ function MultiBrandMarketSection() {
               brand={selectedBrand}
               onClose={() => setSelectedBrand(null)}
               onUpdate={handleUpdateBrand}
-              onDelete={handleDeleteBrand}
               markets={markets}
+            />
+          )}
+
+          {/* Delete Brand Modal */}
+          {brandToDelete && (
+            <DeleteBrandModal
+              brand={brandToDelete}
+              onClose={() => {
+                setIsDeleteBrandModalShowing(false);
+                setBrandToDelete(null);
+              }}
+              onConfirm={handleConfirmDeleteBrand}
+              isShowing={isDeleteBrandModalShowing}
             />
           )}
         </>
@@ -675,7 +760,7 @@ function MultiBrandMarketSection() {
                   placeholder="Search by market name, code, country, or region..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-10 ::placeholder-[12px] text-[14px] pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -693,9 +778,9 @@ function MultiBrandMarketSection() {
                 </div>
                 <button
                   onClick={() => setShowCreateMarketModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   New Market
                 </button>
               </div>
@@ -780,11 +865,10 @@ function MultiBrandMarketSection() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            market.status === 'active'
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${market.status === 'active'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                          }`}>
+                            }`}>
                             {market.status}
                           </span>
                         </td>
@@ -797,12 +881,13 @@ function MultiBrandMarketSection() {
                               }}
                               className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteMarket(market.id);
+                                setMarketToDelete(market);
+                                setIsDeleteMarketModalShowing(true);
                               }}
                               className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             >
@@ -833,8 +918,20 @@ function MultiBrandMarketSection() {
               market={selectedMarket}
               onClose={() => setSelectedMarket(null)}
               onUpdate={handleUpdateMarket}
-              onDelete={handleDeleteMarket}
               brands={brands}
+            />
+          )}
+
+          {/* Delete Market Modal */}
+          {marketToDelete && (
+            <DeleteMarketModal
+              market={marketToDelete}
+              onClose={() => {
+                setIsDeleteMarketModalShowing(false);
+                setMarketToDelete(null);
+              }}
+              onConfirm={handleConfirmDeleteMarket}
+              isShowing={isDeleteMarketModalShowing}
             />
           )}
         </>
@@ -890,12 +987,12 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Brand</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Brand</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -909,7 +1006,7 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Main Brand"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -924,7 +1021,7 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g., MAIN"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
                 required
               />
             </div>
@@ -953,7 +1050,7 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the brand..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -989,13 +1086,13 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 text-[14px] text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="px-4 py-2 text-[14px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               Create Brand
             </button>
@@ -1006,16 +1103,165 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
   );
 }
 
+// Delete Brand Modal Component
+function DeleteBrandModal({
+  brand,
+  onClose,
+  onConfirm,
+  isShowing,
+}: {
+  brand: Brand;
+  onClose: () => void;
+  onConfirm: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteBrandModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            <div className="modal-body text-center py-8 px-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+              <h5 id="deleteBrandModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Brand
+              </h5>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{brand.name}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Brand
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Delete Market Modal Component
+function DeleteMarketModal({
+  market,
+  onClose,
+  onConfirm,
+  isShowing,
+}: {
+  market: Market;
+  onClose: () => void;
+  onConfirm: () => void;
+  isShowing: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+      />
+      <div
+        className={`modal fade ${isShowing ? 'show' : ''}`}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteMarketModalLabel"
+        tabIndex={-1}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '28rem' }}
+        >
+          <div className="modal-content">
+            <div className="modal-body text-center py-8 px-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
+                </div>
+              </div>
+              <h5 id="deleteMarketModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
+                Delete Market
+              </h5>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Are you sure you want to delete
+              </p>
+              <p className="text-gray-900 dark:text-white font-semibold mb-4">
+                "{market.name}"?
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="px-5 py-2 text-[14px] bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Market
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // Brand Details Modal
 interface BrandDetailsModalProps {
   brand: Brand;
   onClose: () => void;
   onUpdate: (brandId: string | number, updates: any) => void;
-  onDelete: (brandId: string | number) => void;
   markets: Market[];
 }
 
-function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: BrandDetailsModalProps) {
+function BrandDetailsModal({ brand, onClose, onUpdate, markets }: BrandDetailsModalProps) {
   const [name, setName] = useState(brand.name);
   const [code, setCode] = useState(brand.code);
   const [description, setDescription] = useState(brand.description);
@@ -1041,13 +1287,6 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this brand?')) {
-      onDelete(brand.id);
-      onClose();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -1059,8 +1298,8 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Brand Details</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{brand.name}</p>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Brand Details</h2>
+            <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">{brand.name}</p>
           </div>
           <button
             onClick={onClose}
@@ -1072,14 +1311,15 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
               Brand Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., Main Brand"
             />
           </div>
 
@@ -1092,7 +1332,8 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                placeholder="e.g., MAIN"
               />
             </div>
 
@@ -1119,7 +1360,8 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full  px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Describe the brand..."
             />
           </div>
 
@@ -1168,13 +1410,7 @@ function BrandDetailsModal({ brand, onClose, onUpdate, onDelete, markets }: Bran
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -1257,7 +1493,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Market</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Market</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
@@ -1276,7 +1512,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., United States"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -1291,7 +1527,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g., US"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
                 required
               />
             </div>
@@ -1321,7 +1557,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 placeholder="e.g., North America"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -1335,7 +1571,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder="e.g., United States"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -1405,7 +1641,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex text-[14px] items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -1431,11 +1667,10 @@ interface MarketDetailsModalProps {
   market: Market;
   onClose: () => void;
   onUpdate: (marketId: string | number, updates: any) => void;
-  onDelete: (marketId: string | number) => void;
   brands: Brand[];
 }
 
-function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: MarketDetailsModalProps) {
+function MarketDetailsModal({ market, onClose, onUpdate, brands }: MarketDetailsModalProps) {
   const [name, setName] = useState(market.name);
   const [code, setCode] = useState(market.code);
   const [region, setRegion] = useState(market.region);
@@ -1477,13 +1712,6 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this market?')) {
-      onDelete(market.id);
-      onClose();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -1495,7 +1723,7 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Market Details</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Market Details</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{market.name}</p>
           </div>
           <button
@@ -1515,7 +1743,8 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter market name"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1528,7 +1757,8 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                placeholder="Enter market code"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
               />
             </div>
 
@@ -1556,7 +1786,8 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
                 type="text"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter region"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -1568,7 +1799,8 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter country"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1654,13 +1886,7 @@ function MarketDetailsModal({ market, onClose, onUpdate, onDelete, brands }: Mar
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -1781,11 +2007,11 @@ function LocalizationSection() {
     setLocalizations(localizations.map((loc) =>
       loc.id === localizationId
         ? {
-            ...loc,
-            ...updates,
-            marketName: market?.name || loc.marketName,
-            updatedAt: new Date().toISOString(),
-          }
+          ...loc,
+          ...updates,
+          marketName: market?.name || loc.marketName,
+          updatedAt: new Date().toISOString(),
+        }
         : loc
     ));
     toast.success('Localization updated successfully!');
@@ -1867,7 +2093,7 @@ function LocalizationSection() {
               placeholder="Search by market name, language, or currency..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -1887,9 +2113,9 @@ function LocalizationSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Localization
             </button>
           </div>
@@ -2096,7 +2322,7 @@ function CreateLocalizationModal({ onClose, onCreate, markets }: CreateLocalizat
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Localization</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Localization</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
@@ -2113,13 +2339,10 @@ function CreateLocalizationModal({ onClose, onCreate, markets }: CreateLocalizat
             <CustomDropdown
               value={marketId}
               onChange={setMarketId}
-              options={[
-                { value: '', label: 'Select a market...' },
-                ...markets.map((market: Market) => ({
-                  value: market.id.toString(),
-                  label: `${market.name} (${market.code})`,
-                })),
-              ]}
+              options={markets.map((market: Market) => ({
+                value: market.id.toString(),
+                label: `${market.name} (${market.code})`,
+              }))}
               placeholder="Select a market"
             />
           </div>
@@ -2284,10 +2507,8 @@ function LocalizationDetailsModal({ localization, onClose, onUpdate, onDelete, m
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this localization?')) {
-      onDelete(localization.id);
-      onClose();
-    }
+    onDelete(localization.id);
+    onClose();
   };
 
   return (

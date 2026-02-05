@@ -64,7 +64,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [sidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [selectedNavbarItem, setSelectedNavbarItem] = useState<string>('dashboards');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -79,6 +79,10 @@ export default function Layout({ children }: LayoutProps) {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   const toggleDarkMode = () => {
@@ -475,9 +479,9 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       {/* Icon-only Navbar (Left Side) */}
-      <aside className="fixed left-0 top-0 bottom-0 w-[380px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 flex">
-        {/* Logo at top */}
-        <div className='w-[88px] border-r h-full flex flex-col border-gray-200 dark:border-gray-700'>
+      <aside className="fixed left-0 top-0 bottom-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 flex">
+        {/* Logo at top - Always visible */}
+        <div className='w-[88px] border-r h-full flex flex-col border-gray-200 dark:border-gray-700 flex-shrink-0'>
           <div className='h-full flex flex-col'>
             <div className="h-20 flex items-center justify-center border-gray-200 dark:border-gray-700">
               <div className="w-10 h-10 rounded-lg bg-primary-600 dark:bg-primary-500 flex items-center justify-center">
@@ -528,11 +532,11 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
-        <div className='w-full h-full flex flex-col px-3'>
+        {/* Sidebar section - Hideable */}
+        <div className={`h-full flex flex-col transition-all duration-300 overflow-hidden ${sidebarOpen ? 'w-[292px]' : 'w-0'}`}>
           <div className='h-20 flex px-5 justify-center border-gray-200 dark:border-gray-700 flex flex-col'>
             {/* Sidebar header */}
             <h1 className='text-[18px] font-bold text-primary-600 dark:text-primary-400'>HAZEL</h1>
-            <p className='text-[14px] text-gray-500 dark:text-gray-400'>Inventory Platform</p>
           </div>
 
           {/* Sidebar */}
@@ -754,13 +758,34 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Header and Sidebar Brand Row */}
-      <div className={`fixed top-0 h-20 flex z-40 ${sidebarOpen ? 'left-[368px] right-0' : 'left-[100px] right-0'}`}>
+      <div className={`fixed top-0 h-20 flex z-40 transition-all duration-300 ${sidebarOpen ? 'left-[380px] right-0' : 'left-[88px] right-0'}`}>
 
         {/* Header */}
         <header className="flex-1 h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between h-full px-4 lg:px-6">
             {/* Left side */}
             <div className="flex items-center gap-4 flex-1">
+
+              {/* Sidebar Toggle Button */}
+              <button
+                onClick={toggleSidebar}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Toggle sidebar"
+              >
+                <div className="flex items-center gap-0.5">
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 16 16" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className={`text-gray-700 dark:text-white transition-transform duration-300 ${sidebarOpen ? '' : 'rotate-180'}`}
+                  >
+                    <path d="M7.66699 12.6668L3.66699 8.00016L7.66699 3.3335" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                    <path opacity="0.5" d="M12.667 12.6668L8.66699 8.00016L12.667 3.3335" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
 
               {/* Search */}
               <div className="hidden lg:flex items-center flex-1 max-w-md">
@@ -769,15 +794,15 @@ export default function Layout({ children }: LayoutProps) {
                   <input
                     type="text"
                     placeholder="Search anything's"
-                    className="pl-10 pr-4 py-3 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-black"
+                    className="pl-10 pr-4 py-2 w-full ::placeholder-[14px] text-[14px] rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-black"
                   />
                 </div>
               </div>
 
               {/* Badge */}
               <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
-                <span className="text-lg text-gray-700 dark:text-gray-300">Today New Leads</span>
-                <span className="px-2 py-0.5 bg-primary-500 text-white text-xs font-semibold rounded-full">{todayNewLeads}</span>
+                <span className="text-[14px] text-gray-700 dark:text-gray-300">Today New Leads</span>
+                <span className="px-2 py-0.5 bg-primary-500 text-white text-[14px] font-semibold rounded-full">{todayNewLeads}</span>
               </div>
             </div>
 
@@ -821,7 +846,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                   title="Documents & Tasks"
                 >
-                  <i className="fi fi-rr-file text-2xl text-gray-700 dark:text-white"></i>
+                  <i className="fi fi-rr-file text-[20px] text-gray-700 dark:text-white"></i>
                   {unreadDocumentsCount > 0 && (
                     <span className="absolute top-0 right-0 w-3 h-3 bg-primary-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                   )}
@@ -831,7 +856,7 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Documents & Tasks</h3>
+                        <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">Documents & Tasks</h3>
                         {unreadDocumentsCount > 0 && (
                           <span className="px-2 py-1 bg-primary-500 text-white text-xs font-semibold rounded-full">
                             {unreadDocumentsCount} new
@@ -907,7 +932,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                   title="Notifications"
                 >
-                  <i className="fi fi-rr-bell text-2xl text-gray-700 dark:text-white"></i>
+                  <i className="fi fi-rr-bell text-[20px] text-gray-700 dark:text-white"></i>
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                   )}
@@ -917,7 +942,7 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                        <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">Notifications</h3>
                         {unreadNotificationsCount > 0 && (
                           <span className="px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">
                             {unreadNotificationsCount} new
@@ -993,13 +1018,13 @@ export default function Layout({ children }: LayoutProps) {
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="Calendar & Events"
                 >
-                  <i className="fi fi-rr-calendar text-2xl text-gray-700 dark:text-white"></i>
+                  <i className="fi fi-rr-calendar text-[20px] text-gray-700 dark:text-white"></i>
                 </button>
 
                 {calendarDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upcoming Events</h3>
+                      <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">Upcoming Events</h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Next 7 days</p>
                     </div>
                     <div className="overflow-y-auto flex-1">
@@ -1059,10 +1084,10 @@ export default function Layout({ children }: LayoutProps) {
                   className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="hidden lg:block text-right mr-2">
-                    <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <div className="text-[14px] font-semibold text-gray-900 dark:text-white">
                       {user?.firstName} {user?.lastName}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-white flex items-center gap-1">
+                    <div className="text-[12.25px] text-gray-500 dark:text-white flex items-center gap-1">
                       <ChevronDown className="w-3 h-3" />
                       {user?.role || 'User'}
                     </div>
@@ -1088,10 +1113,10 @@ export default function Layout({ children }: LayoutProps) {
                             {user?.firstName?.[0] || 'U'}{user?.lastName?.[0] || ''}
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-900 dark:text-white">
+                            <div className="text-[14px] font-semibold text-gray-900 dark:text-white">
                               {user?.firstName} {user?.lastName}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-[12.25px] text-gray-500 dark:text-gray-400">
                               {user?.email}
                             </div>
                           </div>
@@ -1101,7 +1126,7 @@ export default function Layout({ children }: LayoutProps) {
                         <Link
                           to="/profile"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="flex items-center gap-2 px-4 py-2 text-[14px] text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                           <User className="w-4 h-4 text-gray-900 dark:text-white" />
                           View Profile
@@ -1109,7 +1134,7 @@ export default function Layout({ children }: LayoutProps) {
                         <Link
                           to="/tasks"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="flex items-center gap-2 px-4 py-2 text-[14px] text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                           <FileText className="w-4 h-4 text-gray-900 dark:text-white" />
                           My Task
@@ -1117,7 +1142,7 @@ export default function Layout({ children }: LayoutProps) {
                         <Link
                           to="/settings"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="flex items-center gap-2 px-4 py-2 text-[14px] text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                           <Settings className="w-4 h-4 text-gray-900 dark:text-white" />
                           Account Settings
@@ -1142,7 +1167,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main
-        className={`transition-all duration-300 bg-gray-50 dark:bg-gray-900 pt-20 ${sidebarOpen ? 'ml-[368px]' : 'ml-[100px]'}`}
+        className={`transition-all duration-300 bg-gray-50 dark:bg-gray-900 pt-20 ${sidebarOpen ? 'ml-[380px]' : 'ml-[88px]'}`}
       >
         <div className="p-6 px-10">{children}</div>
       </main>

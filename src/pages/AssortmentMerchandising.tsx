@@ -111,7 +111,7 @@ const CustomSelect = ({
             <div className="py-1">
               {options.map((option, index) => {
                 const isSelected = option.value === value;
-                
+                const isHighlighted = index === highlightedIndex;
                 
                 return (
                   <button
@@ -119,15 +119,22 @@ const CustomSelect = ({
                     type="button"
                     onClick={() => handleSelect(option.value)}
                     onMouseEnter={() => setHighlightedIndex(index)}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    onMouseLeave={() => setHighlightedIndex(-1)}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-all duration-200 relative ${
                       isSelected
                         ? 'bg-primary-600 text-white'
                         : isHighlighted
-                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                          : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 shadow-sm'
+                          : 'text-gray-900 dark:text-white hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400'
                     }`}
+                    style={{
+                      transform: isHighlighted ? 'translateX(2px)' : 'translateX(0)',
+                    }}
                   >
                     {option.label}
+                    {isHighlighted && !isSelected && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-600 dark:bg-primary-400 rounded-r" />
+                    )}
                   </button>
                 );
               })}
@@ -532,7 +539,7 @@ function MarkdownPlanningSection() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-[14px]">
             <CustomSelect
               value={filterStatus}
               onChange={(value) => setFilterStatus(value)}

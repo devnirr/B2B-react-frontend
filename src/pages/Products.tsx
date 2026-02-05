@@ -113,7 +113,7 @@ const CustomSelect = ({
           ) : (
             options.map((option, index) => {
               const isSelected = option.value === value;
-              
+              const isHighlighted = index === highlightedIndex;
 
               return (
                 <button

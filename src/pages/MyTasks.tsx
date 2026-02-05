@@ -320,7 +320,7 @@ export default function MyTasks() {
 
   return (
     <div>
-      <Breadcrumb currentPage="My Tasks" />
+      <Breadcrumb />
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

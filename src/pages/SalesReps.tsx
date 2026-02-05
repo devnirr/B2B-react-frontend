@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { User, MapPin, Users, DollarSign, Search, Plus, X, Pencil, Trash2, ChevronDown, Inbox, Calculator } from 'lucide-react';
+import { User, MapPin, Users, DollarSign, Search, Plus, X, Pencil, Trash2, ChevronDown, Inbox, Calculator, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -72,9 +72,8 @@ const CustomSelect = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${
-          error ? 'border-red-500' : 'border-gray-300'
-        } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
+        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex items-center justify-between ${error ? 'border-red-500' : 'border-gray-300'
+          } ${isOpen ? 'ring-2 ring-primary-500' : ''}`}
         style={{
           padding: '0.532rem 0.6rem 0.532rem 1.2rem',
           fontSize: '0.875rem',
@@ -91,7 +90,7 @@ const CustomSelect = ({
       </button>
 
       {isOpen && (
-        <div 
+        <div
           className="absolute w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-auto custom-dropdown-menu"
           style={{
             zIndex: 10001,
@@ -113,19 +112,18 @@ const CustomSelect = ({
           ) : (
             options.map((option, index) => {
               const isSelected = option.value === value;
-              
-              
+
+
               return (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => handleSelect(option.value)}
                   onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
-                    isSelected
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${isSelected
                       ? 'bg-primary-500 text-white'
                       : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
-                  } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
+                    } ${index === 0 ? 'rounded-t-lg' : ''} ${index === options.length - 1 ? 'rounded-b-lg' : ''}`}
                   style={{
                     fontSize: '0.875rem',
                     fontWeight: 500,
@@ -174,11 +172,10 @@ export default function SalesReps() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                  activeTab === tab.id
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -214,7 +211,7 @@ function RepAccountsTerritoriesSection() {
       try {
         const response = await api.get('/users');
         let reps = (response.data || []).filter((user: any) => user.role === 'SALES' || user.role === 'B2B');
-        
+
         // Filter by search query
         if (searchQuery) {
           reps = reps.filter((rep: any) => {
@@ -225,7 +222,7 @@ function RepAccountsTerritoriesSection() {
             );
           });
         }
-        
+
         return reps;
       } catch (error) {
         return [];
@@ -283,12 +280,12 @@ function RepAccountsTerritoriesSection() {
               placeholder="Search sales reps..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Sales Rep
@@ -307,15 +304,6 @@ function RepAccountsTerritoriesSection() {
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
               {searchQuery ? 'Try adjusting your search criteria.' : 'Get started by adding your first sales rep account.'}
             </p>
-            {!searchQuery && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Add Sales Rep
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -362,11 +350,10 @@ function RepAccountsTerritoriesSection() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          rep.isActive
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${rep.isActive
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                        }`}>
+                          }`}>
                           {rep.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -431,8 +418,17 @@ function RepAccountsTerritoriesSection() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedRep && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedRep(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Sales Rep</h3>
               <button
@@ -525,11 +521,11 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -557,7 +553,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   placeholder="Enter first name"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div>
@@ -568,7 +564,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   placeholder="Enter last name"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
@@ -581,7 +577,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter email address"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div>
@@ -610,7 +606,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                   value={formData.territoryName}
                   onChange={(e) => setFormData({ ...formData, territoryName: e.target.value })}
                   placeholder="e.g., North America East"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div>
@@ -620,7 +616,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                   value={formData.region}
                   onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                   placeholder="e.g., North America"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
@@ -638,12 +634,12 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                     }
                   }}
                   placeholder="Add country (e.g., USA, Canada)"
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="flex-1 ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={addCountry}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 text-[14px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Add
                 </button>
@@ -677,12 +673,12 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                     }
                   }}
                   placeholder="Add state/province"
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="flex-1 ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={addState}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 text-[14px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Add
                 </button>
@@ -716,12 +712,12 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                     }
                   }}
                   placeholder="Add city"
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="flex-1 ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={addCity}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 text-[14px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Add
                 </button>
@@ -748,7 +744,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Enter description (optional)"
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -758,7 +754,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel
             </button>
@@ -769,7 +765,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
                 toast.success(rep ? 'Sales rep updated successfully!' : 'Sales rep created successfully!');
                 onSave();
               }}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              className="px-4 py-2 text-[14px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
             >
               {rep ? 'Update' : 'Create'}
             </button>
@@ -783,7 +779,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
 // Client Assignments Section Component
 function ClientAssignmentsSection() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [repFilter, setRepFilter] = useState<string>('all');
+  const repFilter = 'all'; // Filter is always 'all' as there's no UI to change it
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -808,12 +804,12 @@ function ClientAssignmentsSection() {
       try {
         const response = await api.get('/customers?skip=0&take=1000');
         let customers = response.data?.data || [];
-        
+
         // Filter by sales rep
         if (repFilter !== 'all') {
           customers = customers.filter((customer: any) => customer.ownerId?.toString() === repFilter);
         }
-        
+
         // Filter by search query
         if (searchQuery) {
           customers = customers.filter((customer: any) =>
@@ -822,7 +818,7 @@ function ClientAssignmentsSection() {
             customer.companyName?.toLowerCase().includes(searchQuery.toLowerCase())
           );
         }
-        
+
         return customers;
       } catch (error) {
         return [];
@@ -859,9 +855,9 @@ function ClientAssignmentsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header with Search and Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex-1 relative w-full sm:max-w-md">
@@ -871,23 +867,9 @@ function ClientAssignmentsSection() {
                 placeholder="Search clients..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Filter by sales rep:</span>
-            <CustomSelect
-              value={repFilter}
-              onChange={(value) => setRepFilter(value)}
-              options={[
-                { value: 'all', label: 'All Sales Reps' },
-                ...(reps || []).map((rep: any) => ({
-                  value: rep.id.toString(),
-                  label: `${rep.firstName} ${rep.lastName}`.trim() || rep.email,
-                })),
-              ]}
-            />
           </div>
         </div>
       </div>
@@ -947,11 +929,10 @@ function ClientAssignmentsSection() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          customer.isActive
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${customer.isActive
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                        }`}>
+                          }`}>
                           {customer.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -1001,13 +982,19 @@ function AssignClientModal({ customer, reps, onClose, onSave, isLoading }: { cus
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assign Client</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1034,14 +1021,14 @@ function AssignClientModal({ customer, reps, onClose, onSave, isLoading }: { cus
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="px-4 text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Saving...' : 'Save Assignment'}
             </button>
@@ -1078,6 +1065,161 @@ function CalculateCommissionsModal({
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  
+  // Period calendar state
+  const [isPeriodCalendarOpen, setIsPeriodCalendarOpen] = useState(false);
+  const [periodCalendarDate, setPeriodCalendarDate] = useState(() => {
+    if (formData.period) {
+      const [year, month] = formData.period.split('-');
+      return new Date(parseInt(year), parseInt(month) - 1, 1);
+    }
+    return new Date();
+  });
+  const [periodCalendarPosition, setPeriodCalendarPosition] = useState({ top: 0, left: 0 });
+  const periodCalendarRef = useRef<HTMLDivElement>(null);
+  const periodCalendarButtonRef = useRef<HTMLDivElement>(null);
+
+  // Period calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigatePeriodMonth = (direction: 'prev' | 'next') => {
+    setPeriodCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const navigatePeriodYear = (direction: 'prev' | 'next') => {
+    setPeriodCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setFullYear(prev.getFullYear() - 1);
+      } else {
+        newDate.setFullYear(prev.getFullYear() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const handlePeriodDateSelect = (day: number) => {
+    const selected = new Date(periodCalendarDate.getFullYear(), periodCalendarDate.getMonth(), day);
+    const year = selected.getFullYear();
+    const month = String(selected.getMonth() + 1).padStart(2, '0');
+    const period = `${year}-${month}`;
+    setFormData({ ...formData, period });
+    setIsPeriodCalendarOpen(false);
+  };
+
+  const handlePeriodToday = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const period = `${year}-${month}`;
+    setFormData({ ...formData, period });
+    setPeriodCalendarDate(today);
+    setIsPeriodCalendarOpen(false);
+  };
+
+  const isPeriodSelected = (_day: number) => {
+    if (!formData.period) return false;
+    const [year, month] = formData.period.split('-');
+    return (
+      parseInt(year) === periodCalendarDate.getFullYear() &&
+      parseInt(month) - 1 === periodCalendarDate.getMonth()
+    );
+  };
+
+  const isPeriodToday = (day: number) => {
+    const today = new Date();
+    return (
+      today.getDate() === day &&
+      today.getMonth() === periodCalendarDate.getMonth() &&
+      today.getFullYear() === periodCalendarDate.getFullYear()
+    );
+  };
+
+  // Calculate period calendar position
+  const calculatePeriodCalendarPosition = () => {
+    if (periodCalendarButtonRef.current) {
+      const rect = periodCalendarButtonRef.current.getBoundingClientRect();
+      const calendarHeight = 400;
+      const calendarWidth = 320;
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+      
+      let top: number;
+      if (openUpward) {
+        top = Math.max(16, rect.top - calendarHeight - 4);
+      } else {
+        top = rect.bottom + 4;
+        if (top + calendarHeight > viewportHeight - 16) {
+          top = viewportHeight - calendarHeight - 16;
+        }
+      }
+      
+      // Align calendar to the left edge of the input field
+      let left = rect.left;
+      
+      // If calendar goes off the right edge, align to the right edge of the input
+      if (left + calendarWidth > viewportWidth - 16) {
+        left = rect.right - calendarWidth;
+      }
+      
+      // Ensure calendar doesn't go off the left edge
+      if (left < 16) {
+        left = 16;
+      }
+      
+      setPeriodCalendarPosition({ top, left });
+    }
+  };
+
+  // Update period calendar date when formData.period changes
+  useEffect(() => {
+    if (formData.period) {
+      const [year, month] = formData.period.split('-');
+      setPeriodCalendarDate(new Date(parseInt(year), parseInt(month) - 1, 1));
+    }
+  }, [formData.period]);
+
+  // Close period calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        periodCalendarRef.current && !periodCalendarRef.current.contains(event.target as Node) &&
+        periodCalendarButtonRef.current && !periodCalendarButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsPeriodCalendarOpen(false);
+      }
+    };
+
+    if (isPeriodCalendarOpen) {
+      calculatePeriodCalendarPosition();
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', calculatePeriodCalendarPosition);
+      window.addEventListener('scroll', calculatePeriodCalendarPosition, true);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('resize', calculatePeriodCalendarPosition);
+        window.removeEventListener('scroll', calculatePeriodCalendarPosition, true);
+      };
+    }
+  }, [isPeriodCalendarOpen]);
 
   // Fetch orders for the selected period
   const { data: ordersData } = useQuery({
@@ -1091,9 +1233,9 @@ function CalculateCommissionsModal({
         const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
         return orders.filter((order: any) => {
           const orderDate = new Date(order.orderDate);
-          return orderDate >= periodStart && orderDate <= periodEnd && 
-                 (order.status === 'FULFILLED' || order.status === 'DELIVERED') &&
-                 order.userId;
+          return orderDate >= periodStart && orderDate <= periodEnd &&
+            (order.status === 'FULFILLED' || order.status === 'DELIVERED') &&
+            order.userId;
         });
       } catch (error) {
         return [];
@@ -1122,44 +1264,44 @@ function CalculateCommissionsModal({
     setTimeout(() => {
       const commissionMap: any = {};
 
-    filteredOrders.forEach((order: any) => {
-      const repId = order.userId;
-      if (!repId) return;
+      filteredOrders.forEach((order: any) => {
+        const repId = order.userId;
+        if (!repId) return;
 
-      const salesAmount = parseFloat(order.totalAmount || 0);
-      const marginAmount = salesAmount * 0.3; // Assuming 30% margin
-      
-      let commissionAmount = 0;
-      if (formData.commissionType === 'SALES_VOLUME') {
-        commissionAmount = salesAmount * (formData.salesVolumeRate / 100);
-      } else if (formData.commissionType === 'MARGIN') {
-        commissionAmount = marginAmount * (formData.marginRate / 100);
-      } else if (formData.commissionType === 'HYBRID') {
-        commissionAmount = (salesAmount * (formData.salesVolumeRate / 100)) + 
-                          (marginAmount * (formData.marginRate / 100));
-      }
+        const salesAmount = parseFloat(order.totalAmount || 0);
+        const marginAmount = salesAmount * 0.3; // Assuming 30% margin
 
-      if (!commissionMap[repId]) {
-        const rep = reps.find((r: any) => r.id === repId);
-        commissionMap[repId] = {
-          repId,
-          rep,
-          salesAmount: 0,
-          marginAmount: 0,
-          commissionAmount: 0,
-          orderCount: 0,
-        };
-      }
+        let commissionAmount = 0;
+        if (formData.commissionType === 'SALES_VOLUME') {
+          commissionAmount = salesAmount * (formData.salesVolumeRate / 100);
+        } else if (formData.commissionType === 'MARGIN') {
+          commissionAmount = marginAmount * (formData.marginRate / 100);
+        } else if (formData.commissionType === 'HYBRID') {
+          commissionAmount = (salesAmount * (formData.salesVolumeRate / 100)) +
+            (marginAmount * (formData.marginRate / 100));
+        }
 
-      commissionMap[repId].salesAmount += salesAmount;
-      commissionMap[repId].marginAmount += marginAmount;
-      commissionMap[repId].commissionAmount += commissionAmount;
-      commissionMap[repId].orderCount += 1;
-    });
+        if (!commissionMap[repId]) {
+          const rep = reps.find((r: any) => r.id === repId);
+          commissionMap[repId] = {
+            repId,
+            rep,
+            salesAmount: 0,
+            marginAmount: 0,
+            commissionAmount: 0,
+            orderCount: 0,
+          };
+        }
 
-    setPreviewData(Object.values(commissionMap));
-    setIsPreviewMode(true);
-    setIsCalculating(false);
+        commissionMap[repId].salesAmount += salesAmount;
+        commissionMap[repId].marginAmount += marginAmount;
+        commissionMap[repId].commissionAmount += commissionAmount;
+        commissionMap[repId].orderCount += 1;
+      });
+
+      setPreviewData(Object.values(commissionMap));
+      setIsPreviewMode(true);
+      setIsCalculating(false);
     }, 500);
   };
 
@@ -1174,14 +1316,14 @@ function CalculateCommissionsModal({
         salesAmount: data.salesAmount,
         marginAmount: data.marginAmount,
         commissionAmount: data.commissionAmount,
-        commissionRate: formData.commissionType === 'SALES_VOLUME' 
-          ? formData.salesVolumeRate / 100 
+        commissionRate: formData.commissionType === 'SALES_VOLUME'
+          ? formData.salesVolumeRate / 100
           : formData.commissionType === 'MARGIN'
-          ? formData.marginRate / 100
-          : (formData.salesVolumeRate / 100) + (formData.marginRate / 100),
+            ? formData.marginRate / 100
+            : (formData.salesVolumeRate / 100) + (formData.marginRate / 100),
         status: 'CALCULATED',
       }));
-      
+
       // For now, just simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       return commissions;
@@ -1200,16 +1342,16 @@ function CalculateCommissionsModal({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
             {selectedCommission ? 'Commission Details' : 'Calculate Commissions'}
           </h3>
           <button
@@ -1228,7 +1370,7 @@ function CalculateCommissionsModal({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sales Rep</label>
                   <p className="text-sm text-gray-900 dark:text-white">
-                    {selectedCommission.rep 
+                    {selectedCommission.rep
                       ? `${selectedCommission.rep.firstName} ${selectedCommission.rep.lastName}`.trim()
                       : selectedCommission.rep?.email || 'Unknown'}
                   </p>
@@ -1261,7 +1403,7 @@ function CalculateCommissionsModal({
                   Preview of commissions to be calculated for {new Date(formData.period + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                 </p>
               </div>
-              
+
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
@@ -1276,7 +1418,7 @@ function CalculateCommissionsModal({
                     {previewData.map((data: any, index: number) => (
                       <tr key={index}>
                         <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {data.rep 
+                          {data.rep
                             ? `${data.rep.firstName} ${data.rep.lastName}`.trim()
                             : data.rep?.email || 'Unknown'}
                         </td>
@@ -1338,13 +1480,131 @@ function CalculateCommissionsModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period *</label>
-                  <input
-                    type="month"
-                    value={formData.period}
-                    onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <div ref={periodCalendarButtonRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isPeriodCalendarOpen) {
+                          calculatePeriodCalendarPosition();
+                        }
+                        setIsPeriodCalendarOpen(!isPeriodCalendarOpen);
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <span className="text-sm">
+                        {formData.period
+                          ? new Date(formData.period + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+                          : 'Select period'}
+                      </span>
+                      <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </button>
+                  </div>
+                  
+                  {isPeriodCalendarOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[10001]" onClick={() => setIsPeriodCalendarOpen(false)} />
+                      <div 
+                        ref={periodCalendarRef}
+                        className="fixed w-80 bg-gray-800 dark:bg-gray-800 rounded-lg shadow-xl border border-gray-700 dark:border-gray-700" 
+                        style={{ 
+                          zIndex: 10002,
+                          top: `${periodCalendarPosition.top}px`,
+                          left: `${periodCalendarPosition.left}px`,
+                        }}
+                      >
+                        <div className="p-4">
+                          {/* Calendar Header */}
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => navigatePeriodYear('prev')}
+                                className="p-1 hover:bg-gray-700 dark:hover:bg-gray-700 rounded transition-colors"
+                                title="Previous year"
+                              >
+                                <ChevronLeft className="w-4 h-4 text-white dark:text-white" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigatePeriodMonth('prev')}
+                                className="p-1 hover:bg-gray-700 dark:hover:bg-gray-700 rounded transition-colors"
+                                title="Previous month"
+                              >
+                                <ChevronLeft className="w-4 h-4 text-white dark:text-white" />
+                              </button>
+                            </div>
+                            <div className="text-sm font-semibold text-white dark:text-white">
+                              {periodCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => navigatePeriodMonth('next')}
+                                className="p-1 hover:bg-gray-700 dark:hover:bg-gray-700 rounded transition-colors"
+                                title="Next month"
+                              >
+                                <ChevronRight className="w-4 h-4 text-white dark:text-white" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigatePeriodYear('next')}
+                                className="p-1 hover:bg-gray-700 dark:hover:bg-gray-700 rounded transition-colors"
+                                title="Next year"
+                              >
+                                <ChevronRight className="w-4 h-4 text-white dark:text-white" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Calendar Days */}
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                              <div key={day} className="text-center text-xs font-medium text-gray-400 dark:text-gray-400 py-1">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1">
+                            {Array.from({ length: getFirstDayOfMonth(periodCalendarDate) }).map((_, index) => (
+                              <div key={`empty-${index}`} className="aspect-square" />
+                            ))}
+                            {Array.from({ length: getDaysInMonth(periodCalendarDate) }, (_, i) => i + 1).map((day) => {
+                              const isSelected = isPeriodSelected(day);
+                              const isToday = isPeriodToday(day);
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => handlePeriodDateSelect(day)}
+                                  className={`aspect-square text-sm rounded transition-colors ${
+                                    isSelected
+                                      ? 'bg-primary-500 text-white font-semibold'
+                                      : isToday
+                                        ? 'bg-primary-500/50 text-white font-semibold'
+                                        : 'text-white dark:text-white hover:bg-gray-700 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  {day}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Today Button */}
+                          <div className="mt-4 pt-4 border-t border-gray-700 dark:border-gray-700">
+                            <button
+                              type="button"
+                              onClick={handlePeriodToday}
+                              className="w-full px-4 py-2 text-sm text-primary-400 dark:text-primary-400 hover:bg-gray-700 dark:hover:bg-gray-700 rounded transition-colors"
+                            >
+                              Today
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Commission Type *</label>
@@ -1373,7 +1633,7 @@ function CalculateCommissionsModal({
                       step="0.1"
                       value={formData.salesVolumeRate}
                       onChange={(e) => setFormData({ ...formData, salesVolumeRate: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="5.0"
                     />
                   </div>
@@ -1390,7 +1650,7 @@ function CalculateCommissionsModal({
                       step="0.1"
                       value={formData.marginRate}
                       onChange={(e) => setFormData({ ...formData, marginRate: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="10.0"
                     />
                   </div>
@@ -1444,7 +1704,7 @@ function CalculateCommissionsModal({
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
                 <button
                   onClick={onClose}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1508,7 +1768,7 @@ function CommissionsSection() {
         // TODO: Replace with actual commissions API endpoint when backend is ready
         const response = await api.get('/orders?skip=0&take=1000');
         const orders = response.data?.data || [];
-        
+
         // Calculate commissions from orders (placeholder logic)
         const commissions = orders
           .filter((order: any) => order.userId && (order.status === 'FULFILLED' || order.status === 'DELIVERED'))
@@ -1518,7 +1778,7 @@ function CommissionsSection() {
             const marginAmount = salesAmount * 0.3;
             const commissionRate = 0.05; // 5% placeholder
             const commissionAmount = salesAmount * commissionRate;
-            
+
             return {
               id: order.id,
               userId: order.userId,
@@ -1533,7 +1793,7 @@ function CommissionsSection() {
               orderDate: order.orderDate,
             };
           });
-        
+
         // Group by user and period
         const grouped = commissions.reduce((acc: any, comm: any) => {
           const key = `${comm.userId}-${comm.period}`;
@@ -1550,24 +1810,24 @@ function CommissionsSection() {
           }
           return acc;
         }, {});
-        
+
         let result = Object.values(grouped);
-        
+
         // Filter by period
         if (periodFilter !== 'all') {
           result = result.filter((c: any) => c.period === periodFilter);
         }
-        
+
         // Filter by type
         if (typeFilter !== 'all') {
           result = result.filter((c: any) => c.type === typeFilter);
         }
-        
+
         // Filter by status
         if (statusFilter !== 'all') {
           result = result.filter((c: any) => c.status === statusFilter);
         }
-        
+
         // Filter by search query
         if (searchQuery) {
           result = result.filter((c: any) => {
@@ -1579,7 +1839,7 @@ function CommissionsSection() {
             );
           });
         }
-        
+
         return result;
       } catch (error) {
         return [];
@@ -1621,9 +1881,9 @@ function CommissionsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header with Search and Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex-1 relative w-full sm:max-w-md">
@@ -1633,12 +1893,12 @@ function CommissionsSection() {
                 placeholder="Search commissions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Calculate Commissions
@@ -1685,7 +1945,7 @@ function CommissionsSection() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -1749,8 +2009,8 @@ function CommissionsSection() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No commissions found</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
-              {searchQuery || periodFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.' 
+              {searchQuery || periodFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all'
+                ? 'Try adjusting your search or filter criteria.'
                 : 'No commission records available. Commissions are calculated from completed orders.'}
             </p>
           </div>
@@ -1830,9 +2090,9 @@ function CommissionsSection() {
         <CalculateCommissionsModal
           isOpen={isModalOpen}
           onClose={() => {
-                  setIsModalOpen(false);
-                  setSelectedCommission(null);
-                }}
+            setIsModalOpen(false);
+            setSelectedCommission(null);
+          }}
           selectedCommission={selectedCommission}
           reps={repsData || []}
           onCalculate={() => {

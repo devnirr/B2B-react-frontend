@@ -335,7 +335,7 @@ function QuoteBuilderSection() {
                 placeholder="Search quotes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -357,7 +357,7 @@ function QuoteBuilderSection() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Quote
@@ -513,6 +513,174 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
     color: line.color || '',
     description: line.description || '',
   })) || []);
+
+  // Calendar state for Valid Until
+  const [isValidUntilCalendarOpen, setIsValidUntilCalendarOpen] = useState(false);
+  const [validUntilCalendarDate, setValidUntilCalendarDate] = useState(() => {
+    if (formData.validUntil) {
+      return new Date(formData.validUntil);
+    }
+    return new Date();
+  });
+  const [validUntilCalendarPosition, setValidUntilCalendarPosition] = useState({ top: 0, left: 0 });
+  const validUntilCalendarRef = useRef<HTMLDivElement>(null);
+  const validUntilCalendarButtonRef = useRef<HTMLDivElement>(null);
+
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigateValidUntilMonth = (direction: 'prev' | 'next') => {
+    setValidUntilCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const navigateValidUntilYear = (direction: 'prev' | 'next') => {
+    setValidUntilCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setFullYear(prev.getFullYear() - 1);
+      } else {
+        newDate.setFullYear(prev.getFullYear() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const handleValidUntilDateSelect = (day: number) => {
+    const selected = new Date(validUntilCalendarDate.getFullYear(), validUntilCalendarDate.getMonth(), day);
+    const formattedDate = selected.toISOString().split('T')[0];
+    setFormData({ ...formData, validUntil: formattedDate });
+    setIsValidUntilCalendarOpen(false);
+  };
+
+  const handleValidUntilClearDate = () => {
+    setFormData({ ...formData, validUntil: '' });
+    setIsValidUntilCalendarOpen(false);
+  };
+
+  const handleValidUntilToday = () => {
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    setFormData({ ...formData, validUntil: formattedDate });
+    setValidUntilCalendarDate(today);
+    setIsValidUntilCalendarOpen(false);
+  };
+
+  const isValidUntilSelected = (day: number) => {
+    if (!formData.validUntil) return false;
+    const selected = new Date(formData.validUntil);
+    return (
+      selected.getDate() === day &&
+      selected.getMonth() === validUntilCalendarDate.getMonth() &&
+      selected.getFullYear() === validUntilCalendarDate.getFullYear()
+    );
+  };
+
+  const isToday = (day: number, calendarDate: Date) => {
+    const today = new Date();
+    return (
+      today.getDate() === day &&
+      today.getMonth() === calendarDate.getMonth() &&
+      today.getFullYear() === calendarDate.getFullYear()
+    );
+  };
+
+  // Calculate calendar position
+  const calculateValidUntilCalendarPosition = () => {
+    if (validUntilCalendarButtonRef.current) {
+      const rect = validUntilCalendarButtonRef.current.getBoundingClientRect();
+      const calendarHeight = 400;
+      const calendarWidth = 320;
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+      
+      let top: number;
+      if (openUpward) {
+        top = Math.max(16, rect.top - calendarHeight - 4);
+      } else {
+        top = rect.bottom + 4;
+        if (top + calendarHeight > viewportHeight - 16) {
+          top = viewportHeight - calendarHeight - 16;
+        }
+      }
+      
+      // Align calendar to the left edge of the input field
+      let left = rect.left;
+      
+      // If calendar goes off the right edge, align to the right edge of the input
+      if (left + calendarWidth > viewportWidth - 16) {
+        left = rect.right - calendarWidth;
+      }
+      
+      // Ensure calendar doesn't go off the left edge
+      if (left < 16) {
+        left = 16;
+      }
+      
+      setValidUntilCalendarPosition({ top, left });
+    }
+  };
+
+  // Update calendar date when formData changes
+  useEffect(() => {
+    if (formData.validUntil) {
+      const date = new Date(formData.validUntil);
+      if (!isNaN(date.getTime())) {
+        setValidUntilCalendarDate(date);
+      }
+    }
+  }, [formData.validUntil]);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isValidUntilCalendarOpen) {
+        const target = event.target as Node;
+        const isClickInsideCalendar = validUntilCalendarRef.current?.contains(target);
+        const isClickInsideInput = validUntilCalendarButtonRef.current?.contains(target);
+        
+        if (!isClickInsideCalendar && !isClickInsideInput) {
+          setIsValidUntilCalendarOpen(false);
+        }
+      }
+    };
+
+    const handleResize = () => {
+      if (isValidUntilCalendarOpen) {
+        calculateValidUntilCalendarPosition();
+      }
+    };
+
+    if (isValidUntilCalendarOpen) {
+      calculateValidUntilCalendarPosition();
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('scroll', handleResize, true);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleResize, true);
+    };
+  }, [isValidUntilCalendarOpen]);
 
   // Fetch customers and products
   const { data: customersData } = useQuery({
@@ -686,12 +854,159 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valid Until</label>
-              <input
-                type="date"
-                value={formData.validUntil}
-                onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
+              <div className="relative" ref={validUntilCalendarButtonRef}>
+                <input
+                  type="text"
+                  value={formData.validUntil ? new Date(formData.validUntil).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, validUntil: value });
+                  }}
+                  onClick={() => setIsValidUntilCalendarOpen(!isValidUntilCalendarOpen)}
+                  placeholder="mm/dd/yyyy"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsValidUntilCalendarOpen(!isValidUntilCalendarOpen)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
+                >
+                  <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                </button>
+
+                {isValidUntilCalendarOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[10001]" onClick={() => setIsValidUntilCalendarOpen(false)} />
+                    <div 
+                      ref={validUntilCalendarRef}
+                      className="fixed w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700" 
+                      style={{ 
+                        zIndex: 10002,
+                        top: `${validUntilCalendarPosition.top}px`,
+                        left: `${validUntilCalendarPosition.left}px`,
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      {/* Calendar Header */}
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            type="button"
+                            onClick={() => navigateValidUntilMonth('prev')}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          >
+                            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                              {validUntilCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h3>
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => navigateValidUntilYear('next')}
+                                className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                              >
+                                <ChevronUp className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigateValidUntilYear('prev')}
+                                className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                              >
+                                <ChevronDown className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                              </button>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => navigateValidUntilMonth('next')}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          >
+                            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Calendar Days */}
+                      <div className="p-4">
+                        {/* Day names */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                            <div
+                              key={day}
+                              className="text-center text-xs font-medium text-gray-600 dark:text-gray-400 py-1"
+                            >
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Calendar grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {/* Empty cells for days before month starts */}
+                          {Array.from({ length: getFirstDayOfMonth(validUntilCalendarDate) }).map((_, index) => (
+                            <div key={`empty-${index}`} className="aspect-square"></div>
+                          ))}
+                          {/* Days of the month */}
+                          {Array.from({ length: getDaysInMonth(validUntilCalendarDate) }, (_, i) => i + 1).map((day) => {
+                            const isSelectedDay = isValidUntilSelected(day);
+                            const isTodayDay = isToday(day, validUntilCalendarDate);
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => handleValidUntilDateSelect(day)}
+                                className={`aspect-square rounded text-sm font-medium transition-all ${
+                                  isSelectedDay
+                                    ? 'bg-primary-600 text-white'
+                                    : isTodayDay
+                                      ? 'bg-primary-200 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                          {/* Days from next month to fill grid */}
+                          {(() => {
+                            const totalCells = getFirstDayOfMonth(validUntilCalendarDate) + getDaysInMonth(validUntilCalendarDate);
+                            const remainingCells = 42 - totalCells;
+                            return Array.from({ length: remainingCells }, (_, i) => i + 1).map((day) => (
+                              <div
+                                key={`next-${day}`}
+                                className="aspect-square text-sm text-gray-400 dark:text-gray-600"
+                              >
+                                {day}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Calendar Footer */}
+                      <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={handleValidUntilClearDate}
+                          className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleValidUntilToday}
+                          className="px-4 py-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                        >
+                          Today
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -718,7 +1033,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Product</th>
+                      <th className="px-4 py-3 text-left min-w-[200px] text-xs font-medium text-gray-500 dark:text-white uppercase">Product</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Qty</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Unit Price</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Total</th>
@@ -970,7 +1285,7 @@ function ProformaInvoicesSection() {
                 placeholder="Search invoices..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -991,7 +1306,7 @@ function ProformaInvoicesSection() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Proforma Invoice
@@ -1715,7 +2030,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
                                   value={line.size || ''}
                                   onChange={(e) => handleLineChange(index, 'size', e.target.value)}
                                   placeholder="Size"
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                                  className="w-full ::placeholder-[12px] text-[14px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                                 />
                               )}
                             </td>
@@ -1734,7 +2049,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
                                   value={line.color || ''}
                                   onChange={(e) => handleLineChange(index, 'color', e.target.value)}
                                   placeholder="Color"
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                                  className="w-full ::placeholder-[12px] text-[14px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                                 />
                               )}
                             </td>
@@ -1840,7 +2155,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Additional notes..."
               />
             </div>
@@ -1850,7 +2165,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
                 value={formData.terms}
                 onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Terms and conditions..."
               />
             </div>

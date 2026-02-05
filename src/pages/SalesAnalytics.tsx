@@ -346,7 +346,7 @@ function SellInPerformanceSection() {
       {/* Performance Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sell-in Performance Trend</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Sell-in Performance Trend</h3>
         </div>
         {metrics.monthlyData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -361,7 +361,7 @@ function SellInPerformanceSection() {
       {/* Top Products Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Selling Products</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Top Selling Products</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -683,7 +683,7 @@ function ChannelPerformanceSection() {
         {/* Revenue by Channel Bar Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Revenue by Channel</h3>
+            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Revenue by Channel</h3>
           </div>
           {channelMetrics.channels.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
@@ -698,7 +698,7 @@ function ChannelPerformanceSection() {
         {/* Channel Distribution Pie Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Channel Distribution</h3>
+            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Channel Distribution</h3>
           </div>
           {channelMetrics.channels.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
@@ -714,7 +714,7 @@ function ChannelPerformanceSection() {
       {/* Channel Performance Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Channel Performance Details</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Channel Performance Details</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -1056,7 +1056,7 @@ function CustomerPerformanceSection() {
               placeholder="Search customers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
         </div>
@@ -1126,7 +1126,7 @@ function CustomerPerformanceSection() {
         {/* Top Customers Bar Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top 10 Customers by Revenue</h3>
+            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Top 10 Customers by Revenue</h3>
           </div>
           {customerMetrics.topCustomers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
@@ -1141,7 +1141,7 @@ function CustomerPerformanceSection() {
         {/* Customer Segments Pie Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Customer Segments</h3>
+            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Customer Segments</h3>
           </div>
           {customerMetrics.totalCustomers === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
@@ -1157,7 +1157,7 @@ function CustomerPerformanceSection() {
       {/* Customer Performance Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Customer Performance Details</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Customer Performance Details</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

@@ -403,7 +403,7 @@ function SKUEANRulesSection() {
               placeholder="Search by rule name, type, or format..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 ::placeholder-[12px] text-[14px] pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -433,9 +433,9 @@ function SKUEANRulesSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Rule
             </button>
           </div>
@@ -580,7 +580,6 @@ function SKUEANRulesSection() {
           rule={selectedRule}
           onClose={() => setSelectedRule(null)}
           onUpdate={handleUpdateRule}
-          onDelete={handleDeleteRule}
         />
       )}
     </div>
@@ -646,10 +645,10 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Numbering Rule</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Numbering Rule</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
@@ -665,7 +664,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Standard SKU Rule"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -711,7 +710,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value.toUpperCase())}
                 placeholder="e.g., SKU"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -724,7 +723,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value.toUpperCase())}
                 placeholder="e.g., END"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -754,7 +753,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
                 value={sequenceStart}
                 onChange={(e) => setSequenceStart(parseInt(e.target.value) || 1)}
                 min={0}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -769,7 +768,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
               value={format}
               onChange={(e) => setFormat(e.target.value)}
               placeholder="e.g., {prefix}-{sequence}"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
               required
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -786,11 +785,11 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the purpose of this numbering rule..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               type="button"
               onClick={onClose}
@@ -816,10 +815,9 @@ interface RuleDetailsModalProps {
   rule: NumberingRule;
   onClose: () => void;
   onUpdate: (ruleId: string | number, updates: any) => void;
-  onDelete: (ruleId: string | number) => void;
 }
 
-function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModalProps) {
+function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
   const [name, setName] = useState(rule.name);
   const [type, setType] = useState<RuleType>(rule.type);
   const [prefix, setPrefix] = useState(rule.prefix);
@@ -853,13 +851,6 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this numbering rule?')) {
-      onDelete(rule.id);
-      onClose();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -871,14 +862,14 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Numbering Rule Details</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rule.name}</p>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Numbering Rule Details</h2>
+            <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-1">{rule.name}</p>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -891,7 +882,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., Standard SKU Rule"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -935,7 +927,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
                 type="text"
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., SKU"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -947,7 +940,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
                 type="text"
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., END"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -963,7 +957,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
                 onChange={(e) => setLength(parseInt(e.target.value) || 8)}
                 min={1}
                 max={20}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -976,7 +970,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
                 value={currentSequence}
                 onChange={(e) => setCurrentSequence(parseInt(e.target.value) || 0)}
                 min={0}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -989,7 +983,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
               type="text"
               value={format}
               onChange={(e) => setFormat(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+              placeholder="e.g., {prefix}-{sequence}"
+              className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Example: <code className="bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">{generateExample()}</code>
@@ -1004,7 +999,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Describe the purpose of this numbering rule..."
+              className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1025,13 +1021,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate, onDelete }: RuleDetailsModa
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -1251,7 +1241,7 @@ function TaxDefaultsSection() {
               placeholder="Search by name, country, or type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -1270,9 +1260,9 @@ function TaxDefaultsSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Tax Default
             </button>
           </div>
@@ -1417,7 +1407,6 @@ function TaxDefaultsSection() {
           tax={selectedTax}
           onClose={() => setSelectedTax(null)}
           onUpdate={handleUpdateTax}
-          onDelete={handleDeleteTax}
         />
       )}
     </div>
@@ -1472,10 +1461,10 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Tax Default</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Tax Default</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
@@ -1491,12 +1480,12 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Standard VAT"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 text-[14px]">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Type <span className="text-red-500">*</span>
@@ -1524,7 +1513,7 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
                 max={100}
                 step={0.01}
                 placeholder="e.g., 20.0"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -1555,7 +1544,7 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 placeholder="e.g., California"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1581,11 +1570,11 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the tax default..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               type="button"
               onClick={onClose}
@@ -1611,10 +1600,9 @@ interface TaxDetailsModalProps {
   tax: TaxDefault;
   onClose: () => void;
   onUpdate: (taxId: string | number, updates: any) => void;
-  onDelete: (taxId: string | number) => void;
 }
 
-function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalProps) {
+function TaxDetailsModal({ tax, onClose, onUpdate }: TaxDetailsModalProps) {
   const [name, setName] = useState(tax.name);
   const [type, setType] = useState<TaxType>(tax.type);
   const [rate, setRate] = useState(tax.rate);
@@ -1642,13 +1630,6 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
     onClose();
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this tax default?')) {
-      onDelete(tax.id);
-      onClose();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -1660,14 +1641,14 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tax Default Details</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{tax.name}</p>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Tax Default Details</h2>
+            <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-1">{tax.name}</p>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1680,7 +1661,8 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., Standard VAT"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1711,7 +1693,8 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
                 min={0}
                 max={100}
                 step={0.01}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., 20.0"
+                className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1736,7 +1719,8 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
                 type="text"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., California"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1748,6 +1732,7 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
                 checked={isDefault}
                 onChange={(e) => setIsDefault(e.target.checked)}
                 className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Set as default tax</span>
             </label>
@@ -1761,7 +1746,8 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Describe the tax default..."
+              className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1782,13 +1768,7 @@ function TaxDetailsModal({ tax, onClose, onUpdate, onDelete }: TaxDetailsModalPr
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -2007,7 +1987,7 @@ function WarehouseDefaultsSection() {
               placeholder="Search by name, code, city, or country..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 ::placeholder-[12px] text-[14px] pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -2025,9 +2005,9 @@ function WarehouseDefaultsSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center gap-2 text-[14px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Warehouse
             </button>
           </div>
@@ -2236,10 +2216,10 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Warehouse</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create New Warehouse</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
@@ -2256,7 +2236,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Main Warehouse"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -2270,7 +2250,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g., WH-001"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
                 required
               />
             </div>
@@ -2285,7 +2265,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="e.g., 123 Industrial Blvd"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
@@ -2300,7 +2280,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="e.g., New York"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -2314,7 +2294,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 placeholder="e.g., NY"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2327,7 +2307,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 placeholder="e.g., 10001"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -2374,7 +2354,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
                 onChange={(e) => setCapacity(e.target.value ? parseInt(e.target.value) : undefined)}
                 min={0}
                 placeholder="e.g., 10000"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full ::placeholder-[12px] text-[14px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2407,7 +2387,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               type="button"
               onClick={onClose}
@@ -2490,14 +2470,14 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Warehouse Details</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Warehouse Details</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{warehouse.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2511,7 +2491,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., Main Warehouse"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2523,7 +2504,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                placeholder="e.g., WH-001"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-mono"
               />
             </div>
           </div>
@@ -2536,7 +2518,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., 123 Industrial Blvd"
+              className="w-full px-3 py-2 border border-gray-300 ::placeholder-[12px] text-[14px] dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -2549,7 +2532,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., New York"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2561,7 +2545,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 type="text"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., New York"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2573,7 +2558,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 type="text"
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., 10001"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -2615,7 +2601,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
                 value={capacity || ''}
                 onChange={(e) => setCapacity(e.target.value ? parseInt(e.target.value) : undefined)}
                 min={0}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., 10000"
+                className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
@@ -2643,7 +2630,8 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Describe the warehouse..."
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -2664,13 +2652,7 @@ function WarehouseDetailsModal({ warehouse, onClose, onUpdate, onDelete }: Wareh
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 text-[14px]">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
