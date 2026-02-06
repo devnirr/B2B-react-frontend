@@ -6,6 +6,8 @@ import {
   Filter,
   RefreshCw,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -13,6 +15,8 @@ import {
   CheckCircle,
   X,
   Eye,
+  Edit,
+  Trash2,
   Plus,
   ArrowUpDown,
 } from 'lucide-react';
@@ -53,8 +57,8 @@ export default function MultiCurrencyFX() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -105,8 +109,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center justify-between cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${isOpen
-            ? 'border-primary-500 ring-2 ring-primary-500/20'
-            : 'hover:border-gray-400 dark:hover:border-gray-500'
+          ? 'border-primary-500 ring-2 ring-primary-500/20'
+          : 'hover:border-gray-400 dark:hover:border-gray-500'
           }`}
       >
         <span>{selectedOption?.label || placeholder || 'Select...'}</span>
@@ -127,8 +131,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${option.value === value
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
             >
               {option.label}
@@ -146,6 +150,8 @@ function FXRatesSection() {
   const [baseCurrency, setBaseCurrency] = useState<string>('USD');
   const [selectedRate, setSelectedRate] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Common currencies
   const currencies: { code: CurrencyCode; name: string; symbol: string }[] = [
@@ -218,6 +224,17 @@ function FXRatesSection() {
     return filtered.sort((a: any, b: any) => a.toCurrency.localeCompare(b.toCurrency));
   }, [fxRates, baseCurrency, searchQuery, currencies]);
 
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredRates.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRates = filteredRates.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, baseCurrency]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const totalRates = filteredRates.length;
@@ -237,7 +254,7 @@ function FXRatesSection() {
     setIsRefreshing(true);
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    
+
     // Update rates with small random variations
     setFxRates((prevRates: any[]) =>
       prevRates.map((rate: any) => {
@@ -369,12 +386,12 @@ function FXRatesSection() {
             <button
               onClick={handleRefreshRates}
               disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh Rates
             </button>
-            </div>
+          </div>
         </div>
       </div>
 
@@ -426,7 +443,7 @@ function FXRatesSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredRates.map((rate: any) => {
+                {paginatedRates.map((rate: any) => {
                   const toCurrencyInfo = getCurrencyInfo(rate.toCurrency);
                   const ChangeIcon = getChangeIcon(rate.change);
                   return (
@@ -494,6 +511,101 @@ function FXRatesSection() {
         </div>
       )}
 
+      {/* Pagination */}
+      {filteredRates.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min(endIndex, filteredRates.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredRates.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                <CustomDropdown
+                  value={itemsPerPage.toString()}
+                  onChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '5', label: '5' },
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="First page"
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${currentPage === pageNum
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="Last page"
+                >
+                  &gt;&gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* FX Rate Details Modal */}
       {selectedRate && (
         <FXRateDetailsModal rate={selectedRate} onClose={() => setSelectedRate(null)} currencies={currencies} />
@@ -538,17 +650,17 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
   const ChangeIcon = getChangeIcon(rate.change);
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">FX Rate Details</h2>
+            <h2 className="text-[18px] font-bold text-gray-900 dark:text-white">FX Rate Details</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {rate.fromCurrency}/{rate.toCurrency}
             </p>
@@ -557,7 +669,7 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -687,15 +799,6 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
             </div>
           </div>
         </div>
-
-        <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -704,8 +807,13 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
 // Market Currency Settings Section
 function MarketCurrencySettingsSection() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMarket, setSelectedMarket] = useState<any>(null);
+  const [marketToView, setMarketToView] = useState<any>(null);
+  const [marketToEdit, setMarketToEdit] = useState<any>(null);
+  const [marketToDelete, setMarketToDelete] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Common markets/regions
   const markets: { code: string; name: string; region: string }[] = [
@@ -766,6 +874,17 @@ function MarketCurrencySettingsSection() {
     return filtered.sort((a: any, b: any) => a.marketName.localeCompare(b.marketName));
   }, [marketSettings, searchQuery]);
 
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredMarkets.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMarkets = filteredMarkets.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const total = filteredMarkets.length;
@@ -799,13 +918,15 @@ function MarketCurrencySettingsSection() {
 
   const handleDeleteMarket = (marketId: string) => {
     setMarketSettings(marketSettings.filter((m: any) => m.id !== marketId));
+    setShowDeleteModal(false);
+    setMarketToDelete(null);
     toast.success('Market currency setting deleted successfully!');
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -850,7 +971,7 @@ function MarketCurrencySettingsSection() {
       </div>
 
       {/* Filters and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex-1 relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -864,9 +985,9 @@ function MarketCurrencySettingsSection() {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-[14px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             New Market
           </button>
         </div>
@@ -874,7 +995,7 @@ function MarketCurrencySettingsSection() {
 
       {/* Market Settings Table */}
       {filteredMarkets.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <Globe className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -926,7 +1047,7 @@ function MarketCurrencySettingsSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredMarkets.map((market: any) => (
+                {paginatedMarkets.map((market: any) => (
                   <tr key={market.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -962,37 +1083,53 @@ function MarketCurrencySettingsSection() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        market.autoUpdateRates
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${market.autoUpdateRates
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
                         {market.autoUpdateRates ? 'Yes' : 'No'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        market.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${market.isActive
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
                         {market.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setSelectedMarket(market)}
-                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMarketToView(market);
+                          }}
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                          title="View Market"
                         >
                           <Eye className="w-4 h-4" />
-                          View
                         </button>
                         <button
-                          onClick={() => handleDeleteMarket(market.id)}
-                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMarketToEdit(market);
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                          title="Edit Market"
                         >
-                          <X className="w-4 h-4" />
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMarketToDelete(market);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          title="Delete Market"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1004,23 +1141,138 @@ function MarketCurrencySettingsSection() {
         </div>
       )}
 
-       {/* Create Market Modal */}
-       {showCreateModal && (
-         <CreateMarketModal
-           onClose={() => setShowCreateModal(false)}
-           onCreate={handleCreateMarket}
-         />
-       )}
+      {/* Pagination */}
+      {filteredMarkets.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min(endIndex, filteredMarkets.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredMarkets.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                <CustomDropdown
+                  value={itemsPerPage.toString()}
+                  onChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '5', label: '5' },
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="First page"
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
 
-       {/* Market Details Modal */}
-       {selectedMarket && (
-         <MarketDetailsModal
-           market={selectedMarket}
-           onClose={() => setSelectedMarket(null)}
-           onUpdate={handleUpdateMarket}
-           markets={markets}
-         />
-       )}
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${currentPage === pageNum
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="Last page"
+                >
+                  &gt;&gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Market Modal */}
+      {showCreateModal && (
+        <CreateMarketModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateMarket}
+        />
+      )}
+
+      {/* View Market Modal */}
+      {marketToView && (
+        <MarketViewModal
+          market={marketToView}
+          onClose={() => setMarketToView(null)}
+        />
+      )}
+
+      {/* Edit Market Modal */}
+      {marketToEdit && (
+        <MarketEditModal
+          market={marketToEdit}
+          onClose={() => setMarketToEdit(null)}
+          onUpdate={handleUpdateMarket}
+          markets={markets}
+        />
+      )}
+
+      {/* Delete Market Modal */}
+      {showDeleteModal && marketToDelete && (
+        <DeleteMarketModal
+          market={marketToDelete}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setMarketToDelete(null);
+          }}
+          onConfirm={() => handleDeleteMarket(marketToDelete.id)}
+        />
+      )}
     </div>
   );
 }
@@ -1084,16 +1336,16 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Market Currency Setting</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create Market Currency Setting</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
@@ -1181,62 +1433,67 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Rounding Precision
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="6"
-                value={roundingPrecision}
-                onChange={(e) => setRoundingPrecision(parseInt(e.target.value) || 2)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Rounding Precision
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="6"
+                  value={roundingPrecision}
+                  onChange={(e) => setRoundingPrecision(parseInt(e.target.value) || 2)}
+                  placeholder="2"
+                  className="w-full px-4 text-[14px] ::placeholder-[12px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 h-full justify-end flex flex-col">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isActiveCreate"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="isActiveCreate" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Active (market will be available for use)
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autoUpdateCreate"
+                  checked={autoUpdateRates}
+                  onChange={(e) => setAutoUpdateRates(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="autoUpdateCreate" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Auto-update FX rates for this market
+                </label>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isActiveCreate"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <label htmlFor="isActiveCreate" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Active (market will be available for use)
-              </label>
+          <div className="sticky bottom-0 text-[14px] pt-0 flex justify-end gap-2">
+            <div className='flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-6 w-full justify-end'>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Create Market
+              </button>
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="autoUpdateCreate"
-                checked={autoUpdateRates}
-                onChange={(e) => setAutoUpdateRates(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <label htmlFor="autoUpdateCreate" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Auto-update FX rates for this market
-              </label>
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mb-6 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Create Market
-            </button>
           </div>
         </form>
       </div>
@@ -1244,15 +1501,155 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
   );
 }
 
-// Market Details Modal Component
-interface MarketDetailsModalProps {
+// Market View Modal Component (Read-only)
+interface MarketViewModalProps {
+  market: any;
+  onClose: () => void;
+}
+
+function MarketViewModal({ market, onClose }: MarketViewModalProps) {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">View Market Currency Setting</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{market.marketName} ({market.marketCode})</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status Section */}
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${market.isActive
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
+                  {market.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Auto-Update</p>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${market.autoUpdateRates
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
+                  {market.autoUpdateRates ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Market Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Market Code
+              </label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                {market.marketCode}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Market Name
+              </label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                {market.marketName}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Region
+            </label>
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+              {market.region}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Default Currency
+            </label>
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+              {market.defaultCurrency}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Supported Currencies
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {market.supportedCurrencies?.map((currency: string) => (
+                <span
+                  key={currency}
+                  className="px-3 py-1 text-sm font-medium rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  {currency}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Rounding Precision
+            </label>
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+              {market.roundingPrecision || 2}
+            </div>
+          </div>
+
+          {market.createdAt && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <p>Created: {new Date(market.createdAt).toLocaleString()}</p>
+              {market.updatedAt && (
+                <p>Last Updated: {new Date(market.updatedAt).toLocaleString()}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="sticky text-[14px] bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Market Edit Modal Component (Editable)
+interface MarketEditModalProps {
   market: any;
   onClose: () => void;
   onUpdate: (marketId: string, updates: any) => void;
   markets: { code: string; name: string; region: string }[];
 }
 
-function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalProps) {
+function MarketEditModal({ market, onClose, onUpdate }: MarketEditModalProps) {
   const [marketCode, setMarketCode] = useState(market.marketCode);
   const [marketName, setMarketName] = useState(market.marketName);
   const [region, setRegion] = useState(market.region);
@@ -1291,24 +1688,24 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Market Currency Settings</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Edit Market Currency Setting</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{market.marketName} ({market.marketCode})</p>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1318,21 +1715,19 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  isActive
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                }`}>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${isActive
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
                   {isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Auto-Update</p>
-                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  autoUpdateRates
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                }`}>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${autoUpdateRates
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
                   {autoUpdateRates ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
@@ -1349,7 +1744,8 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
                 type="text"
                 value={marketCode}
                 onChange={(e) => setMarketCode(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., US"
+                className="w-full px-4 text-[14px] ::placeholder-[12px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -1360,33 +1756,37 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
                 type="text"
                 value={marketName}
                 onChange={(e) => setMarketName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="e.g., United States"
+                className="w-full px-4 text-[14px] ::placeholder-[12px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Region
-            </label>
-            <input
-              type="text"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Default Currency
-            </label>
-            <div className="min-w-[240px]">
-              <CustomDropdown
-                value={defaultCurrency}
-                onChange={setDefaultCurrency}
-                options={currencyOptions.map((c) => ({ value: c, label: c }))}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Region
+              </label>
+              <input
+                type="text"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                placeholder="e.g., North America"
+                className="w-full px-4 text-[14px] ::placeholder-[12px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Default Currency
+              </label>
+              <div className="min-w-[240px]">
+                <CustomDropdown
+                  value={defaultCurrency}
+                  onChange={setDefaultCurrency}
+                  options={currencyOptions.map((c) => ({ value: c, label: c }))}
+                />
+              </div>
             </div>
           </div>
 
@@ -1412,44 +1812,47 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Rounding Precision
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="6"
-              value={roundingPrecision}
-              onChange={(e) => setRoundingPrecision(parseInt(e.target.value) || 2)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isActiveEdit"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <label htmlFor="isActiveEdit" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Active (market will be available for use)
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Rounding Precision
               </label>
+              <input
+                type="number"
+                min="0"
+                max="6"
+                value={roundingPrecision}
+                onChange={(e) => setRoundingPrecision(parseInt(e.target.value) || 2)}
+                placeholder="2"
+                className="w-full px-4 text-[14px] ::placeholder-[12px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="autoUpdateEdit"
-                checked={autoUpdateRates}
-                onChange={(e) => setAutoUpdateRates(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <label htmlFor="autoUpdateEdit" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Auto-update FX rates for this market
-              </label>
+
+            <div className="space-y-3 h-full justify-end flex flex-col">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isActiveEdit"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="isActiveEdit" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Active (market will be available for use)
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autoUpdateEdit"
+                  checked={autoUpdateRates}
+                  onChange={(e) => setAutoUpdateRates(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="autoUpdateEdit" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Auto-update FX rates for this market
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1461,7 +1864,61 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-2">
+        <div className="sticky bottom-0 text-[14px] pt-0 px-6 pb-4 flex justify-end gap-2">
+          <div className='flex items-center text-[14px] gap-2 border-t border-gray-200 dark:border-gray-700 pt-4 w-full justify-end'>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Delete Market Modal Component
+interface DeleteMarketModalProps {
+  market: any;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteMarketModal({ market, onClose, onConfirm }: DeleteMarketModalProps) {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Delete Market Currency Setting</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Are you sure you want to delete the market currency setting for <span className="font-medium text-gray-900 dark:text-white">{market.marketName} ({market.marketCode})</span>? This action cannot be undone.
+          </p>
+        </div>
+
+        <div className="sticky text-[14px] bottom-0 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1469,10 +1926,10 @@ function MarketDetailsModal({ market, onClose, onUpdate }: MarketDetailsModalPro
             Cancel
           </button>
           <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
-            Save Changes
+            Delete
           </button>
         </div>
       </div>

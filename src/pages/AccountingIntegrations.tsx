@@ -1,15 +1,20 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-hot-toast';
 import {
   Search,
   Filter,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Settings,
   FileText,
   RefreshCw,
   CheckCircle,
   X,
   Eye,
+  Edit,
+  Trash2,
   AlertCircle,
   Clock,
   Database,
@@ -85,23 +90,89 @@ interface CustomDropdownProps {
 function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    // Calculate position based on available space and button position
+    const calculatePosition = () => {
+      if (!buttonRef.current) return;
+      
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const estimatedItemHeight = 40; // Approximate height per option
+      const menuHeight = Math.min(options.length * estimatedItemHeight, 200); // Max 200px
+      const menuWidth = buttonRect.width;
+      const padding = 4; // Gap between button and menu
+      
+      // Use fixed positioning to escape modal overflow
+      const style: React.CSSProperties = {
+        position: 'fixed',
+        width: `${menuWidth}px`,
+        left: `${buttonRect.left}px`,
+        zIndex: 9999,
+      };
+      
+      // Determine if we should open upward or downward
+      // Open upward if:
+      // 1. Not enough space below AND more space above, OR
+      // 2. Space above is significantly more than space below
+      const shouldOpenUpward = (spaceBelow < menuHeight + padding && spaceAbove > spaceBelow) || 
+                               (spaceAbove > spaceBelow + 50);
+      
+      if (shouldOpenUpward) {
+        // Position above the button
+        const bottomPosition = window.innerHeight - buttonRect.top + padding;
+        style.bottom = `${bottomPosition}px`;
+        style.maxHeight = `${Math.min(spaceAbove - padding, 200)}px`;
+      } else {
+        // Position below the button
+        style.top = `${buttonRect.bottom + padding}px`;
+        style.maxHeight = `${Math.min(spaceBelow - padding, 200)}px`;
+      }
+      
+      setMenuStyle(style);
+    };
+
+    // Calculate position immediately
+    calculatePosition();
+
+    // Add event listener with a slight delay to avoid immediate closure when opening
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      // Recalculate after a brief moment to ensure accurate positioning
+      calculatePosition();
+    }, 10);
+
+    // Recalculate on scroll or resize
+    window.addEventListener('scroll', calculatePosition, true);
+    window.addEventListener('resize', calculatePosition);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', calculatePosition, true);
+      window.removeEventListener('resize', calculatePosition);
+    };
+  }, [isOpen, options.length]);
 
   const selectedOption = options.find(opt => opt.value === value);
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center justify-between cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${isOpen
@@ -116,8 +187,12 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
         />
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden max-h-[200px] overflow-y-auto">
+      {isOpen && createPortal(
+        <div 
+          ref={menuRef}
+          className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden overflow-y-auto"
+          style={menuStyle}
+        >
           {options.map((option) => (
             <button
               key={option.value}
@@ -127,14 +202,15 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${option.value === value
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
             >
               {option.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -144,8 +220,13 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
 function VismaMappingSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedMapping, setSelectedMapping] = useState<any>(null);
+  const [mappingToView, setMappingToView] = useState<any>(null);
+  const [mappingToEdit, setMappingToEdit] = useState<any>(null);
+  const [mappingToDelete, setMappingToDelete] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Common accounting fields
   const accountingFields = [
@@ -245,6 +326,17 @@ function VismaMappingSection() {
     // Sort by name
     return filtered.sort((a: any, b: any) => a.name.localeCompare(b.name));
   }, [mappings, searchQuery, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredMappings.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMappings = filteredMappings.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -436,11 +528,10 @@ function VismaMappingSection() {
                   </td>
                 </tr>
               ) : (
-                filteredMappings.map((mapping: any) => (
+                paginatedMappings.map((mapping: any) => (
                   <tr
                     key={mapping.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                    onClick={() => setSelectedMapping(mapping)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -472,11 +563,33 @@ function VismaMappingSection() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedMapping(mapping);
+                            setMappingToView(mapping);
                           }}
                           className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                          title="View Mapping"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMappingToEdit(mapping);
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                          title="Edit Mapping"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMappingToDelete(mapping);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          title="Delete Mapping"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -488,6 +601,102 @@ function VismaMappingSection() {
         </div>
       </div>
 
+      {/* Pagination */}
+      {filteredMappings.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min(endIndex, filteredMappings.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredMappings.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                <CustomDropdown
+                  value={itemsPerPage.toString()}
+                  onChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '5', label: '5' },
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="First page"
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="Last page"
+                >
+                  &gt;&gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Mapping Modal */}
       {showCreateModal && (
         <CreateMappingModal
@@ -498,15 +707,36 @@ function VismaMappingSection() {
         />
       )}
 
-      {/* Mapping Details Modal */}
-      {selectedMapping && (
-        <MappingDetailsModal
-          mapping={selectedMapping}
-          onClose={() => setSelectedMapping(null)}
-          onUpdate={handleUpdateMapping}
-          onDelete={handleDeleteMapping}
+      {/* View Mapping Modal */}
+      {mappingToView && (
+        <MappingViewModal
+          mapping={mappingToView}
+          onClose={() => setMappingToView(null)}
           accountingFields={accountingFields}
           vismaFields={vismaFields}
+        />
+      )}
+
+      {/* Edit Mapping Modal */}
+      {mappingToEdit && (
+        <MappingEditModal
+          mapping={mappingToEdit}
+          onClose={() => setMappingToEdit(null)}
+          onUpdate={handleUpdateMapping}
+          accountingFields={accountingFields}
+          vismaFields={vismaFields}
+        />
+      )}
+
+      {/* Delete Mapping Modal */}
+      {showDeleteModal && mappingToDelete && (
+        <DeleteMappingModal
+          mapping={mappingToDelete}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setMappingToDelete(null);
+          }}
+          onDelete={handleDeleteMapping}
         />
       )}
     </div>
@@ -555,12 +785,12 @@ function CreateMappingModal({ onClose, onCreate, accountingFields, vismaFields }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Mapping</h2>
+          <h2 className="text-[18px] font-bold text-gray-900 dark:text-white">Create New Mapping</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -680,17 +910,163 @@ function CreateMappingModal({ onClose, onCreate, accountingFields, vismaFields }
   );
 }
 
-// Mapping Details Modal
-interface MappingDetailsModalProps {
+// Mapping View Modal (Read-only)
+interface MappingViewModalProps {
   mapping: any;
   onClose: () => void;
-  onUpdate: (mappingId: number, updates: any) => void;
-  onDelete: (mappingId: number) => void;
   accountingFields: any[];
   vismaFields: any[];
 }
 
-function MappingDetailsModal({ mapping, onClose, onUpdate, onDelete, accountingFields, vismaFields }: MappingDetailsModalProps) {
+function MappingViewModal({ mapping, onClose, accountingFields, vismaFields }: MappingViewModalProps) {
+  const getStatusColor = (status: MappingStatus) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">View Mapping</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{mapping.name}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status Badge */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
+            <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(mapping.status)}`}>
+              {mapping.status}
+            </span>
+          </div>
+
+          {/* Mapping Information */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Mapping Name
+              </label>
+              <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                {mapping.name}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Source Field (System)
+                </label>
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                  {accountingFields.find((f) => f.id === mapping.sourceField)?.label || mapping.sourceField}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Target Field (Visma/eAccounting)
+                </label>
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                  {vismaFields.find((f) => f.id === mapping.targetField)?.label || mapping.targetField}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sync Direction
+                </label>
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white capitalize">
+                  {mapping.syncDirection}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Transformation
+                </label>
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white capitalize">
+                  {mapping.transformation}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status
+              </label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white capitalize">
+                {mapping.status}
+              </div>
+            </div>
+          </div>
+
+          {/* Metadata */}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Created At</span>
+              <span className="text-gray-900 dark:text-white">
+                {new Date(mapping.createdAt).toLocaleString()}
+              </span>
+            </div>
+            {mapping.updatedAt && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Updated At</span>
+                <span className="text-gray-900 dark:text-white">
+                  {new Date(mapping.updatedAt).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mapping Edit Modal (Editable)
+interface MappingEditModalProps {
+  mapping: any;
+  onClose: () => void;
+  onUpdate: (mappingId: number, updates: any) => void;
+  accountingFields: any[];
+  vismaFields: any[];
+}
+
+function MappingEditModal({ mapping, onClose, onUpdate, accountingFields, vismaFields }: MappingEditModalProps) {
   const [name, setName] = useState(mapping.name);
   const [sourceField, setSourceField] = useState(mapping.sourceField);
   const [targetField, setTargetField] = useState(mapping.targetField);
@@ -708,13 +1084,6 @@ function MappingDetailsModal({ mapping, onClose, onUpdate, onDelete, accountingF
       status,
     });
     onClose();
-  };
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this mapping?')) {
-      onDelete(mapping.id);
-      onClose();
-    }
   };
 
   const getStatusColor = (status: MappingStatus) => {
@@ -741,7 +1110,7 @@ function MappingDetailsModal({ mapping, onClose, onUpdate, onDelete, accountingF
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Mapping Details</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Mapping</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{mapping.name}</p>
           </div>
           <button
@@ -875,12 +1244,6 @@ function MappingDetailsModal({ mapping, onClose, onUpdate, onDelete, accountingF
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
-              onClick={handleDelete}
-              className="px-4 py-2 text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Delete
-            </button>
-            <button
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
@@ -899,11 +1262,65 @@ function MappingDetailsModal({ mapping, onClose, onUpdate, onDelete, accountingF
   );
 }
 
+// Delete Mapping Modal
+interface DeleteMappingModalProps {
+  mapping: any;
+  onClose: () => void;
+  onDelete: (mappingId: number) => void;
+}
+
+function DeleteMappingModal({ mapping, onClose, onDelete }: DeleteMappingModalProps) {
+  const handleDelete = () => {
+    onDelete(mapping.id);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+            <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">
+            Delete Mapping
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+            Are you sure you want to delete the mapping <span className="font-medium text-gray-900 dark:text-white">"{mapping.name}"</span>? This action cannot be undone.
+          </p>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Sync Logs Section
 function SyncLogsSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Load sync logs from localStorage
   const [syncLogs, setSyncLogs] = useState<any[]>(() => {
@@ -962,6 +1379,17 @@ function SyncLogsSection() {
       new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     );
   }, [syncLogs, searchQuery, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -1131,9 +1559,9 @@ function SyncLogsSection() {
                 setSyncLogs([newLog, ...syncLogs]);
                 toast.success('Sync started');
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex items-center text-[14px] gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
-              <RefreshCw className="w-5 h-5" />
+              <RefreshCw className="w-4 h-4" />
               Start Sync
             </button>
           </div>
@@ -1183,7 +1611,7 @@ function SyncLogsSection() {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log: any) => {
+                paginatedLogs.map((log: any) => {
                   const StatusIcon = getStatusIcon(log.status);
                   const duration = log.completedAt
                     ? Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 1000)
@@ -1252,6 +1680,102 @@ function SyncLogsSection() {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {filteredLogs.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min(endIndex, filteredLogs.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredLogs.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                <CustomDropdown
+                  value={itemsPerPage.toString()}
+                  onChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '5', label: '5' },
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="First page"
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="Last page"
+                >
+                  &gt;&gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sync Log Details Modal */}
       {selectedLog && (

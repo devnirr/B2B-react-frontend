@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import {
   Receipt,
   Search,
@@ -18,6 +19,9 @@ import {
   CheckCircle,
   Trash2,
   AlertTriangle,
+  Edit,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
@@ -57,8 +61,8 @@ export default function TaxesVAT() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -84,9 +88,10 @@ interface CustomDropdownProps {
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
+  className?: string;
 }
 
-function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdownProps) {
+function CustomDropdown({ value, onChange, options, placeholder, className }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -104,13 +109,13 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
   const selectedOption = options.find(opt => opt.value === value);
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className={`relative ${className || ''}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center justify-between cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${isOpen
-            ? 'border-primary-500 ring-2 ring-primary-500/20'
-            : 'hover:border-gray-400 dark:hover:border-gray-500'
+          ? 'border-primary-500 ring-2 ring-primary-500/20'
+          : 'hover:border-gray-400 dark:hover:border-gray-500'
           }`}
       >
         <span>{selectedOption?.label || placeholder || 'Select...'}</span>
@@ -131,8 +136,8 @@ function CustomDropdown({ value, onChange, options, placeholder }: CustomDropdow
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${option.value === value
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
             >
               {option.label}
@@ -186,11 +191,11 @@ function VATReportsSection() {
   const vatReports = useMemo(() => {
     const reports: any[] = [];
     const now = new Date();
-    
+
     // Get date range based on period filter
     let startDate: Date;
     let endDate: Date = new Date(now);
-    
+
     switch (periodFilter) {
       case 'daily':
         startDate = new Date(now);
@@ -237,11 +242,11 @@ function VATReportsSection() {
 
     // Group by region/country
     const regionGroups: { [key: string]: any[] } = {};
-    
+
     filteredInvoices.forEach((invoice: any) => {
       const customer = customers.find((c: any) => c.id === invoice.customerId);
       const region = customer?.country || 'Unknown';
-      
+
       if (!regionGroups[region]) {
         regionGroups[region] = [];
       }
@@ -254,7 +259,7 @@ function VATReportsSection() {
       const subtotal = regionInvoices.reduce((sum: number, inv: any) => sum + parseFloat(inv.subtotal || 0), 0);
       const totalTax = regionInvoices.reduce((sum: number, inv: any) => sum + parseFloat(inv.taxAmount || 0), 0);
       const totalAmount = regionInvoices.reduce((sum: number, inv: any) => sum + parseFloat(inv.totalAmount || 0), 0);
-      
+
       // Calculate average tax rate
       const avgTaxRate = regionInvoices.length > 0
         ? regionInvoices.reduce((sum: number, inv: any) => sum + parseFloat(inv.taxRate || 0), 0) / regionInvoices.length
@@ -379,9 +384,6 @@ function VATReportsSection() {
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 {summaryMetrics.totalInvoices}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {summaryMetrics.totalReports} regions
-              </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
               <FileText className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
@@ -454,7 +456,7 @@ function VATReportsSection() {
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            </div>
+          </div>
         )}
       </div>
 
@@ -732,56 +734,57 @@ function VATReportDetailsModal({ report, onClose }: VATReportDetailsModalProps) 
 // Region Rules Section
 function RegionRulesSection() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRule, setSelectedRule] = useState<any>(null);
+  const [ruleToView, setRuleToView] = useState<any>(null);
+  const [ruleToEdit, setRuleToEdit] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Load region rules from localStorage (since there's no API endpoint yet)
-  const [regionRules, setRegionRules] = useState<any[]>(() => {
-    const saved = localStorage.getItem('region-tax-rules');
-    return saved ? JSON.parse(saved) : [
-      // Default rules
-      {
-        id: 1,
-        region: 'United States',
-        country: 'US',
-        taxType: 'sales-tax',
-        taxRate: 0,
-        vatRate: 0,
-        isActive: true,
-        description: 'Sales tax varies by state',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        region: 'United Kingdom',
-        country: 'GB',
-        taxType: 'vat',
-        taxRate: 0,
-        vatRate: 20,
-        isActive: true,
-        description: 'Standard VAT rate: 20%',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 3,
-        region: 'European Union',
-        country: 'EU',
-        taxType: 'vat',
-        taxRate: 0,
-        vatRate: 19,
-        isActive: true,
-        description: 'Standard EU VAT rate: 19%',
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const queryClient = useQueryClient();
+
+  // Fetch tax defaults from API
+  const { data: taxDefaultsData, isLoading: isLoadingTaxDefaults } = useQuery({
+    queryKey: ['tax-defaults', 'region-rules'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/tax-defaults?skip=0&take=10000');
+        return response.data?.data || response.data || [];
+      } catch (error) {
+        console.error('Error fetching tax defaults:', error);
+        return [];
+      }
+    },
   });
 
-  // Save region rules to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('region-tax-rules', JSON.stringify(regionRules));
-  }, [regionRules]);
+  // Transform database data to frontend format
+  const regionRules = useMemo(() => {
+    if (!taxDefaultsData || !Array.isArray(taxDefaultsData)) return [];
+    
+    return taxDefaultsData.map((tax: any) => {
+      // Map database fields to frontend format
+      // Backend returns type as lowercase with dash (e.g., 'vat', 'sales-tax')
+      const taxType = tax.type || 'vat';
+      
+      // Use separate taxRate and vatRate fields from database
+      const taxRate = tax.taxRate !== null && tax.taxRate !== undefined ? Number(tax.taxRate) : 0;
+      const vatRate = tax.vatRate !== null && tax.vatRate !== undefined ? Number(tax.vatRate) : 0;
+      
+      return {
+        id: tax.id,
+        region: tax.name || tax.region || '',
+        country: tax.country || '',
+        taxType,
+        taxRate,
+        vatRate,
+        isActive: tax.isDefault !== undefined ? tax.isDefault : true,
+        description: tax.description || '',
+        createdAt: tax.createdAt,
+        updatedAt: tax.updatedAt,
+      };
+    });
+  }, [taxDefaultsData]);
 
   // Filter rules
   const filteredRules = useMemo(() => {
@@ -801,6 +804,17 @@ function RegionRulesSection() {
     return filtered.sort((a: any, b: any) => a.region.localeCompare(b.region));
   }, [regionRules, searchQuery]);
 
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredRules.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRules = filteredRules.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const total = filteredRules.length;
@@ -816,25 +830,104 @@ function RegionRulesSection() {
     };
   }, [filteredRules]);
 
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (ruleData: any) => {
+      // Transform frontend format to database format
+      // Backend expects: VAT, SALES_TAX, GST (uppercase with underscore)
+      const taxType = ruleData.taxType === 'vat' ? 'VAT' : ruleData.taxType === 'sales-tax' ? 'SALES_TAX' : 'VAT';
+      
+      const payload = {
+        name: ruleData.region,
+        type: taxType,
+        taxRate: ruleData.taxRate || 0,
+        vatRate: ruleData.vatRate || 0,
+        country: ruleData.country,
+        region: ruleData.region || undefined,
+        isDefault: ruleData.isActive,
+        description: ruleData.description || undefined,
+      };
+      
+      const response = await api.post('/tax-defaults', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-defaults'] });
+      setShowCreateModal(false);
+      toast.success('Tax rule created successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Error creating tax rule:', error);
+      toast.error(error.response?.data?.message || 'Failed to create tax rule');
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      // Transform frontend format to database format
+      const taxType = updates.taxType === 'vat' ? 'VAT' : updates.taxType === 'sales-tax' ? 'SALES_TAX' : 'VAT';
+      
+      const payload: any = {
+        name: updates.region,
+        type: taxType,
+        taxRate: updates.taxRate || 0,
+        vatRate: updates.vatRate || 0,
+        country: updates.country,
+        region: updates.region || undefined,
+        isDefault: updates.isActive,
+      };
+      
+      if (updates.description !== undefined) {
+        payload.description = updates.description || undefined;
+      }
+      
+      const response = await api.patch(`/tax-defaults/${id}`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-defaults'] });
+      setRuleToEdit(null);
+      toast.success('Tax rule updated successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Error updating tax rule:', error);
+      toast.error(error.response?.data?.message || 'Failed to update tax rule');
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/tax-defaults/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-defaults'] });
+      setShowDeleteModal(false);
+      setRuleToDelete(null);
+      toast.success('Tax rule deleted successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting tax rule:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete tax rule');
+    },
+  });
+
   const handleCreateRule = (ruleData: any) => {
-    const newRule = {
-      id: Date.now(),
-      ...ruleData,
-      createdAt: new Date().toISOString(),
-    };
-    setRegionRules([...regionRules, newRule]);
-    setShowCreateModal(false);
+    createMutation.mutate(ruleData);
   };
 
   const handleUpdateRule = (ruleId: number, updates: any) => {
-    setRegionRules(regionRules.map((r: any) =>
-      r.id === ruleId ? { ...r, ...updates } : r
-    ));
+    updateMutation.mutate({ id: ruleId, updates });
   };
 
   const handleDeleteRule = (ruleId: number) => {
-    setRegionRules(regionRules.filter((r: any) => r.id !== ruleId));
+    deleteMutation.mutate(ruleId);
   };
+
+  if (isLoadingTaxDefaults) {
+    return <SkeletonPage />;
+  }
 
   return (
     <div>
@@ -933,15 +1026,6 @@ function RegionRulesSection() {
                 ? 'Try adjusting your search criteria.'
                 : 'No region tax rules configured. Create a new rule to get started.'}
             </p>
-            {!searchQuery && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-                Create First Rule
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -974,7 +1058,7 @@ function RegionRulesSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredRules.map((rule: any) => (
+                {paginatedRules.map((rule: any) => (
                   <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -988,11 +1072,10 @@ function RegionRulesSection() {
                       {rule.country}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        rule.taxType === 'vat'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${rule.taxType === 'vat'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                        : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                        }`}>
                         {rule.taxType === 'vat' ? 'VAT' : 'Sales Tax'}
                       </span>
                     </td>
@@ -1003,24 +1086,38 @@ function RegionRulesSection() {
                       {rule.vatRate > 0 ? `${rule.vatRate}%` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        rule.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${rule.isActive
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
                         {rule.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setSelectedRule(rule)}
-                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRuleToView(rule);
+                          }}
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                          title="View Rule"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRuleToEdit(rule);
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                          title="Edit Rule"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setRuleToDelete(rule);
                             setShowDeleteModal(true);
                           }}
@@ -1039,7 +1136,103 @@ function RegionRulesSection() {
         </div>
       )}
 
-      {/* Create/Edit Rule Modal */}
+      {/* Pagination */}
+      {filteredRules.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {Math.min(endIndex, filteredRules.length)}
+              </span>{' '}
+              of <span className="font-medium text-gray-900 dark:text-white">{filteredRules.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
+                <CustomDropdown
+                  value={itemsPerPage.toString()}
+                  onChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '5', label: '5' },
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                  ]}
+                  className="min-w-[80px]"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="First page"
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${currentPage === pageNum
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                  title="Last page"
+                >
+                  &gt;&gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Rule Modal */}
       {showCreateModal && (
         <CreateRuleModal
           onClose={() => setShowCreateModal(false)}
@@ -1047,11 +1240,19 @@ function RegionRulesSection() {
         />
       )}
 
-      {/* Rule Details Modal */}
-      {selectedRule && (
-        <RuleDetailsModal
-          rule={selectedRule}
-          onClose={() => setSelectedRule(null)}
+      {/* View Rule Modal (Read-only) */}
+      {ruleToView && (
+        <RuleViewModal
+          rule={ruleToView}
+          onClose={() => setRuleToView(null)}
+        />
+      )}
+
+      {/* Edit Rule Modal */}
+      {ruleToEdit && (
+        <RuleEditModal
+          rule={ruleToEdit}
+          onClose={() => setRuleToEdit(null)}
           onUpdate={handleUpdateRule}
         />
       )}
@@ -1066,8 +1267,6 @@ function RegionRulesSection() {
           }}
           onConfirm={() => {
             handleDeleteRule(ruleToDelete.id);
-            setShowDeleteModal(false);
-            setRuleToDelete(null);
           }}
           isShowing={showDeleteModal}
         />
@@ -1116,15 +1315,21 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Region Rule</h2>
+          <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Create Region Rule</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1203,7 +1408,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
               max="100"
               value={vatRate}
               onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               placeholder="0.00"
             />
           </div>
@@ -1234,35 +1439,167 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
             </label>
           </div>
 
-          <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mb-6 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Create Rule
-            </button>
+          <div className="sticky text-[14px] bottom-0 px-6 -mx-6 -mb-6 flex justify-end gap-2">
+            <div className='flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-6 w-full justify-end'>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Create Rule
+              </button>
+            </div>
           </div>
         </form>
+      </div >
+    </div >
+  );
+}
+
+// Rule View Modal Component (Read-only)
+interface RuleViewModalProps {
+  rule: any;
+  onClose: () => void;
+}
+
+function RuleViewModal({ rule, onClose }: RuleViewModalProps) {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">View Region Rule</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rule.region} ({rule.country})</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status Section */}
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${rule.isActive
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
+                  {rule.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tax Type</p>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${rule.taxType === 'vat'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                  }`}>
+                  {rule.taxType === 'vat' ? 'VAT' : 'Sales Tax'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rule Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Region Name
+              </label>
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white">
+                {rule.region}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Country Code
+              </label>
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white">
+                {rule.country}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tax Type
+              </label>
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${rule.taxType === 'vat'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                  }`}>
+                  {rule.taxType === 'vat' ? 'VAT' : 'Sales Tax'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tax Rate (%)
+              </label>
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white">
+                {rule.taxRate > 0 ? `${rule.taxRate}%` : '-'}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              VAT Rate (%)
+            </label>
+            <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white">
+              {rule.vatRate > 0 ? `${rule.vatRate}%` : '-'}
+            </div>
+          </div>
+
+          {rule.description && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description
+              </label>
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white min-h-[80px]">
+                {rule.description}
+              </div>
+            </div>
+          )}
+
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <p>Created: {new Date(rule.createdAt || rule.createdDate).toLocaleString()}</p>
+            {rule.updatedAt && (
+              <p>Last Updated: {new Date(rule.updatedAt).toLocaleString()}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// Rule Details Modal Component
-interface RuleDetailsModalProps {
+// Rule Edit Modal Component (Editable)
+interface RuleEditModalProps {
   rule: any;
   onClose: () => void;
   onUpdate: (ruleId: number, updates: any) => void;
 }
 
-function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
+function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
   const [region, setRegion] = useState(rule.region);
   const [country, setCountry] = useState(rule.country);
   const [taxType, setTaxType] = useState(rule.taxType);
@@ -1285,18 +1622,24 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Region Rule Details</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">Edit Region Rule</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rule.region} ({rule.country})</p>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1306,21 +1649,19 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  isActive
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                }`}>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${isActive
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                  }`}>
                   {isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Tax Type</p>
-                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  taxType === 'vat'
-                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                }`}>
+                <span className={`mt-2 inline-flex px-3 py-1 text-sm font-medium rounded-full ${taxType === 'vat'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                  }`}>
                   {taxType === 'vat' ? 'VAT' : 'Sales Tax'}
                 </span>
               </div>
@@ -1337,7 +1678,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
                 type="text"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -1348,7 +1689,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 maxLength={2}
               />
             </div>
@@ -1381,7 +1722,8 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
                 max="100"
                 value={taxRate}
                 onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="0.00"
+                className="w-full px-4 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -1396,8 +1738,9 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
               min="0"
               max="100"
               value={vatRate}
+              placeholder="0.00"
               onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1409,7 +1752,7 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1427,26 +1770,28 @@ function RuleDetailsModal({ rule, onClose, onUpdate }: RuleDetailsModalProps) {
           </div>
 
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            <p>Created: {new Date(rule.createdDate).toLocaleString()}</p>
-            {rule.updatedDate && (
-              <p>Last Updated: {new Date(rule.updatedDate).toLocaleString()}</p>
+            <p>Created: {new Date(rule.createdAt || rule.createdDate).toLocaleString()}</p>
+            {rule.updatedAt && (
+              <p>Last Updated: {new Date(rule.updatedAt).toLocaleString()}</p>
             )}
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Save Changes
-          </button>
+        <div className="sticky text-[14px] bottom-0 px-6 py-4 pt-0 flex justify-end gap-2">
+          <div className='flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-6 w-full justify-end'>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1465,11 +1810,11 @@ function DeleteRuleModal({ rule, onClose, onConfirm, isShowing }: DeleteRuleModa
   if (!isShowing) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
         onClick={(e) => e.stopPropagation()}
       >
