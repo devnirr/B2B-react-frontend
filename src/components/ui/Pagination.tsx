@@ -1,10 +1,11 @@
 import { ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 
+export const ITEMS_PER_PAGE = 10;
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   totalItems: number;
-  itemsPerPage: number;
   onPageChange: (page: number) => void;
   className?: string;
 }
@@ -13,14 +14,13 @@ export default function Pagination({
   currentPage,
   totalPages,
   totalItems,
-  itemsPerPage,
   onPageChange,
   className = '',
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
   return (
     <div className={`flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 ${className}`}>
@@ -65,5 +65,6 @@ export default function Pagination({
     </div>
   );
 }
+
 
 

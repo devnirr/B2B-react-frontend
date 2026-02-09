@@ -28,6 +28,7 @@ import { ButtonWithWaves } from '../components/ui';
 import {
   PageHeader,
   CustomDropdown,
+  SearchInput,
   DatePicker,
 } from '../components/ui';
 
@@ -518,19 +519,15 @@ export default function ProductionOrders() {
       {/* Search and Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by PO number, supplier, BOM, or product..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-10 pr-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={(value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by PO number, supplier, BOM, or product..."
+            className="flex-1"
+          />
           <div className="w-full md:w-48">
             <CustomDropdown
               value={statusFilter}

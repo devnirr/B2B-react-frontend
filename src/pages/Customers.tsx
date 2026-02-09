@@ -10,7 +10,6 @@ import {
   ChevronsRight,
   Edit,
   Trash2,
-  AlertTriangle,
   Search,
   Building2,
   Mail,
@@ -25,7 +24,7 @@ import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import { useCheckCustomerEmail, useDebounce } from '../utils/emailDuplicateCheck';
 import PhoneInput from '../components/PhoneInput';
-import { ButtonWithWaves, CustomDropdown } from '../components/ui';
+import { ButtonWithWaves, CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
 import Breadcrumb from '../components/Breadcrumb';
 
 const CustomerType = {
@@ -77,7 +76,6 @@ export default function Customers() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isContactModalShowing, setIsContactModalShowing] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -91,7 +89,6 @@ export default function Customers() {
         requestAnimationFrame(() => {
           if (isModalOpen) setIsModalShowing(true);
           if (isEditModalOpen) setIsEditModalShowing(true);
-          if (isDeleteModalOpen) setIsDeleteModalShowing(true);
           if (isContactModalOpen) setIsContactModalShowing(true);
         });
       });
@@ -99,7 +96,6 @@ export default function Customers() {
       document.body.classList.remove('modal-open');
       setIsModalShowing(false);
       setIsEditModalShowing(false);
-      setIsDeleteModalShowing(false);
       setIsContactModalShowing(false);
     }
   }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isContactModalOpen]);
@@ -232,11 +228,8 @@ export default function Customers() {
   };
 
   const closeDeleteModal = () => {
-    setIsDeleteModalShowing(false);
-    setTimeout(() => {
-      setIsDeleteModalOpen(false);
-      setSelectedCustomer(null);
-    }, 300);
+    setIsDeleteModalOpen(false);
+    setSelectedCustomer(null);
   };
 
   const closeContactModal = () => {
@@ -373,16 +366,12 @@ export default function Customers() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div className="lg:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search customers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search customers..."
+              className="w-full"
+            />
           </div>
 
           {/* Segment Filter */}
@@ -427,10 +416,6 @@ export default function Customers() {
             <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-md">
               Get started by adding your first customer to the system.
             </p>
-            <ButtonWithWaves onClick={openModal}>
-              <Plus className="w-5 h-5" />
-              Add Customer
-            </ButtonWithWaves>
           </div>
         ) : (
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -666,12 +651,13 @@ export default function Customers() {
 
       {/* Delete Customer Modal */}
       {isDeleteModalOpen && selectedCustomer && (
-        <DeleteCustomerModal
-          customer={selectedCustomer}
+        <DeleteModal
+          title="Delete Customer"
+          message="Are you sure you want to delete"
+          itemName={selectedCustomer.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteCustomerMutation.mutate(Number(selectedCustomer.id))}
           isLoading={deleteCustomerMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
 
@@ -901,7 +887,7 @@ function AddCustomerModal({
                         type="text"
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 ::placeholder-[12px] text-[14px] py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
                           }`}
                         placeholder="Enter customer name"
                       />
@@ -913,7 +899,7 @@ function AddCustomerModal({
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        className={`w-full px-4 ::placeholder-[12px] text-[14px] py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                           }`}
                         placeholder="Enter email"
                       />
@@ -926,7 +912,7 @@ function AddCustomerModal({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 ::placeholder-[12px] text-[14px] mb-2">Phone</label>
                       <PhoneInput
                         value={formData.phone}
                         onChange={(value) => handleChange('phone', value || '')}
@@ -967,7 +953,7 @@ function AddCustomerModal({
                       type="text"
                       value={formData.companyName}
                       onChange={(e) => handleChange('companyName', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Enter company name"
                     />
                   </div>
@@ -979,7 +965,7 @@ function AddCustomerModal({
                         type="text"
                         value={formData.taxId}
                         onChange={(e) => handleChange('taxId', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter tax ID"
                       />
                     </div>
@@ -990,7 +976,7 @@ function AddCustomerModal({
                         step="0.01"
                         value={formData.creditLimit}
                         onChange={(e) => handleChange('creditLimit', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="0.00"
                       />
                     </div>
@@ -1002,7 +988,7 @@ function AddCustomerModal({
                       type="text"
                       value={formData.address}
                       onChange={(e) => handleChange('address', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Enter address"
                     />
                   </div>
@@ -1014,7 +1000,7 @@ function AddCustomerModal({
                         type="text"
                         value={formData.city}
                         onChange={(e) => handleChange('city', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter city"
                       />
                     </div>
@@ -1024,7 +1010,7 @@ function AddCustomerModal({
                         type="text"
                         value={formData.country}
                         onChange={(e) => handleChange('country', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter country"
                       />
                     </div>
@@ -1034,7 +1020,7 @@ function AddCustomerModal({
                         type="text"
                         value={formData.postalCode}
                         onChange={(e) => handleChange('postalCode', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter postal code"
                       />
                     </div>
@@ -1042,7 +1028,7 @@ function AddCustomerModal({
                 </div>
               </div>
 
-              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+              <div className="modal-footer text-[14px] border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}
@@ -1296,7 +1282,7 @@ function EditCustomerModal({
                         type="text"
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 ::placeholder-[12px] text-[14px] py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
                           }`}
                         placeholder="Enter customer name"
                       />
@@ -1308,7 +1294,7 @@ function EditCustomerModal({
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        className={`w-full px-4 ::placeholder-[12px] text-[14px] py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                           }`}
                         placeholder="Enter email"
                       />
@@ -1362,7 +1348,7 @@ function EditCustomerModal({
                       type="text"
                       value={formData.companyName}
                       onChange={(e) => handleChange('companyName', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Enter company name"
                     />
                   </div>
@@ -1374,7 +1360,7 @@ function EditCustomerModal({
                         type="text"
                         value={formData.taxId}
                         onChange={(e) => handleChange('taxId', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter tax ID"
                       />
                     </div>
@@ -1385,7 +1371,7 @@ function EditCustomerModal({
                         step="0.01"
                         value={formData.creditLimit}
                         onChange={(e) => handleChange('creditLimit', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="0.00"
                       />
                     </div>
@@ -1397,7 +1383,7 @@ function EditCustomerModal({
                       type="text"
                       value={formData.address}
                       onChange={(e) => handleChange('address', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="Enter address"
                     />
                   </div>
@@ -1409,7 +1395,7 @@ function EditCustomerModal({
                         type="text"
                         value={formData.city}
                         onChange={(e) => handleChange('city', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter city"
                       />
                     </div>
@@ -1419,7 +1405,7 @@ function EditCustomerModal({
                         type="text"
                         value={formData.country}
                         onChange={(e) => handleChange('country', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter country"
                       />
                     </div>
@@ -1429,7 +1415,7 @@ function EditCustomerModal({
                         type="text"
                         value={formData.postalCode}
                         onChange={(e) => handleChange('postalCode', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="Enter postal code"
                       />
                     </div>
@@ -1437,7 +1423,7 @@ function EditCustomerModal({
                 </div>
               </div>
 
-              <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+              <div className="modal-footer text-[14px] border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}
@@ -1467,85 +1453,6 @@ function EditCustomerModal({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// Delete Customer Modal Component
-function DeleteCustomerModal({
-  customer,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  customer: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteCustomerModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteCustomerModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Customer
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{customer.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Customer'}
-              </button>
-            </div>
           </div>
         </div>
       </div>

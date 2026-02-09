@@ -27,7 +27,7 @@ import {
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { ButtonWithWaves, CustomDropdown, DatePicker, ScrollIndicator, Input } from '../components/ui';
+import { ButtonWithWaves, CustomDropdown, DatePicker, Input, SearchInput } from '../components/ui';
 import PhoneInput from '../components/PhoneInput';
 
 // Types
@@ -370,19 +370,15 @@ export default function VendorsFactories() {
       {/* Search and Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search vendors by name, email, phone, contact, city, or country..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-10 pr-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={(value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search vendors by name, email, phone, contact, city, or country..."
+            className="flex-1"
+          />
           <div className="w-full md:w-48">
             <CustomDropdown
               value={statusFilter}
@@ -766,13 +762,13 @@ function AddVendorModal({
       onClick={onClose}
     >
       <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar transform transition-all duration-300 ${
-            isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto  transform transition-all duration-300 ${
+          isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Add Vendor</h2>
           <button
@@ -789,7 +785,7 @@ function AddVendorModal({
               <Input
                 label={
                   <>
-                    Vendor Name <span className="text-red-500">*</span>
+                Vendor Name <span className="text-red-500">*</span>
                   </>
                 }
                 type="text"
@@ -927,11 +923,6 @@ function AddVendorModal({
             </button>
           </div>
         </form>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[formData]}
-        />
         </div>
       </div>
     </div>
@@ -1033,13 +1024,13 @@ function EditVendorModal({
       onClick={onClose}
     >
       <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar transform transition-all duration-300 ${
-            isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto  transform transition-all duration-300 ${
+          isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Vendor</h2>
           <button
@@ -1056,7 +1047,7 @@ function EditVendorModal({
               <Input
                 label={
                   <>
-                    Vendor Name <span className="text-red-500">*</span>
+                Vendor Name <span className="text-red-500">*</span>
                   </>
                 }
                 type="text"
@@ -1194,11 +1185,6 @@ function EditVendorModal({
             </button>
           </div>
         </form>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[formData]}
-        />
         </div>
       </div>
     </div>
@@ -1387,13 +1373,13 @@ function PriceHistoryModal({
       onClick={onClose}
     >
       <div className="relative max-w-5xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar transform transition-all duration-300 ${
-            isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto  transform transition-all duration-300 ${
+          isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Price History</h2>
@@ -1504,11 +1490,6 @@ function PriceHistoryModal({
             </div>
           )}
         </div>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[priceHistory, searchQuery]}
-        />
         </div>
 
         {/* Add/Edit Price Modal */}
@@ -1601,11 +1582,11 @@ function AddEditPriceModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
       <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar"
-          onClick={(e) => e.stopPropagation()}
-        >
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto "
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {price ? 'Edit Price History' : 'Add Price History'}
@@ -1634,7 +1615,7 @@ function AddEditPriceModal({
               <Input
                 label={
                   <>
-                    Price <span className="text-red-500">*</span>
+                Price <span className="text-red-500">*</span>
                   </>
                 }
                 type="number"
@@ -1727,11 +1708,6 @@ function AddEditPriceModal({
             </button>
           </div>
         </form>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[formData]}
-        />
         </div>
       </div>
     </div>
@@ -1862,13 +1838,13 @@ function NegotiationNotesModal({
       onClick={onClose}
     >
       <div className="relative max-w-5xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar transform transition-all duration-300 ${
-            isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+          className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto  transform transition-all duration-300 ${
+          isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Negotiation Notes</h2>
@@ -1979,30 +1955,25 @@ function NegotiationNotesModal({
             </div>
           )}
         </div>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[notes, searchQuery, tagFilter]}
-        />
         </div>
-      </div>
+        </div>
 
-      {/* Add/Edit Note Modal */}
-      {(isAddModalOpen || editingNote) && (
-        <AddEditNoteModal
-          note={editingNote || undefined}
-          allTags={allTags}
-          onClose={() => {
-            setIsAddModalOpen(false);
-            setEditingNote(null);
-          }}
-          onSubmit={
-            editingNote
-              ? (data) => handleUpdateNote(editingNote.id!, data as Partial<NegotiationNote>)
-              : (data) => handleAddNote(data as Omit<NegotiationNote, 'id' | 'vendorId'>)
-          }
-        />
-      )}
+        {/* Add/Edit Note Modal */}
+        {(isAddModalOpen || editingNote) && (
+          <AddEditNoteModal
+            note={editingNote || undefined}
+            allTags={allTags}
+            onClose={() => {
+              setIsAddModalOpen(false);
+              setEditingNote(null);
+            }}
+            onSubmit={
+              editingNote
+                ? (data) => handleUpdateNote(editingNote.id!, data as Partial<NegotiationNote>)
+                : (data) => handleAddNote(data as Omit<NegotiationNote, 'id' | 'vendorId'>)
+            }
+          />
+        )}
     </div>
   );
 }
@@ -2080,11 +2051,11 @@ function AddEditNoteModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
       <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]">
-        <div
+      <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar"
-          onClick={(e) => e.stopPropagation()}
-        >
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto "
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {note ? 'Edit Negotiation Note' : 'Add Negotiation Note'}
@@ -2102,7 +2073,7 @@ function AddEditNoteModal({
             <Input
               label={
                 <>
-                  Title <span className="text-red-500">*</span>
+              Title <span className="text-red-500">*</span>
                 </>
               }
               type="text"
@@ -2236,11 +2207,6 @@ function AddEditNoteModal({
             </button>
           </div>
         </form>
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[formData]}
-        />
         </div>
       </div>
     </div>

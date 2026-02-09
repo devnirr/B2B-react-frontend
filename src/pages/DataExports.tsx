@@ -7,7 +7,6 @@ import {
   Download,
   Upload,
   Plus,
-  Search,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -28,7 +27,7 @@ import {
   Edit,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown } from '../components/ui';
+import { CustomDropdown, SearchInput } from '../components/ui';
 
 type TabType = 'imports' | 'exports';
 type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -130,7 +129,7 @@ function ImportsSection() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch imports from API
@@ -439,16 +438,11 @@ function ImportsSection() {
       {/* Filters and Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by file name, type, or uploader..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by file name, type, or uploader..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -646,22 +640,6 @@ function ImportsSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredImports.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -1409,7 +1387,7 @@ function ExportsSection() {
   const [selectedExport, setSelectedExport] = useState<ExportRecord | null>(null);
   const [exportToDelete, setExportToDelete] = useState<ExportRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch exports from API
@@ -1718,16 +1696,11 @@ function ExportsSection() {
       {/* Filters and Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, type, or creator..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 text-[14px] ::placeholder-[12px] pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by name, type, or creator..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[180px]">
@@ -1933,22 +1906,6 @@ function ExportsSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredExports.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}

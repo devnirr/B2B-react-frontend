@@ -7,7 +7,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronDown,
-  Search,
   Warehouse,
   CheckCircle2,
   Clock,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
+import { SearchInput } from '../components/ui';
 import { ButtonWithWaves, CustomDropdown } from '../components/ui';
 import { SkeletonPage } from '../components/Skeleton';
 
@@ -461,19 +461,14 @@ export default function Counting() {
         <div className="p-6">
           {/* Search and Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className='relative'>
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={`Search ${activeTab === 'cycle-counts' ? 'cycle counts' : 'physical inventory'}...`}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
+            <SearchInput
+              value={searchQuery}
+              onChange={(value) => {
+                setSearchQuery(value);
+                setCurrentPage(1);
+              }}
+              placeholder={`Search ${activeTab === 'cycle-counts' ? 'cycle counts' : 'physical inventory'}...`}
+            />
             <div>
               <CustomDropdown
                 value={statusFilter}

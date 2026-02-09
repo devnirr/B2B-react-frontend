@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 import { useQuery } from '@tanstack/react-query';
 import {
   ClipboardList,
-  Search,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +23,7 @@ import {
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown } from '../components/ui';
+import { CustomDropdown, SearchInput } from '../components/ui';
 
 type TransactionType = 'order' | 'payment' | 'inventory' | 'invoice' | 'credit-note' | 'return' | 'adjustment';
 type TransactionStatus = 'completed' | 'pending' | 'failed' | 'cancelled' | 'refunded';
@@ -134,239 +134,113 @@ export default function AuditTrail() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch orders, invoices, payments, etc. for transaction history
-  const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ['orders', 'audit-trail'],
+  // Fetch audit trail data from database
+  const { data: auditTrailData, isLoading } = useQuery({
+    queryKey: ['audit-trail', searchQuery, typeFilter, statusFilter, dateRangeFilter, startDate, endDate, currentPage],
     queryFn: async () => {
       try {
-        const response = await api.get('/orders?skip=0&take=1000');
-        return response.data?.data || [];
-      } catch (error) {
-        return [];
+        // Build query parameters
+        const params: any = {
+          skip: (currentPage - 1) * ITEMS_PER_PAGE,
+          take: ITEMS_PER_PAGE,
+        };
+
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+        if (typeFilter !== 'all') {
+          params.type = typeFilter;
+        }
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+        if (dateRangeFilter !== 'all') {
+          if (dateRangeFilter === 'custom') {
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
+          } else {
+            params.dateRange = dateRangeFilter;
+          }
+        }
+
+        const response = await api.get('/audit-trail', { params });
+        return response.data || { data: [], total: 0 };
+      } catch (error: any) {
+        // Silently handle 404/500 errors - endpoint may not be implemented yet
+        if (error?.response?.status !== 404 && error?.response?.status !== 500) {
+          console.error('Error fetching audit trail:', error);
+        }
+        return { data: [], total: 0 };
       }
     },
   });
 
-  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
-    queryKey: ['invoices', 'audit-trail'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/proforma-invoices?skip=0&take=1000');
-        return response.data?.data || [];
-      } catch (error) {
-        return [];
-      }
-    },
-  });
+  const transactions: Transaction[] = auditTrailData?.data || [];
+  const totalItems = auditTrailData?.total || 0;
 
-  const { data: customersData, isLoading: customersLoading } = useQuery({
-    queryKey: ['customers', 'audit-trail'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/customers?skip=0&take=1000');
-        return response.data?.data || [];
-      } catch (error) {
-        return [];
-      }
-    },
-  });
-
-  const isLoading = ordersLoading || invoicesLoading || customersLoading;
-
-  // Process transactions from API data
-  const transactions = useMemo(() => {
-    const allTransactions: Transaction[] = [];
-
-    // Process orders
-    if (ordersData && Array.isArray(ordersData)) {
-      ordersData.forEach((order: any) => {
-        allTransactions.push({
-          id: `order-${order.id}`,
-          type: 'order',
-          status: order.status === 'COMPLETED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
-          entityId: order.id,
-          entityName: `Order #${order.orderNumber || order.id}`,
-          amount: order.totalAmount || 0,
-          currency: order.currency || 'USD',
-          userId: order.customerId || 'system',
-          userName: order.customerName || 'System',
-          timestamp: order.createdAt || new Date().toISOString(),
-          description: `Order ${order.status?.toLowerCase() || 'created'}`,
-          changes: [
-            {
-              field: 'status',
-              oldValue: null,
-              newValue: order.status,
-            },
-          ],
-          metadata: {
-            orderNumber: order.orderNumber,
-            itemsCount: order.items?.length || 0,
-            warehouseId: order.warehouseId,
-          },
-        });
-      });
-    }
-
-    // Process invoices
-    if (invoicesData && Array.isArray(invoicesData)) {
-      invoicesData.forEach((invoice: any) => {
-        allTransactions.push({
-          id: `invoice-${invoice.id}`,
-          type: 'invoice',
-          status: invoice.status === 'PAID' ? 'completed' : invoice.status === 'CANCELLED' ? 'cancelled' : 'pending',
-          entityId: invoice.id,
-          entityName: `Invoice #${invoice.invoiceNumber || invoice.id}`,
-          amount: invoice.totalAmount || 0,
-          currency: invoice.currency || 'USD',
-          userId: invoice.customerId || 'system',
-          userName: invoice.customerName || 'System',
-          timestamp: invoice.createdAt || new Date().toISOString(),
-          description: `Invoice ${invoice.status?.toLowerCase() || 'created'}`,
-          changes: [
-            {
-              field: 'status',
-              oldValue: null,
-              newValue: invoice.status,
-            },
-          ],
-          metadata: {
-            invoiceNumber: invoice.invoiceNumber,
-            dueDate: invoice.dueDate,
-            paymentStatus: invoice.paymentStatus,
-          },
-        });
-      });
-    }
-
-    // Generate additional mock transactions for demonstration
-    const now = new Date();
-    for (let i = 0; i < 50; i++) {
-      const date = new Date(now);
-      date.setHours(date.getHours() - i * 2);
-      const types: TransactionType[] = ['payment', 'inventory', 'return', 'adjustment', 'credit-note'];
-      const statuses: TransactionStatus[] = ['completed', 'pending', 'failed', 'cancelled', 'refunded'];
-      const type = types[Math.floor(Math.random() * types.length)];
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-      allTransactions.push({
-        id: `mock-${i + 1}`,
-        type,
-        status,
-        entityId: i + 1,
-        entityName: `${type.charAt(0).toUpperCase() + type.slice(1)} #${i + 1}`,
-        amount: Math.random() * 10000,
-        currency: 'USD',
-        userId: Math.floor(Math.random() * 10) + 1,
-        userName: `User ${Math.floor(Math.random() * 10) + 1}`,
-        timestamp: date.toISOString(),
-        description: `${type} transaction ${status}`,
-        changes: [
-          {
-            field: 'amount',
-            oldValue: Math.random() * 5000,
-            newValue: Math.random() * 10000,
-          },
-        ],
-        metadata: {
-          reference: `REF-${i + 1}`,
-        },
-      });
-    }
-
-    // Sort by timestamp (newest first)
-    return allTransactions.sort((a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-  }, [ordersData, invoicesData, customersData]);
-
-  // Filter transactions
-  const filteredTransactions = useMemo(() => {
-    let filtered = transactions;
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((tx) =>
-        tx.entityName.toLowerCase().includes(query) ||
-        tx.description.toLowerCase().includes(query) ||
-        tx.userName.toLowerCase().includes(query) ||
-        tx.id.toString().toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by type
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter((tx) => tx.type === typeFilter);
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((tx) => tx.status === statusFilter);
-    }
-
-    // Filter by date range
-    if (dateRangeFilter === 'custom') {
-      if (startDate) {
-        filtered = filtered.filter((tx) => new Date(tx.timestamp) >= new Date(startDate));
-      }
-      if (endDate) {
-        filtered = filtered.filter((tx) => new Date(tx.timestamp) <= new Date(endDate + 'T23:59:59'));
-      }
-    } else if (dateRangeFilter !== 'all') {
-      const now = new Date();
-      let cutoffDate = new Date();
-      switch (dateRangeFilter) {
-        case 'today':
-          cutoffDate.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-          cutoffDate.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          cutoffDate.setMonth(now.getMonth() - 1);
-          break;
-        case 'year':
-          cutoffDate.setFullYear(now.getFullYear() - 1);
-          break;
-      }
-      filtered = filtered.filter((tx) => new Date(tx.timestamp) >= cutoffDate);
-    }
-
-    return filtered;
-  }, [transactions, searchQuery, typeFilter, statusFilter, dateRangeFilter, startDate, endDate]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const paginatedTransactions = transactions;
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, typeFilter, statusFilter, dateRangeFilter, startDate, endDate]);
 
-  // Calculate summary metrics
-  const summaryMetrics = useMemo(() => {
-    const total = filteredTransactions.length;
-    const completed = filteredTransactions.filter((tx) => tx.status === 'completed');
-    const pending = filteredTransactions.filter((tx) => tx.status === 'pending');
-    const failed = filteredTransactions.filter((tx) => tx.status === 'failed');
-    const totalAmount = filteredTransactions
-      .filter((tx) => tx.status === 'completed')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+  // Fetch summary metrics from API
+  const { data: summaryData } = useQuery({
+    queryKey: ['audit-trail-summary', typeFilter, statusFilter, dateRangeFilter, startDate, endDate],
+    queryFn: async () => {
+      try {
+        const params: any = {};
+        if (typeFilter !== 'all') {
+          params.type = typeFilter;
+        }
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+        if (dateRangeFilter !== 'all') {
+          if (dateRangeFilter === 'custom') {
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
+          } else {
+            params.dateRange = dateRangeFilter;
+          }
+        }
 
-    return {
-      total,
-      completed: completed.length,
-      pending: pending.length,
-      failed: failed.length,
-      totalAmount,
-    };
-  }, [filteredTransactions]);
+        const response = await api.get('/audit-trail/summary', { params });
+        return response.data || {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          failed: 0,
+          totalAmount: 0,
+        };
+      } catch (error: any) {
+        // Silently handle 404/500 errors - endpoint may not be implemented yet
+        if (error?.response?.status !== 404 && error?.response?.status !== 500) {
+          console.error('Error fetching audit trail summary:', error);
+        }
+        return {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          failed: 0,
+          totalAmount: 0,
+        };
+      }
+    },
+  });
+
+  const summaryMetrics = summaryData || {
+    total: 0,
+    completed: 0,
+    pending: 0,
+    failed: 0,
+    totalAmount: 0,
+  };
 
   if (isLoading) {
     return <SkeletonPage />;
@@ -462,16 +336,12 @@ export default function AuditTrail() {
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="flex-1 relative w-full lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by transaction ID, entity name, user, description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by transaction ID, entity name, user, description..."
+            className="w-full lg:max-w-md"
+          />
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[180px]">
@@ -578,7 +448,7 @@ export default function AuditTrail() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredTransactions.length === 0 ? (
+              {transactions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
@@ -667,33 +537,17 @@ export default function AuditTrail() {
       </div>
 
       {/* Pagination */}
-      {filteredTransactions.length > 0 && (
+      {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
+              Showing <span className="font-medium text-gray-900 dark:text-white">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{' '}
               <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredTransactions.length)}
+                {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)}
               </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredTransactions.length}</span> results
+              of <span className="font-medium text-gray-900 dark:text-white">{totalItems}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -978,3 +832,4 @@ function TransactionDetailsModal({ transaction, onClose }: TransactionDetailsMod
     </div>
   );
 }
+

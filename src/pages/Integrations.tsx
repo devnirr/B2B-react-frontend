@@ -30,7 +30,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown } from '../components/ui';
+import { CustomDropdown, SearchInput } from '../components/ui';
 
 type TabType = 'connected-channels' | 'api-keys-webhooks' | 'sync-health';
 type ChannelType = 'ecommerce' | 'pos' | 'marketplace' | '3pl' | 'shipping';
@@ -144,7 +144,7 @@ function ConnectedChannelsSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
 
   // Load channels from localStorage
   const [channels, setChannels] = useState<Channel[]>(() => {
@@ -401,13 +401,10 @@ function ConnectedChannelsSection() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by channel name..."
+            <SearchInput
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              onChange={setSearchQuery}
+              placeholder="Search by channel name..."
             />
           </div>
           <button
@@ -558,23 +555,6 @@ function ConnectedChannelsSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredChannels.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                  className="min-w-[80px]"
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -1274,7 +1254,7 @@ function ApiKeysWebhooksSection() {
   const [keyToDelete, setKeyToDelete] = useState<ApiKey | null>(null);
   const [isDeleteKeyModalShowing, setIsDeleteKeyModalShowing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -1704,23 +1684,6 @@ function ApiKeysWebhooksSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredKeys.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                  className="min-w-[80px]"
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -2465,7 +2428,7 @@ function SyncHealthSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedHealth, setSelectedHealth] = useState<SyncHealth | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch sync health from API
@@ -2817,23 +2780,6 @@ function SyncHealthSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredHealth.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                  className="min-w-[80px]"
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}

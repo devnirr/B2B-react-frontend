@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   FileText,
-  Search,
   Filter,
   CheckCircle,
   X,
@@ -16,13 +15,13 @@ import {
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown } from '../components/ui';
+import { CustomDropdown, SearchInput } from '../components/ui';
 
 type TabType = 'sales-invoices' | 'credit-notes';
 type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 type CreditNoteStatus = 'draft' | 'issued' | 'applied' | 'cancelled';
 
-export default function Invoicing() {
+function Invoicing() {
   const [activeTab, setActiveTab] = useState<TabType>('sales-invoices');
 
   const tabs = [
@@ -82,7 +81,7 @@ function SalesInvoicesSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
 
   // Fetch proforma invoices (sales invoices)
   const { data: invoicesData, isLoading: isLoadingInvoices } = useQuery({
@@ -349,16 +348,11 @@ function SalesInvoicesSection() {
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by invoice number, customer, order number..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by invoice number, customer, order number..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -529,22 +523,6 @@ function SalesInvoicesSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredInvoices.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -829,21 +807,26 @@ function CreditNotesSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedCreditNote, setSelectedCreditNote] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
 
-  // Load credit notes from localStorage (since there's no API endpoint yet)
-  const [creditNotes] = useState<any[]>(() => {
-    const saved = localStorage.getItem('credit-notes');
-    return saved ? JSON.parse(saved) : [];
+  // Fetch credit notes from API
+  const { data: creditNotesData, isLoading: isLoadingCreditNotes } = useQuery({
+    queryKey: ['credit-notes'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/credit-notes?skip=0&take=10000');
+        return response.data?.data || response.data || [];
+      } catch (error) {
+        console.error('Error fetching credit notes:', error);
+        return [];
+      }
+    },
   });
 
-  // Save credit notes to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('credit-notes', JSON.stringify(creditNotes));
-  }, [creditNotes]);
+  const creditNotes = creditNotesData || [];
 
   // Fetch returns data to potentially convert to credit notes
-  const { data: returnsData } = useQuery({
+  const { data: _returnsData } = useQuery({
     queryKey: ['returns', 'credit-notes'],
     queryFn: async () => {
       try {
@@ -881,49 +864,46 @@ function CreditNotesSection() {
     },
   });
 
-  const returns = returnsData || [];
   const invoices = invoicesData || [];
   const customers = customersData || [];
 
   // Process credit notes
   const processedCreditNotes = useMemo(() => {
-    // Combine stored credit notes with returns that could be credit notes
-    const storedNotes = creditNotes.map((note: any) => ({
-      ...note,
-      source: 'stored',
-    }));
+    return creditNotes.map((note: any) => {
+      const customer = customers.find((c: any) => c.id === note.customerId);
+      const invoice = invoices.find((inv: any) => inv.id === note.invoiceId);
+      
+      // Normalize status
+      let status: CreditNoteStatus = 'draft';
+      const statusStr = (note.status || '').toLowerCase();
+      if (statusStr === 'issued') {
+        status = 'issued';
+      } else if (statusStr === 'applied') {
+        status = 'applied';
+      } else if (statusStr === 'cancelled') {
+        status = 'cancelled';
+      } else {
+        status = 'draft';
+      }
 
-    // Convert returns to credit notes if they're approved/completed
-    const returnBasedNotes = returns
-      .filter((ret: any) => {
-        const status = (ret.status || '').toLowerCase();
-        return status === 'approved' || status === 'completed';
-      })
-      .map((ret: any) => {
-        const customer = customers.find((c: any) => c.id === ret.customerId);
-        const invoice = invoices.find((inv: any) => inv.orderId === ret.orderId);
-        
-        return {
-          id: `return-${ret.id}`,
-          creditNoteNumber: `CN-${ret.id}`,
-          customerId: ret.customerId,
-          customerName: customer?.name || 'Unknown Customer',
-          invoiceId: invoice?.id,
-          invoiceNumber: invoice?.invoiceNumber,
-          returnId: ret.id,
-          reason: ret.reason || 'Return/Refund',
-          amount: parseFloat(ret.totalAmount || ret.amount || 0),
-          currency: invoice?.currency || 'USD',
-          status: 'issued' as CreditNoteStatus,
-          issuedDate: ret.processedDate || ret.updatedAt || ret.createdAt,
-          appliedDate: ret.completedDate,
-          notes: ret.notes || '',
-          source: 'return',
-        };
-      });
-
-    return [...storedNotes, ...returnBasedNotes];
-  }, [creditNotes, returns, invoices, customers]);
+      return {
+        id: note.id,
+        creditNoteNumber: note.creditNoteNumber || `CN-${note.id}`,
+        customerId: note.customerId,
+        customerName: note.customerName || customer?.name || 'Unknown Customer',
+        invoiceId: note.invoiceId,
+        invoiceNumber: note.invoiceNumber || invoice?.invoiceNumber,
+        returnId: note.returnId,
+        reason: note.reason || 'Return/Refund',
+        amount: parseFloat(note.amount || 0),
+        currency: note.currency || 'USD',
+        status,
+        issuedDate: note.issuedDate,
+        appliedDate: note.appliedDate,
+        notes: note.notes || '',
+      };
+    });
+  }, [creditNotes, invoices, customers]);
 
   // Filter credit notes
   const filteredCreditNotes = useMemo(() => {
@@ -996,6 +976,10 @@ function CreditNotesSection() {
     }
   };
 
+  if (isLoadingCreditNotes) {
+    return <SkeletonPage />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -1060,16 +1044,11 @@ function CreditNotesSection() {
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by credit note number, customer, invoice number..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by credit note number, customer, invoice number..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -1199,22 +1178,6 @@ function CreditNotesSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredCreditNotes.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -1424,3 +1387,5 @@ function CreditNoteDetailsModal({ creditNote, onClose }: CreditNoteDetailsModalP
     </div>
   );
 }
+
+export default Invoicing;

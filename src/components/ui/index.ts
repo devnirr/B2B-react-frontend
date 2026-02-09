@@ -11,6 +11,5 @@ export { default as Pagination } from './Pagination';
 export { default as SearchAndFilterBar } from './SearchAndFilterBar';
 export { default as ButtonWithWaves } from './ButtonWithWaves';
 export { default as Button } from './Button';
-export { default as ScrollIndicator } from './ScrollIndicator';
 export { default as Input } from './Input';
 

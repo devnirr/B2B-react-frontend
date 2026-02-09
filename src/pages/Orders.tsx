@@ -594,7 +594,6 @@ export default function Orders() {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalItems={totalOrders}
-                    itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                   />
                 </>

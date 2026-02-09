@@ -16,7 +16,6 @@ import {
   Clock,
   Database,
   MapPin,
-  Search,
   Filter,
 } from 'lucide-react';
 import api from '../lib/api';
@@ -24,6 +23,8 @@ import {
   PageHeader,
   TabsNavigation,
   CustomDropdown,
+  SearchInput,
+  DeleteModal,
 } from '../components/ui';
 
 type TabType = 'mapping' | 'sync-logs';
@@ -72,7 +73,7 @@ function VismaMappingSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch accounting fields from API
@@ -300,16 +301,11 @@ function VismaMappingSection() {
       {/* Filters and Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by mapping name, source field, target field..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by mapping name, source field, target field..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -460,22 +456,6 @@ function VismaMappingSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredMappings.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -577,13 +557,19 @@ function VismaMappingSection() {
 
       {/* Delete Mapping Modal */}
       {showDeleteModal && mappingToDelete && (
-        <DeleteMappingModal
-          mapping={mappingToDelete}
+        <DeleteModal
+          title="Delete Mapping"
+          message="Are you sure you want to delete the mapping"
+          itemName={mappingToDelete.name}
           onClose={() => {
             setShowDeleteModal(false);
             setMappingToDelete(null);
           }}
-          onDelete={handleDeleteMapping}
+          onConfirm={() => {
+            handleDeleteMapping(mappingToDelete.id);
+            setShowDeleteModal(false);
+            setMappingToDelete(null);
+          }}
         />
       )}
     </div>
@@ -1100,57 +1086,6 @@ function MappingEditModal({ mapping, onClose, onUpdate, accountingFields, vismaF
   );
 }
 
-// Delete Mapping Modal
-interface DeleteMappingModalProps {
-  mapping: any;
-  onClose: () => void;
-  onDelete: (mappingId: number) => void;
-}
-
-function DeleteMappingModal({ mapping, onClose, onDelete }: DeleteMappingModalProps) {
-  const handleDelete = () => {
-    onDelete(mapping.id);
-    onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
-          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
-            <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">
-            Delete Mapping
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
-            Are you sure you want to delete the mapping <span className="font-medium text-gray-900 dark:text-white">"{mapping.name}"</span>? This action cannot be undone.
-          </p>
-          <div className="flex items-center justify-end gap-3 text-[14px]">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Sync Logs Section
 function SyncLogsSection() {
@@ -1158,7 +1093,7 @@ function SyncLogsSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const [isStartingSync, setIsStartingSync] = useState(false);
   const queryClient = useQueryClient();
 
@@ -1350,16 +1285,11 @@ function SyncLogsSection() {
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by sync type, error message..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by sync type, error message..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -1527,22 +1457,6 @@ function SyncLogsSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredLogs.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}

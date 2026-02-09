@@ -3,7 +3,6 @@ import { toast } from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Globe,
-  Search,
   Filter,
   RefreshCw,
   ChevronLeft,
@@ -22,7 +21,7 @@ import {
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import api from '../lib/api';
-import { CustomDropdown, DeleteModal } from '../components/ui';
+import { CustomDropdown, DeleteModal, SearchInput } from '../components/ui';
 import { SkeletonStatsCard, SkeletonTable, SkeletonForm } from '../components/Skeleton';
 
 type TabType = 'fx-rates' | 'market-settings';
@@ -87,7 +86,7 @@ function FXRatesSection() {
   const [selectedRate, setSelectedRate] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch currencies from API
@@ -288,16 +287,11 @@ function FXRatesSection() {
       {/* Filters and Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by currency code or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by currency code or name..."
+          />
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
             <div className="min-w-[240px]">
@@ -450,22 +444,6 @@ function FXRatesSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredRates.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -740,7 +718,7 @@ function MarketCurrencySettingsSection() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch markets from API
@@ -936,16 +914,11 @@ function MarketCurrencySettingsSection() {
       {/* Filters and Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by market name, code, or region..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by market name, code, or region..."
+          />
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 text-[14px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -1107,22 +1080,6 @@ function MarketCurrencySettingsSection() {
               of <span className="font-medium text-gray-900 dark:text-white">{filteredMarkets.length}</span> results
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
-                <CustomDropdown
-                  value={itemsPerPage.toString()}
-                  onChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: '5', label: '5' },
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '50', label: '50' },
-                  ]}
-                />
-              </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -1260,12 +1217,12 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
         return currencies.map((c: any) => c.code);
       } catch (error) {
         console.error('Error fetching currencies:', error);
-        return ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'ZAR'];
+        return [];
       }
     },
   });
 
-  const currencyOptions = currencyOptionsData || ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'ZAR'];
+  const currencyOptions = currencyOptionsData || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1390,23 +1347,31 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Supported Currencies
               </label>
-              <div className="grid grid-cols-4 gap-2 p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-                {currencyOptions.map((currency: string) => (
-                  <label key={currency} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={supportedCurrencies.includes(currency)}
-                      onChange={() => toggleCurrency(currency)}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{currency}</span>
-                  </label>
-                ))}
-              </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Selected: {supportedCurrencies.join(', ')}
-            </p>
-          </div>
+              {currencyOptions.length === 0 ? (
+                <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+                  No currencies available. Please add currencies first.
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-4 gap-2 p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    {currencyOptions.map((currency: string) => (
+                      <label key={currency} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={supportedCurrencies.includes(currency)}
+                          onChange={() => toggleCurrency(currency)}
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{currency}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Selected: {supportedCurrencies.join(', ')}
+                  </p>
+                </>
+              )}
+            </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid grid-cols-1 gap-4">
@@ -1637,12 +1602,12 @@ function MarketEditModal({ market, onClose, onUpdate }: MarketEditModalProps) {
         return currencies.map((c: any) => c.code);
       } catch (error) {
         console.error('Error fetching currencies:', error);
-        return ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'ZAR'];
+        return [];
       }
     },
   });
 
-  const currencyOptions = currencyOptionsData || ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'ZAR'];
+  const currencyOptions = currencyOptionsData || [];
 
   const handleSave = () => {
     onUpdate(market.id, {
@@ -1777,22 +1742,30 @@ function MarketEditModal({ market, onClose, onUpdate }: MarketEditModalProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Supported Currencies
             </label>
-            <div className="grid grid-cols-4 gap-2 p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-              {currencyOptions.map((currency: string) => (
-                <label key={currency} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={supportedCurrencies.includes(currency)}
-                    onChange={() => toggleCurrency(currency)}
-                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{currency}</span>
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Selected: {supportedCurrencies.join(', ')}
-            </p>
+            {currencyOptions.length === 0 ? (
+              <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+                No currencies available. Please add currencies first.
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-2 p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                  {currencyOptions.map((currency: string) => (
+                    <label key={currency} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={supportedCurrencies.includes(currency)}
+                        onChange={() => toggleCurrency(currency)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{currency}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Selected: {supportedCurrencies.join(', ')}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

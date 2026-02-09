@@ -5,7 +5,7 @@ import { Search, Plus, Shield, Globe, X, Edit, Trash2, Eye, ChevronDown, Chevron
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown, DatePicker, ScrollIndicator } from '../components/ui';
+import { CustomDropdown, DatePicker, SearchInput } from '../components/ui';
 
 type TabType = 'dpp' | 'compliance';
 
@@ -162,13 +162,10 @@ function DigitalProductPassportSection() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex-1 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search passports..."
+            <SearchInput
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              onChange={setSearchQuery}
+              placeholder="Search passports..."
             />
           </div>
           <button
@@ -1340,31 +1337,25 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         <div 
           ref={modalRef}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto relative"
         >
-        <div className="sticky z-[50] top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
-            {evidence ? 'Edit' : 'Add'} Compliance Evidence
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors dark:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <ScrollIndicator 
-          scrollableRef={modalRef} 
-          topOffset={73}
-          dependencies={[formData]}
-        />
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="sticky z-[50] top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+            <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
+              {evidence ? 'Edit' : 'Add'} Compliance Evidence
+            </h3>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors dark:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product</label>
             <CustomDropdown
@@ -1571,7 +1562,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               {isSaving || createMutation.isPending || updateMutation.isPending ? 'Saving...' : evidence ? 'Update' : 'Create'}
             </button>
           </div>
-        </form>
+          </form>
         </div>
       </div>
     </div>

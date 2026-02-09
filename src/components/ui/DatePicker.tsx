@@ -279,7 +279,7 @@ export default function DatePicker({
               const isTodayDay = isToday(day);
               const isCurrentMonthDay = isCurrentMonth(day);
 
-              return (
+  return (
                 <button
                   key={`calendar-cell-${index}`}
                   type="button"

@@ -3364,7 +3364,8 @@ function TaxonomyModal({ taxonomy, onClose, onSave }: {
               type="text"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 ::placeholder-[12px] text-[14px] dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Enter category name"
             />
           </div>
           <div>
@@ -3373,12 +3374,12 @@ function TaxonomyModal({ taxonomy, onClose, onSave }: {
               value={subcategories}
               onChange={(e) => setSubcategories(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 ::placeholder-[12px] text-[14px] dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="Subcategory 1&#10;Subcategory 2&#10;Subcategory 3"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex justify-end gap-3 text-[14px] mt-6">
           <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
             Cancel
           </button>
@@ -3591,7 +3592,8 @@ function BundleModal({ bundle, products, onClose, onSave }: {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Enter bundle name"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
           <div>
@@ -3614,7 +3616,7 @@ function BundleModal({ bundle, products, onClose, onSave }: {
               type="text"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 ::placeholder-[12px] text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="e.g., BUNDLE-001 or leave empty to auto-generate"
             />
           </div>

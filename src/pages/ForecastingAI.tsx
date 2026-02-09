@@ -122,27 +122,122 @@ function ForecastBySKUStyleCollectionSection() {
     },
   });
 
+  // Fetch forecast data from API
+  const { data: forecastDataFromAPI } = useQuery({
+    queryKey: ['forecast', 'sku-style-collection', forecastType, selectedItem],
+    queryFn: async () => {
+      try {
+        const productId = selectedItem !== 'all' ? parseInt(selectedItem) : undefined;
+        const response = await api.get('/forecast', {
+          params: productId ? { productId } : {},
+        });
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch orders for actual sales data
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'forecast-actual'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   const products = productsData || [];
   const collections = collectionsData || [];
+  const orders = ordersData || [];
+  const forecasts = forecastDataFromAPI || [];
 
-  // Generate forecast data (simulated AI predictions)
+  // Calculate forecast data from real database
   const forecastData = useMemo(() => {
-    const months = [];
     const now = new Date();
+    const months = [];
     
+    // Get forecasts for the selected item
+    let relevantForecasts = forecasts;
+    if (selectedItem !== 'all') {
+      if (forecastType === 'SKU') {
+        relevantForecasts = forecasts.filter((f: any) => f.productId === parseInt(selectedItem));
+      } else if (forecastType === 'Collection') {
+        const collection = collections.find((c: any) => c.id === parseInt(selectedItem));
+        if (collection) {
+          const collectionProducts = products.filter((p: any) => p.collectionId === collection.id);
+          relevantForecasts = forecasts.filter((f: any) => 
+            collectionProducts.some((p: any) => p.id === f.productId)
+          );
+        }
+      } else if (forecastType === 'Style') {
+        const styleProducts = products.filter((p: any) => p.style === selectedItem);
+        relevantForecasts = forecasts.filter((f: any) => 
+          styleProducts.some((p: any) => p.id === f.productId)
+        );
+      }
+    }
+
+    // Group forecasts by period
+    const forecastByPeriod: Record<string, { forecast: number; confidence: number; count: number }> = {};
+    relevantForecasts.forEach((forecast: any) => {
+      const period = forecast.period;
+      if (!forecastByPeriod[period]) {
+        forecastByPeriod[period] = { forecast: 0, confidence: 0, count: 0 };
+      }
+      forecastByPeriod[period].forecast += forecast.predictedDemand || 0;
+      forecastByPeriod[period].confidence += parseFloat(forecast.confidence || 0.75);
+      forecastByPeriod[period].count += 1;
+    });
+
+    // Calculate actual sales from orders
+    const actualByPeriod: Record<string, number> = {};
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      const period = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!actualByPeriod[period]) {
+        actualByPeriod[period] = 0;
+      }
+
+      order.orderLines?.forEach((line: any) => {
+        if (selectedItem === 'all' || 
+            (forecastType === 'SKU' && line.productId === parseInt(selectedItem)) ||
+            (forecastType === 'Collection' && products.find((p: any) => p.id === line.productId)?.collectionId === parseInt(selectedItem)) ||
+            (forecastType === 'Style' && products.find((p: any) => p.id === line.productId)?.style === selectedItem)) {
+          actualByPeriod[period] += line.quantity || 0;
+        }
+      });
+    });
+
+    // Generate months for the next 6 months
     for (let i = 0; i < 6; i++) {
       const monthDate = new Date(now);
       monthDate.setMonth(monthDate.getMonth() + i);
+      const period = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+      const periodKey = period;
+      
+      const forecastInfo = forecastByPeriod[periodKey];
+      const forecast = forecastInfo ? forecastInfo.forecast : 0;
+      const confidence = forecastInfo && forecastInfo.count > 0 
+        ? forecastInfo.confidence / forecastInfo.count 
+        : 0.75;
+      const actual = actualByPeriod[periodKey] || (i === 0 ? actualByPeriod[period] : null);
+
       months.push({
         month: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        forecast: Math.floor(Math.random() * 1000) + 500,
-        actual: i === 0 ? Math.floor(Math.random() * 1000) + 500 : null,
-        confidence: 0.75 + Math.random() * 0.2,
+        forecast,
+        actual,
+        confidence: Math.min(Math.max(confidence, 0), 1),
       });
     }
     
     return months;
-  }, [forecastType, selectedItem, timeRange]);
+  }, [forecasts, orders, products, collections, forecastType, selectedItem, timeRange]);
 
   const chartOptions = useMemo(() => ({
     chart: {
@@ -156,7 +251,7 @@ function ForecastBySKUStyleCollectionSection() {
       width: 2,
     },
     xaxis: {
-      categories: forecastData.map((d) => d.month),
+      categories: forecastData.map((d: any) => d.month),
       labels: {
         style: {
           colors: isDarkMode ? '#9CA3AF' : '#6B7280',
@@ -187,11 +282,11 @@ function ForecastBySKUStyleCollectionSection() {
   const chartSeries = [
     {
       name: 'Forecast',
-      data: forecastData.map((d) => d.forecast),
+      data: forecastData.map((d: any) => d.forecast),
     },
     {
       name: 'Actual',
-      data: forecastData.map((d) => d.actual || 0),
+      data: forecastData.map((d: any) => d.actual || 0),
     },
   ];
 
@@ -285,7 +380,7 @@ function ForecastBySKUStyleCollectionSection() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {forecastData.map((row, index) => {
+              {forecastData.map((row: any, index: number) => {
                 const variance = row.actual ? ((row.actual - row.forecast) / row.forecast) * 100 : null;
                 return (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -353,20 +448,111 @@ function ForecastByChannelWarehouseRegionSection() {
     return () => observer.disconnect();
   }, []);
 
-  // Simulated forecast data
+  // Fetch forecast data from API
+  const { data: forecastDataFromAPI } = useQuery({
+    queryKey: ['forecast', 'channel-warehouse-region', forecastDimension],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/forecast');
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch orders for actual sales
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'forecast-channel'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch warehouses
+  const { data: warehousesData } = useQuery({
+    queryKey: ['warehouses', 'forecast'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/warehouses');
+        return response.data?.data || response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const forecasts = forecastDataFromAPI || [];
+  const orders = ordersData || [];
+  const warehouses = warehousesData || [];
+
+  // Calculate forecast data from real database
   const forecastData = useMemo(() => {
-    const items = forecastDimension === 'Channel' 
-      ? ['B2B', 'Retail', 'Wholesale', 'Online']
-      : forecastDimension === 'Warehouse'
-      ? ['Warehouse A', 'Warehouse B', 'Warehouse C']
-      : ['North America', 'Europe', 'Asia', 'South America'];
-    
-    return items.map((item) => ({
-      name: item,
-      forecast: Math.floor(Math.random() * 5000) + 2000,
-      confidence: 0.7 + Math.random() * 0.25,
-    }));
-  }, [forecastDimension]);
+    if (forecastDimension === 'Channel') {
+      // Group forecasts by order channel/type
+      const channelForecasts: Record<string, { forecast: number; confidence: number; count: number }> = {};
+      
+      orders.forEach((order: any) => {
+        const channel = order.type || 'B2B';
+        if (!channelForecasts[channel]) {
+          channelForecasts[channel] = { forecast: 0, confidence: 0, count: 0 };
+        }
+        // Calculate demand from order lines
+        order.orderLines?.forEach((line: any) => {
+          const forecast = forecasts.find((f: any) => f.productId === line.productId);
+          if (forecast) {
+            channelForecasts[channel].forecast += forecast.predictedDemand || 0;
+            channelForecasts[channel].confidence += parseFloat(forecast.confidence || 0.75);
+            channelForecasts[channel].count += 1;
+          }
+        });
+      });
+
+      return Object.keys(channelForecasts).map((channel) => ({
+        name: channel,
+        forecast: channelForecasts[channel].forecast,
+        confidence: channelForecasts[channel].count > 0 
+          ? channelForecasts[channel].confidence / channelForecasts[channel].count 
+          : 0.75,
+      }));
+    } else if (forecastDimension === 'Warehouse') {
+      // Group forecasts by warehouse
+      return warehouses.map((warehouse: any) => {
+        // Get inventory for this warehouse and calculate forecast
+        const warehouseForecasts = forecasts.filter((_f: any) => {
+          // Match by warehouse through inventory (would need inventory data)
+          return true; // Simplified - in real app, would filter by warehouse
+        });
+        
+        const totalForecast = warehouseForecasts.reduce((sum: number, f: any) => 
+          sum + (f.predictedDemand || 0), 0
+        );
+        const avgConfidence = warehouseForecasts.length > 0
+          ? warehouseForecasts.reduce((sum: number, f: any) => 
+              sum + parseFloat(f.confidence || 0.75), 0) / warehouseForecasts.length
+          : 0.75;
+
+        return {
+          name: warehouse.name,
+          forecast: totalForecast,
+          confidence: Math.min(Math.max(avgConfidence, 0), 1),
+        };
+      });
+    } else {
+      // Region - would need customer/warehouse location data
+      // For now, return empty or use warehouse regions
+      return warehouses.map((warehouse: any) => ({
+        name: warehouse.country || warehouse.city || 'Unknown',
+        forecast: 0,
+        confidence: 0.75,
+      }));
+    }
+  }, [forecastDimension, forecasts, orders, warehouses]);
 
   const chartOptions = useMemo(() => ({
     chart: {
@@ -376,7 +562,7 @@ function ForecastByChannelWarehouseRegionSection() {
     },
     dataLabels: { enabled: true },
     xaxis: {
-      categories: forecastData.map((d) => d.name),
+      categories: forecastData.map((d: any) => d.name),
       labels: {
         style: {
           colors: isDarkMode ? '#9CA3AF' : '#6B7280',
@@ -407,7 +593,7 @@ function ForecastByChannelWarehouseRegionSection() {
   const chartSeries = [
     {
       name: 'Forecasted Demand',
-      data: forecastData.map((d) => d.forecast),
+      data: forecastData.map((d: any) => d.forecast),
     },
   ];
 
@@ -453,7 +639,7 @@ function ForecastByChannelWarehouseRegionSection() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {forecastData.map((row, index) => (
+              {forecastData.map((row: any, index: number) => (
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {row.name}
@@ -501,15 +687,62 @@ function SeasonalityDetectionSection() {
     return () => observer.disconnect();
   }, []);
 
-  // Simulated seasonality data
+  // Fetch orders for seasonality analysis
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'seasonality'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const orders = ordersData || [];
+
+  // Calculate seasonality from real order data
   const seasonalityData = useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months.map((month, index) => ({
-      month,
-      sales: Math.floor(Math.sin((index / 12) * Math.PI * 2) * 500 + 1000),
-      seasonality: Math.sin((index / 12) * Math.PI * 2) > 0.3 ? 'High' : Math.sin((index / 12) * Math.PI * 2) < -0.3 ? 'Low' : 'Normal',
-    }));
-  }, []);
+    
+    // Calculate sales by month from orders
+    const salesByMonth: Record<number, number> = {};
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      const month = orderDate.getMonth(); // 0-11
+      
+      if (!salesByMonth[month]) {
+        salesByMonth[month] = 0;
+      }
+      
+      order.orderLines?.forEach((line: any) => {
+        salesByMonth[month] += line.quantity || 0;
+      });
+    });
+
+    // Calculate average sales
+    const totalSales = Object.values(salesByMonth).reduce((sum, val) => sum + val, 0);
+    const avgSales = totalSales / 12;
+
+    return months.map((month, index) => {
+      const sales = salesByMonth[index] || 0;
+      const deviation = avgSales > 0 ? ((sales - avgSales) / avgSales) * 100 : 0;
+      
+      let seasonality: 'High' | 'Normal' | 'Low' = 'Normal';
+      if (deviation > 20) {
+        seasonality = 'High';
+      } else if (deviation < -20) {
+        seasonality = 'Low';
+      }
+
+      return {
+        month,
+        sales,
+        seasonality,
+      };
+    });
+  }, [orders]);
 
   const chartOptions = useMemo(() => ({
     chart: {
@@ -619,19 +852,121 @@ function SeasonalityDetectionSection() {
 function AnomalyDetectionSection() {
   const [anomalyType, setAnomalyType] = useState<'all' | 'spikes' | 'drops'>('all');
 
-  // Simulated anomaly data
+  // Fetch orders and forecasts for anomaly detection
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'anomaly'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const { data: forecastData } = useQuery({
+    queryKey: ['forecast', 'anomaly'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/forecast');
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const { data: productsData } = useQuery({
+    queryKey: ['products', 'anomaly'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/products?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const orders = ordersData || [];
+  const forecasts = forecastData || [];
+  const products = productsData || [];
+
+  // Calculate anomalies from real data
   const anomalies = useMemo(() => {
-    const data = [
-      { id: 1, date: '2024-01-15', type: 'spike', product: 'Product A', value: 1500, expected: 800, variance: 87.5 },
-      { id: 2, date: '2024-02-20', type: 'drop', product: 'Product B', value: 200, expected: 600, variance: -66.7 },
-      { id: 3, date: '2024-03-10', type: 'spike', product: 'Product C', value: 2200, expected: 1200, variance: 83.3 },
-      { id: 4, date: '2024-04-05', type: 'drop', product: 'Product D', value: 150, expected: 500, variance: -70.0 },
-    ];
+    const anomaliesList: any[] = [];
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Group orders by product and date
+    const salesByProductDate: Record<number, Record<string, number>> = {};
     
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      if (orderDate < thirtyDaysAgo) return;
+
+      const dateKey = orderDate.toISOString().split('T')[0];
+      
+      order.orderLines?.forEach((line: any) => {
+        if (!salesByProductDate[line.productId]) {
+          salesByProductDate[line.productId] = {};
+        }
+        if (!salesByProductDate[line.productId][dateKey]) {
+          salesByProductDate[line.productId][dateKey] = 0;
+        }
+        salesByProductDate[line.productId][dateKey] += line.quantity || 0;
+      });
+    });
+
+    // Detect anomalies by comparing actual sales with forecasts
+    Object.keys(salesByProductDate).forEach((productIdStr) => {
+      const productId = parseInt(productIdStr);
+      const product = products.find((p: any) => p.id === productId);
+      if (!product) return;
+
+      const productForecast = forecasts.find((f: any) => f.productId === productId);
+      const expectedDaily = productForecast 
+        ? (productForecast.predictedDemand || 0) / 30 
+        : 0;
+
+      Object.keys(salesByProductDate[productId]).forEach((dateKey) => {
+        const actual = salesByProductDate[productId][dateKey];
+        const expected = expectedDaily;
+        
+        if (expected > 0) {
+          const variance = ((actual - expected) / expected) * 100;
+          
+          // Detect spike (>50% above expected) or drop (>50% below expected)
+          if (variance > 50) {
+            anomaliesList.push({
+              id: `spike-${productId}-${dateKey}`,
+              date: dateKey,
+              type: 'spike',
+              product: product.name,
+              value: actual,
+              expected: Math.round(expected),
+              variance: variance,
+            });
+          } else if (variance < -50 && actual > 0) {
+            anomaliesList.push({
+              id: `drop-${productId}-${dateKey}`,
+              date: dateKey,
+              type: 'drop',
+              product: product.name,
+              value: actual,
+              expected: Math.round(expected),
+              variance: variance,
+            });
+          }
+        }
+      });
+    });
+
     return anomalyType === 'all' 
-      ? data 
-      : data.filter((a) => a.type === anomalyType);
-  }, [anomalyType]);
+      ? anomaliesList 
+      : anomaliesList.filter((a) => a.type === anomalyType);
+  }, [anomalyType, orders, forecasts, products]);
 
   return (
     <div className="space-y-6">
@@ -742,22 +1077,101 @@ function ForecastAccuracySection() {
     return () => observer.disconnect();
   }, []);
 
-  // Simulated accuracy data
+  // Fetch forecasts and orders for accuracy calculation
+  const { data: forecastData } = useQuery({
+    queryKey: ['forecast', 'accuracy'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/forecast');
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const { data: ordersData } = useQuery({
+    queryKey: ['orders', 'accuracy'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/orders?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const forecasts = forecastData || [];
+  const orders = ordersData || [];
+
+  // Calculate accuracy from real forecast vs actual data
   const accuracyData = useMemo(() => {
-    const months = [];
     const now = new Date();
+    const months = [];
+    
+    // Group forecasts and actuals by period
+    const forecastByPeriod: Record<string, { forecast: number; actual: number; count: number }> = {};
+    
+    // Process forecasts
+    forecasts.forEach((forecast: any) => {
+      const period = forecast.period;
+      if (!forecastByPeriod[period]) {
+        forecastByPeriod[period] = { forecast: 0, actual: 0, count: 0 };
+      }
+      forecastByPeriod[period].forecast += forecast.predictedDemand || 0;
+      forecastByPeriod[period].count += 1;
+    });
+
+    // Process actual sales from orders
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.orderDate || order.createdAt);
+      const period = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!forecastByPeriod[period]) {
+        forecastByPeriod[period] = { forecast: 0, actual: 0, count: 0 };
+      }
+      
+      order.orderLines?.forEach((line: any) => {
+        const forecast = forecasts.find((f: any) => f.productId === line.productId);
+        if (forecast) {
+          forecastByPeriod[period].actual += line.quantity || 0;
+        }
+      });
+    });
+
+    // Calculate accuracy metrics for last 6 months
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(now);
       monthDate.setMonth(monthDate.getMonth() - i);
+      const period = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      const data = forecastByPeriod[period] || { forecast: 0, actual: 0, count: 0 };
+      
+      // Calculate accuracy metrics
+      let accuracy = 0.75; // Default
+      let mape = 0; // Mean Absolute Percentage Error
+      let rmse = 0; // Root Mean Square Error
+      
+      if (data.forecast > 0 && data.actual > 0) {
+        const error = Math.abs(data.actual - data.forecast);
+        accuracy = 1 - (error / Math.max(data.forecast, data.actual));
+        mape = (error / data.forecast) * 100;
+        rmse = Math.sqrt(Math.pow(error, 2));
+      } else if (data.forecast === 0 && data.actual === 0) {
+        accuracy = 1.0; // Perfect if both are zero
+      }
+
       months.push({
         month: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        accuracy: 0.75 + Math.random() * 0.2,
-        mape: 10 + Math.random() * 15, // Mean Absolute Percentage Error
-        rmse: 50 + Math.random() * 100, // Root Mean Square Error
+        accuracy: Math.max(0, Math.min(1, accuracy)),
+        mape: Math.max(0, mape),
+        rmse: Math.max(0, rmse),
       });
     }
+    
     return months;
-  }, []);
+  }, [forecasts, orders]);
 
   const chartOptions = useMemo(() => ({
     chart: {
