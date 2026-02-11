@@ -234,6 +234,7 @@ export default function DatePicker({
       {isOpen && !disabled && typeof document !== 'undefined' && createPortal(
         <div 
           ref={calendarRef}
+          data-datepicker-calendar="true"
           className="fixed z-[100] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4"
           style={{ 
             position: 'fixed',

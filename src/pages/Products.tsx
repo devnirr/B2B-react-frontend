@@ -1,17 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Package, Plus, X, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Edit, Trash2, AlertTriangle, Upload,  Eye, ChevronLeft } from 'lucide-react';
+import { Package, Plus, X, ChevronDown, ChevronRight, Edit, Trash2, Upload,  Eye, ChevronLeft } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { generateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { ButtonWithWaves, CustomDropdown } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 
 export default function Products() {
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -50,10 +53,15 @@ export default function Products() {
     }
   }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isViewModalOpen]);
 
+  // Reset to page 1 when switching view modes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [viewMode]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['products', page],
+    queryKey: ['products', currentPage],
     queryFn: async () => {
-      const response = await api.get(`/products?skip=${page * 10}&take=10`);
+      const response = await api.get(`/products?skip=${(currentPage - 1) * ITEMS_PER_PAGE}&take=${ITEMS_PER_PAGE}`);
       return response.data;
     },
   });
@@ -122,7 +130,14 @@ export default function Products() {
     return Object.values(variantMap);
   };
 
-  const variantGroups = allProductsData?.data ? organizeProductsByVariants(allProductsData.data) : [];
+  const allVariantGroups = allProductsData?.data ? organizeProductsByVariants(allProductsData.data) : [];
+  
+  // Pagination for variant view
+  const variantViewCurrentPage = viewMode === 'variants' ? currentPage : 1;
+  const variantViewTotalPages = Math.ceil(allVariantGroups.length / ITEMS_PER_PAGE);
+  const variantGroups = viewMode === 'variants' 
+    ? allVariantGroups.slice((variantViewCurrentPage - 1) * ITEMS_PER_PAGE, variantViewCurrentPage * ITEMS_PER_PAGE)
+    : allVariantGroups;
 
   const createProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -151,8 +166,11 @@ export default function Products() {
       const response = await api.post('/products', productPayload);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      const productData = (window as any).__lastProductData;
+      logCreate('Product', data?.id || data?.data?.id, productData);
+      delete (window as any).__lastProductData;
       toast.success('Product added successfully!');
       closeModal();
     },
@@ -202,9 +220,10 @@ export default function Products() {
       const response = await api.patch(`/products/${id}`, productPayload);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; productData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['dam'] });
+      logUpdate('Product', variables.id, variables.productData);
       toast.success('Product updated successfully!');
       closeEditModal();
     },
@@ -219,8 +238,9 @@ export default function Products() {
       const response = await api.delete(`/products/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      logDelete('Product', id);
       toast.success('Product deleted successfully!');
       closeDeleteModal();
     },
@@ -364,7 +384,7 @@ export default function Products() {
               </div>
             ) : (
               <div className="p-6">
-                {variantGroups.map((styleGroup, styleIdx) => {
+                {variantGroups.map((styleGroup: any, styleIdx: number) => {
                   const styleKey = styleGroup.style;
                   const isExpanded = expandedStyles.has(styleKey);
 
@@ -389,7 +409,7 @@ export default function Products() {
                         )}
                         Style: {styleGroup.style}
                       </h3>
-                      {isExpanded && Object.values(styleGroup.colors).map((colorGroup, colorIdx) => {
+                      {isExpanded && Object.values(styleGroup.colors).map((colorGroup: any, colorIdx) => {
                         const colorKey = `${styleKey}-${colorGroup.color}`;
                         const isColorExpanded = expandedColors.has(colorKey);
 
@@ -414,7 +434,7 @@ export default function Products() {
                               )}
                               Color: {colorGroup.color}
                             </h4>
-                            {isColorExpanded && Object.values(colorGroup.sizes).map((sizeGroup, sizeIdx) => {
+                            {isColorExpanded && Object.values(colorGroup.sizes).map((sizeGroup: any, sizeIdx) => {
                               const sizeKey = `${colorKey}-${sizeGroup.size}`;
                               const isSizeExpanded = expandedSizes.has(sizeKey);
 
@@ -494,6 +514,18 @@ export default function Products() {
                     </div>
                   );
                 })}
+                
+                {/* Pagination for Variant View */}
+                {variantViewTotalPages > 1 && (
+                  <div className="mt-6 px-6 pb-6">
+                    <Pagination
+                      currentPage={variantViewCurrentPage}
+                      totalPages={variantViewTotalPages}
+                      totalItems={allVariantGroups.length}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
               </div>
             )
           ) : (
@@ -662,49 +694,15 @@ export default function Products() {
             )
           )}
 
-          {/* Pagination */}
-          {data?.data && data.data.length > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
-              <div className="text-sm text-gray-600 dark:text-white">
-                Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {Math.min((page + 1) * 10, data.total)}
-                </span>{' '}
-                of <span className="font-medium text-gray-900 dark:text-white">{data.total}</span> results
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(0)}
-                  disabled={page === 0}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronsLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronsLeft className="w-4 h-4" />
-                </button>
-                <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                  Page {page + 1} of {Math.ceil(data.total / 10)}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(Math.ceil(data.total / 10) - 1, p + 1))}
-                  disabled={page >= Math.ceil(data.total / 10) - 1}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronsRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setPage(Math.ceil(data.total / 10) - 1)}
-                  disabled={page >= Math.ceil(data.total / 10) - 1}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronsRight className="w-4 h-4" />
-                </button>
-              </div>
+          {/* Pagination for Table View */}
+          {viewMode === 'table' && data?.data && data.data.length > 0 && data.total > 0 && (
+            <div className="px-6 pb-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(data.total / ITEMS_PER_PAGE)}
+                totalItems={data.total}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
@@ -745,13 +743,14 @@ export default function Products() {
       )}
 
       {/* Delete Product Modal */}
-      {isDeleteModalOpen && selectedProduct && (
-        <DeleteProductModal
-          product={selectedProduct}
+      {isDeleteModalOpen && selectedProduct && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Product"
+          message="Are you sure you want to delete"
+          itemName={selectedProduct.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteProductMutation.mutate(selectedProduct.id)}
           isLoading={deleteProductMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
 
@@ -2931,94 +2930,6 @@ function EditProductModal({
 }
 
 // Delete Product Modal Component
-function DeleteProductModal({
-  product,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  product: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      {/* Modal Backdrop */}
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteProductModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '24rem' }}
-        >
-          <div className="modal-content">
-            {/* Modal Body with Icon */}
-            <div className="modal-body text-center py-8 px-6">
-              {/* Warning Icon */}
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-
-              {/* Title */}
-              <h5 id="deleteProductModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Product
-              </h5>
-
-              {/* Description */}
-              <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-[14px] text-gray-900 dark:text-white font-semibold mb-4">
-                "{product.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 w-full items-center flex">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border text-[14px] border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="px-5 text-[14px] py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Product'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Attributes & Taxonomy Section Component
 function AttributesTaxonomySection() {
@@ -3039,22 +2950,78 @@ function AttributesTaxonomySection() {
   const [editingAttribute, setEditingAttribute] = useState<any>(null);
   const [editingTaxonomy, setEditingTaxonomy] = useState<any>(null);
 
-  // Load attributes and taxonomy from localStorage (or API in future)
+  const queryClient = useQueryClient();
+
+  // Fetch attributes from API
+  const { data: attributesData } = useQuery({
+    queryKey: ['product-configuration', 'ATTRIBUTES'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/product-configurations/ATTRIBUTES');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch taxonomy from API
+  const { data: taxonomyData } = useQuery({
+    queryKey: ['product-configuration', 'TAXONOMY'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/product-configurations/TAXONOMY');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   useEffect(() => {
-    const savedAttributes = localStorage.getItem('productAttributes');
-    const savedTaxonomy = localStorage.getItem('productTaxonomy');
-    if (savedAttributes) setAttributes(JSON.parse(savedAttributes));
-    if (savedTaxonomy) setTaxonomy(JSON.parse(savedTaxonomy));
-  }, []);
+    if (attributesData) setAttributes(attributesData);
+  }, [attributesData]);
+
+  useEffect(() => {
+    if (taxonomyData) setTaxonomy(taxonomyData);
+  }, [taxonomyData]);
+
+  // Mutation for saving attributes
+  const saveAttributesMutation = useMutation({
+    mutationFn: async (newAttributes: typeof attributes) => {
+      return api.post('/product-configurations', {
+        type: 'ATTRIBUTES',
+        data: newAttributes,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-configuration', 'ATTRIBUTES'] });
+      setAttributes(attributesData || []);
+    },
+  });
+
+  // Mutation for saving taxonomy
+  const saveTaxonomyMutation = useMutation({
+    mutationFn: async (newTaxonomy: typeof taxonomy) => {
+      return api.post('/product-configurations', {
+        type: 'TAXONOMY',
+        data: newTaxonomy,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-configuration', 'TAXONOMY'] });
+      setTaxonomy(taxonomyData || []);
+    },
+  });
 
   const saveAttributes = (newAttributes: typeof attributes) => {
     setAttributes(newAttributes);
-    localStorage.setItem('productAttributes', JSON.stringify(newAttributes));
+    saveAttributesMutation.mutate(newAttributes);
   };
 
   const saveTaxonomy = (newTaxonomy: typeof taxonomy) => {
     setTaxonomy(newTaxonomy);
-    localStorage.setItem('productTaxonomy', JSON.stringify(newTaxonomy));
+    saveTaxonomyMutation.mutate(newTaxonomy);
   };
 
   return (
@@ -3427,15 +3394,41 @@ function BundlesKitsSection() {
     },
   });
 
-  // Load bundles from localStorage (or API in future)
+  const queryClient = useQueryClient();
+
+  // Fetch bundles from API
+  const { data: bundlesData } = useQuery({
+    queryKey: ['product-configuration', 'BUNDLES'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/product-configurations/BUNDLES');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   useEffect(() => {
-    const savedBundles = localStorage.getItem('productBundles');
-    if (savedBundles) setBundles(JSON.parse(savedBundles));
-  }, []);
+    if (bundlesData) setBundles(bundlesData);
+  }, [bundlesData]);
+
+  // Mutation for saving bundles
+  const saveBundlesMutation = useMutation({
+    mutationFn: async (newBundles: typeof bundles) => {
+      return api.post('/product-configurations', {
+        type: 'BUNDLES',
+        data: newBundles,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-configuration', 'BUNDLES'] });
+    },
+  });
 
   const saveBundles = (newBundles: typeof bundles) => {
     setBundles(newBundles);
-    localStorage.setItem('productBundles', JSON.stringify(newBundles));
+    saveBundlesMutation.mutate(newBundles);
   };
 
   return (

@@ -20,15 +20,38 @@ export default function Pricing() {
     },
   });
 
-  const products = productsData || [];
+  // Fetch product pricing data
+  const { data: pricingData } = useQuery({
+    queryKey: ['product-pricing'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/product-pricing?skip=0&take=1000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
 
-  // Calculate pricing data from products
+  const products = productsData || [];
+  const pricingRecords = pricingData || [];
+
+  // Map pricing data from ProductPricing records
   const pricing = products.map((product: any) => {
-    const basePrice = parseFloat(product.price) || 0;
-    // Estimate discount (could be from actual discount field if available)
-    const discountPercent = Math.floor(Math.random() * 20); // 0-20% discount
-    const discount = discountPercent > 0 ? `${discountPercent}%` : '0%';
-    const finalPrice = basePrice * (1 - discountPercent / 100);
+    const basePrice = parseFloat(product.price) || parseFloat(product.basePrice) || 0;
+    // Find active pricing record for this product
+    const activePricing = pricingRecords.find(
+      (p: any) => p.productId === product.id && p.isActive
+    );
+    
+    const discountPercent = activePricing 
+      ? parseFloat(activePricing.discountPercent) || 0 
+      : 0;
+    const finalPrice = activePricing 
+      ? parseFloat(activePricing.finalPrice) || basePrice 
+      : basePrice;
+    const discount = discountPercent > 0 ? `${discountPercent.toFixed(0)}%` : '0%';
+    
     return {
       id: product.id,
       product: product.name || product.sku || 'Unknown Product',

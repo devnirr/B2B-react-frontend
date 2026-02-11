@@ -106,8 +106,6 @@ export default function WarehousesLocations() {
   const queryClient = useQueryClient();
 
   // Local storage keys for bins and put-away rules
-  const BINS_KEY = 'warehouse_bins';
-  const PUT_AWAY_RULES_KEY = 'warehouse_put_away_rules';
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
@@ -183,47 +181,61 @@ export default function WarehousesLocations() {
     return filteredWarehouses.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredWarehouses, currentPage, itemsPerPage]);
 
-  // Load bins for warehouses
+  // Fetch bins and put-away rules from API
+  const { data: binsDataResponse } = useQuery({
+    queryKey: ['warehouse-configuration', 'BINS'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/warehouse-configurations/BINS');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const { data: putAwayRulesDataResponse } = useQuery({
+    queryKey: ['warehouse-configuration', 'PUT_AWAY_RULES'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/warehouse-configurations/PUT_AWAY_RULES');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   const [binsData, setBinsData] = useState<Record<number, Bin[]>>({});
   const [putAwayRulesData, setPutAwayRulesData] = useState<Record<number, PutAwayRule[]>>({});
 
   useEffect(() => {
-    // Load bins from localStorage
-    try {
-      const storedBins = localStorage.getItem(BINS_KEY);
-      if (storedBins) {
-        const allBins: Bin[] = JSON.parse(storedBins);
-        const binsByWarehouse: Record<number, Bin[]> = {};
-        allBins.forEach((bin) => {
-          if (!binsByWarehouse[bin.warehouseId]) {
-            binsByWarehouse[bin.warehouseId] = [];
-          }
-          binsByWarehouse[bin.warehouseId].push(bin);
-        });
-        setBinsData(binsByWarehouse);
-      }
-    } catch (error) {
-      console.error('Error loading bins:', error);
+    if (binsDataResponse) {
+      const binsByWarehouse: Record<number, Bin[]> = {};
+      binsDataResponse.forEach((bin: Bin) => {
+        if (!binsByWarehouse[bin.warehouseId]) {
+          binsByWarehouse[bin.warehouseId] = [];
+        }
+        binsByWarehouse[bin.warehouseId].push(bin);
+      });
+      setBinsData(binsByWarehouse);
     }
+  }, [binsDataResponse]);
 
-    // Load put-away rules from localStorage
-    try {
-      const storedRules = localStorage.getItem(PUT_AWAY_RULES_KEY);
-      if (storedRules) {
-        const allRules: PutAwayRule[] = JSON.parse(storedRules);
-        const rulesByWarehouse: Record<number, PutAwayRule[]> = {};
-        allRules.forEach((rule) => {
-          if (!rulesByWarehouse[rule.warehouseId]) {
-            rulesByWarehouse[rule.warehouseId] = [];
-          }
-          rulesByWarehouse[rule.warehouseId].push(rule);
-        });
-        setPutAwayRulesData(rulesByWarehouse);
-      }
-    } catch (error) {
-      console.error('Error loading put-away rules:', error);
+  useEffect(() => {
+    if (putAwayRulesDataResponse) {
+      const rulesByWarehouse: Record<number, PutAwayRule[]> = {};
+      putAwayRulesDataResponse.forEach((rule: PutAwayRule) => {
+        if (!rulesByWarehouse[rule.warehouseId]) {
+          rulesByWarehouse[rule.warehouseId] = [];
+        }
+        rulesByWarehouse[rule.warehouseId].push(rule);
+      });
+      setPutAwayRulesData(rulesByWarehouse);
     }
-  }, []);
+  }, [putAwayRulesDataResponse]);
+
+  // Mutations for saving (modals handle their own mutations internally)
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -379,7 +391,7 @@ export default function WarehousesLocations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Warehouse className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -393,7 +405,7 @@ export default function WarehousesLocations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -407,7 +419,7 @@ export default function WarehousesLocations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <XCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -421,7 +433,7 @@ export default function WarehousesLocations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Box className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Box className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -435,7 +447,7 @@ export default function WarehousesLocations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Settings className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Settings className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -843,7 +855,6 @@ export default function WarehousesLocations() {
           warehouse={selectedWarehouse}
           onClose={closeBinsModal}
           isShowing={isBinsModalShowing}
-          storageKey={BINS_KEY}
           onUpdate={(bins) => {
             setBinsData((prev) => ({ ...prev, [selectedWarehouse.id]: bins }));
           }}
@@ -856,7 +867,7 @@ export default function WarehousesLocations() {
           warehouse={selectedWarehouse}
           onClose={closePutAwayRulesModal}
           isShowing={isPutAwayRulesModalShowing}
-          storageKey={PUT_AWAY_RULES_KEY}
+          storageKey={`putAwayRules_${selectedWarehouse.id}`}
           onUpdate={(rules) => {
             setPutAwayRulesData((prev) => ({ ...prev, [selectedWarehouse.id]: rules }));
           }}
@@ -1288,13 +1299,11 @@ function BinsModal({
   warehouse,
   onClose,
   isShowing,
-  storageKey,
   onUpdate,
 }: {
   warehouse: Warehouse;
   onClose: () => void;
   isShowing: boolean;
-  storageKey: string;
   onUpdate: (bins: Bin[]) => void;
 }) {
   const [bins, setBins] = useState<Bin[]>([]);
@@ -1304,38 +1313,49 @@ function BinsModal({
   const [zoneFilter, setZoneFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Load bins from localStorage
-  useEffect(() => {
-    if (isShowing) {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        try {
-          const allBins: Bin[] = JSON.parse(stored);
-          const warehouseBins = allBins
-            .filter((b) => b.warehouseId === warehouse.id)
-            .sort((a, b) => a.binCode.localeCompare(b.binCode));
-          setBins(warehouseBins);
-        } catch (error) {
-          console.error('Error loading bins:', error);
-        }
-      }
-    }
-  }, [isShowing, warehouse.id, storageKey]);
+  const queryClient = useQueryClient();
 
-  // Save bins to localStorage
-  const saveBins = (newBins: Bin[]) => {
-    const stored = localStorage.getItem(storageKey);
-    let allBins: Bin[] = [];
-    if (stored) {
+  // Fetch all bins from API
+  const { data: allBinsData } = useQuery({
+    queryKey: ['warehouse-configuration', 'BINS'],
+    queryFn: async () => {
       try {
-        allBins = JSON.parse(stored);
-        allBins = allBins.filter((b) => b.warehouseId !== warehouse.id);
+        const response = await api.get('/warehouse-configurations/BINS');
+        return response.data?.data || [];
       } catch (error) {
-        console.error('Error parsing stored bins:', error);
+        return [];
       }
+    },
+  });
+
+  // Load bins for this warehouse
+  useEffect(() => {
+    if (isShowing && allBinsData) {
+      const warehouseBins = allBinsData
+        .filter((b: Bin) => b.warehouseId === warehouse.id)
+        .sort((a: Bin, b: Bin) => a.binCode.localeCompare(b.binCode));
+      setBins(warehouseBins);
     }
-    allBins = [...allBins, ...newBins];
-    localStorage.setItem(storageKey, JSON.stringify(allBins));
+  }, [isShowing, warehouse.id, allBinsData]);
+
+  // Mutation for saving bins
+  const saveBinsMutation = useMutation({
+    mutationFn: async (allBins: Bin[]) => {
+      return api.post('/warehouse-configurations', {
+        type: 'BINS',
+        data: allBins,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-configuration', 'BINS'] });
+    },
+  });
+
+  // Save bins to API
+  const saveBins = (newBins: Bin[]) => {
+    const allBins: Bin[] = (allBinsData || []).filter((b: Bin) => b.warehouseId !== warehouse.id);
+    const updatedAllBins = [...allBins, ...newBins];
+    saveBinsMutation.mutate(updatedAllBins);
   };
 
   const handleAddBin = (binData: Omit<Bin, 'id' | 'warehouseId'> | Partial<Bin>) => {
@@ -1454,7 +1474,7 @@ function BinsModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -1706,7 +1726,7 @@ function AddEditBinModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1872,7 +1892,7 @@ function PutAwayRulesModal({
   warehouse,
   onClose,
   isShowing,
-  storageKey,
+  storageKey: _storageKey,
   onUpdate,
 }: {
   warehouse: Warehouse;
@@ -1886,38 +1906,49 @@ function PutAwayRulesModal({
   const [editingRule, setEditingRule] = useState<PutAwayRule | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load rules from localStorage
-  useEffect(() => {
-    if (isShowing) {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        try {
-          const allRules: PutAwayRule[] = JSON.parse(stored);
-          const warehouseRules = allRules
-            .filter((r) => r.warehouseId === warehouse.id)
-            .sort((a, b) => b.priority - a.priority);
-          setRules(warehouseRules);
-        } catch (error) {
-          console.error('Error loading rules:', error);
-        }
-      }
-    }
-  }, [isShowing, warehouse.id, storageKey]);
+  const queryClient = useQueryClient();
 
-  // Save rules to localStorage
-  const saveRules = (newRules: PutAwayRule[]) => {
-    const stored = localStorage.getItem(storageKey);
-    let allRules: PutAwayRule[] = [];
-    if (stored) {
+  // Fetch all rules from API
+  const { data: allRulesData } = useQuery({
+    queryKey: ['warehouse-configuration', 'PUT_AWAY_RULES'],
+    queryFn: async () => {
       try {
-        allRules = JSON.parse(stored);
-        allRules = allRules.filter((r) => r.warehouseId !== warehouse.id);
+        const response = await api.get('/warehouse-configurations/PUT_AWAY_RULES');
+        return response.data?.data || [];
       } catch (error) {
-        console.error('Error parsing stored rules:', error);
+        return [];
       }
+    },
+  });
+
+  // Load rules for this warehouse
+  useEffect(() => {
+    if (isShowing && allRulesData) {
+      const warehouseRules = allRulesData
+        .filter((r: PutAwayRule) => r.warehouseId === warehouse.id)
+        .sort((a: PutAwayRule, b: PutAwayRule) => b.priority - a.priority);
+      setRules(warehouseRules);
     }
-    allRules = [...allRules, ...newRules];
-    localStorage.setItem(storageKey, JSON.stringify(allRules));
+  }, [isShowing, warehouse.id, allRulesData]);
+
+  // Mutation for saving rules
+  const saveRulesMutation = useMutation({
+    mutationFn: async (allRules: PutAwayRule[]) => {
+      return api.post('/warehouse-configurations', {
+        type: 'PUT_AWAY_RULES',
+        data: allRules,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-configuration', 'PUT_AWAY_RULES'] });
+    },
+  });
+
+  // Save rules to API
+  const saveRules = (newRules: PutAwayRule[]) => {
+    const allRules: PutAwayRule[] = (allRulesData || []).filter((r: PutAwayRule) => r.warehouseId !== warehouse.id);
+    const updatedAllRules = [...allRules, ...newRules];
+    saveRulesMutation.mutate(updatedAllRules);
   };
 
   const handleAddRule = (ruleData: Omit<PutAwayRule, 'id' | 'warehouseId'> | Partial<PutAwayRule>) => {
@@ -1994,7 +2025,7 @@ function PutAwayRulesModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -2289,7 +2320,7 @@ function AddEditPutAwayRuleModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

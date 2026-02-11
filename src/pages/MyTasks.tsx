@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-import { CheckSquare, Plus, X, Edit, Trash2, Calendar, Clock, AlertCircle, CheckCircle2, Circle, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { CheckSquare, Plus, X, Edit, Trash2, Calendar, Clock, AlertCircle, CheckCircle2, Circle, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Tag } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { SkeletonPage } from '../components/Skeleton';
+import { DeleteModal } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 interface Task {
   id: number;
@@ -27,7 +29,7 @@ export default function MyTasks() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isStatusModalShowing, setIsStatusModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  const [_isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusModalTask, setStatusModalTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
@@ -37,10 +39,84 @@ export default function MyTasks() {
   const [page, setPage] = useState(0);
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [isPriorityFilterOpen, setIsPriorityFilterOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isCategoryModalShowing, setIsCategoryModalShowing] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [isDeleteCategoryModalShowing, setIsDeleteCategoryModalShowing] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [categoryPage, setCategoryPage] = useState(1);
+  const categoriesPerPage = 5;
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const priorityFilterRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
+
+  // Fetch categories from API
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['task-categories'],
+    queryFn: async () => {
+      const response = await api.get('/task-categories');
+      return response.data;
+    },
+  });
+
+  // Fetch default category from API
+  const { data: defaultCategoryData } = useQuery({
+    queryKey: ['task-categories', 'default'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/task-categories/default');
+        return response.data;
+      } catch (error) {
+        // If no default exists, return a fallback
+        return { name: 'Default', isDefault: true };
+      }
+    },
+  });
+
+  // Get default category name
+  const getDefaultCategory = () => {
+    return defaultCategoryData?.name || 'Default';
+  };
+
+  // Get managed categories
+  const getManagedCategories = (): string[] => {
+    if (!categoriesData) return [];
+    return categoriesData.map((cat: any) => cat.name);
+  };
+
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post('/task-categories', { name });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-categories'] });
+      toast.success('Category added successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to add category');
+    },
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/task-categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['task-categories', 'default'] });
+      toast.success('Category deleted successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete category');
+    },
+  });
+
+
 
   // Fetch tasks from API
   const { data: tasksData, isLoading } = useQuery({
@@ -56,16 +132,28 @@ export default function MyTasks() {
 
   const tasks: Task[] = tasksData?.data || [];
 
-  // Extract unique categories from tasks
+  // Extract unique categories from tasks and merge with managed categories
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
+    const managedCategories = getManagedCategories();
+    const defaultCategory = getDefaultCategory();
+    
+    // Add managed categories (excluding "General" and the default category value)
+    managedCategories.forEach(cat => {
+      if (cat !== 'General' && cat !== defaultCategory) {
+        uniqueCategories.add(cat);
+      }
+    });
+    
+    // Add categories from existing tasks (excluding "General" and the default category value)
     tasks.forEach(task => {
-      if (task.category && task.category.trim()) {
+      if (task.category && task.category.trim() && task.category.trim() !== 'General' && task.category.trim() !== defaultCategory) {
         uniqueCategories.add(task.category.trim());
       }
     });
+    
     return Array.from(uniqueCategories).sort();
-  }, [tasks]);
+  }, [tasks, categoriesData]);
 
   // Create task mutation
   const createMutation = useMutation({
@@ -124,7 +212,7 @@ export default function MyTasks() {
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
-    if (isModalOpen || isEditModalOpen || isStatusModalOpen || isDeleteModalOpen) {
+    if (isModalOpen || isEditModalOpen || isStatusModalOpen || isDeleteModalOpen || isCategoryModalOpen || isDeleteCategoryModalOpen) {
       document.body.classList.add('modal-open');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -132,6 +220,8 @@ export default function MyTasks() {
           if (isEditModalOpen) setIsEditModalShowing(true);
           if (isStatusModalOpen) setIsStatusModalShowing(true);
           if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+          if (isCategoryModalOpen) setIsCategoryModalShowing(true);
+          if (isDeleteCategoryModalOpen) setIsDeleteCategoryModalShowing(true);
         });
       });
     } else {
@@ -140,8 +230,10 @@ export default function MyTasks() {
       setIsEditModalShowing(false);
       setIsStatusModalShowing(false);
       setIsDeleteModalShowing(false);
+      setIsCategoryModalShowing(false);
+      setIsDeleteCategoryModalShowing(false);
     }
-  }, [isModalOpen, isEditModalOpen, isStatusModalOpen, isDeleteModalOpen]);
+  }, [isModalOpen, isEditModalOpen, isStatusModalOpen, isDeleteModalOpen, isCategoryModalOpen, isDeleteCategoryModalOpen]);
 
   const openModal = () => {
     setIsModalOpen(true);
@@ -190,16 +282,88 @@ export default function MyTasks() {
   };
 
   const handleCreateTask = (taskData: Partial<Task> & { title: string }) => {
+    // If no category is provided, use "Default"
+    const finalCategory = taskData.category || 'Default';
+    
     createMutation.mutate({
       title: taskData.title,
       description: taskData.description,
       status: taskData.status || 'PENDING',
       priority: taskData.priority || 'MEDIUM',
       dueDate: taskData.dueDate,
-      category: taskData.category,
+      category: finalCategory,
       assignedTo: taskData.assignedTo,
     });
   };
+
+  const openCategoryModal = () => {
+    setIsCategoryModalOpen(true);
+  };
+
+  const closeCategoryModal = () => {
+    setIsCategoryModalShowing(false);
+    setTimeout(() => {
+      setIsCategoryModalOpen(false);
+      setNewCategoryName('');
+    }, 300);
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Please enter a category name');
+      return;
+    }
+
+    createCategoryMutation.mutate(newCategoryName.trim(), {
+      onSuccess: () => {
+        setNewCategoryName('');
+        // Reset to last page to show the newly added category
+        if (categoriesData) {
+          const totalPages = Math.ceil((categoriesData.length + 1) / categoriesPerPage);
+          setCategoryPage(totalPages);
+        }
+      },
+    });
+  };
+
+  const openDeleteCategoryModal = (category: string) => {
+    setCategoryToDelete(category);
+    setIsDeleteCategoryModalOpen(true);
+  };
+
+  const closeDeleteCategoryModal = () => {
+    setIsDeleteCategoryModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteCategoryModalOpen(false);
+      setCategoryToDelete(null);
+    }, 150);
+  };
+
+  const handleDeleteCategory = () => {
+    if (!categoryToDelete) return;
+    
+    // Find the category ID from the categories data
+    const category = categoriesData?.find((cat: any) => cat.name === categoryToDelete);
+    if (!category) {
+      toast.error('Category not found');
+      closeDeleteCategoryModal();
+      return;
+    }
+
+    deleteCategoryMutation.mutate(category.id, {
+      onSuccess: () => {
+        // Adjust page if current page becomes empty after deletion
+        if (categoriesData) {
+          const totalPages = Math.ceil((categoriesData.length - 1) / categoriesPerPage);
+          if (categoryPage > totalPages && totalPages > 0) {
+            setCategoryPage(totalPages);
+          }
+        }
+        closeDeleteCategoryModal();
+      },
+    });
+  };
+
 
   const handleUpdateTask = (taskData: Partial<Task>) => {
     if (!selectedTask) return;
@@ -240,9 +404,8 @@ export default function MyTasks() {
   });
 
   // Pagination
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const paginatedTasks = filteredTasks.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
+  const paginatedTasks = filteredTasks.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
   // Reset page when filters change
   useEffect(() => {
@@ -327,13 +490,22 @@ export default function MyTasks() {
             <h1 className="text-[24px] font-bold text-gray-900 dark:text-white">My Tasks</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1  text-[14px]">Manage your tasks and track your progress</p>
           </div>
-          <button
-            onClick={openModal}
-            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={openCategoryModal}
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <Tag className="w-4 h-4" />
+              Manage Categories
+            </button>
+            <button
+              onClick={openModal}
+              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Task
+            </button>
+          </div>
         </div>
       </div>
 
@@ -396,7 +568,7 @@ export default function MyTasks() {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -671,7 +843,7 @@ export default function MyTasks() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {task.category ? (
                             <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
-                              {task.category}
+                              {task.category === 'General' ? 'Default' : task.category}
                             </span>
                           ) : (
                             <span className="text-sm text-gray-400 dark:text-gray-500">—</span>
@@ -703,48 +875,14 @@ export default function MyTasks() {
             </div>
 
             {/* Pagination */}
-            {filteredTasks.length > 0 && (
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Showing <span className="font-medium text-gray-900 dark:text-white">{page * itemsPerPage + 1}</span> to{' '}
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {Math.min((page + 1) * itemsPerPage, filteredTasks.length)}
-                  </span>{' '}
-                  of <span className="font-medium text-gray-900 dark:text-white">{filteredTasks.length}</span> results
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage(0)}
-                    disabled={page === 0}
-                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronsLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                    Page {page + 1} of {totalPages || 1}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                    disabled={page >= totalPages - 1}
-                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setPage(totalPages - 1)}
-                    disabled={page >= totalPages - 1}
-                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronsRight className="w-4 h-4" />
-                  </button>
-                </div>
+            {totalPages > 1 && (
+              <div className="mt-6 px-6 pb-6">
+                <Pagination
+                  currentPage={page + 1}
+                  totalPages={totalPages}
+                  totalItems={filteredTasks.length}
+                  onPageChange={(newPage) => setPage(newPage - 1)}
+                />
               </div>
             )}
           </>
@@ -759,6 +897,7 @@ export default function MyTasks() {
           onSave={handleCreateTask}
           isShowing={isModalShowing}
           categories={categories}
+          defaultCategory={getDefaultCategory()}
         />
       )}
 
@@ -770,7 +909,229 @@ export default function MyTasks() {
           onSave={(taskData) => handleUpdateTask(taskData)}
           isShowing={isEditModalShowing}
           categories={categories}
+          defaultCategory={getDefaultCategory()}
         />
+      )}
+
+      {/* Category Management Modal */}
+      {isCategoryModalOpen && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 transition-opacity duration-300 ${
+            isCategoryModalShowing ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={closeCategoryModal}
+        >
+          <div
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto transition-transform duration-300 ${
+              isCategoryModalShowing ? 'scale-100' : 'scale-95'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+              <h5 className="text-lg font-semibold text-gray-900 dark:text-white">Manage Categories</h5>
+              <button
+                type="button"
+                onClick={closeCategoryModal}
+                className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Add New Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Add New Category
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCategory();
+                      }
+                    }}
+                    placeholder="Enter category name"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Managed Categories List */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Categories ({categoriesData?.length || 0})
+                </label>
+                {categoriesLoading ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p className="text-sm">Loading categories...</p>
+                  </div>
+                ) : !categoriesData || categoriesData.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <Tag className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No categories added yet</p>
+                    <p className="text-xs mt-1">Add categories to organize your tasks</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {(() => {
+                        const allCategories = categoriesData || [];
+                        const startIndex = (categoryPage - 1) * categoriesPerPage;
+                        const endIndex = startIndex + categoriesPerPage;
+                        const paginatedCategories = allCategories.slice(startIndex, endIndex);
+                        
+                        return paginatedCategories.map((cat: any) => {
+                          const isDefault = cat.isDefault || cat.name === getDefaultCategory();
+                          return (
+                            <div
+                              key={cat.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Tag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{cat.name}</span>
+                                {isDefault && (
+                                  <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteCategoryModal(cat.name)}
+                                  className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                  title="Delete category"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                    {(() => {
+                      const allCategories = categoriesData || [];
+                      const totalPages = Math.ceil(allCategories.length / categoriesPerPage);
+                      
+                      if (totalPages <= 1) return null;
+                      
+                      return (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <button
+                            type="button"
+                            onClick={() => setCategoryPage(prev => Math.max(1, prev - 1))}
+                            disabled={categoryPage === 1}
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            Previous
+                          </button>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Page {categoryPage} of {totalPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setCategoryPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={categoryPage === totalPages}
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            Next
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeCategoryModal}
+                className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Category Confirmation Modal */}
+      {isDeleteCategoryModalOpen && (
+        <>
+          <div
+            className={`modal-backdrop fade ${isDeleteCategoryModalShowing ? 'show' : ''}`}
+            onClick={closeDeleteCategoryModal}
+          />
+          <div
+            className={`modal fade ${isDeleteCategoryModalShowing ? 'show' : ''}`}
+            onClick={closeDeleteCategoryModal}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+          >
+            <div
+              className="modal-dialog modal-dialog-centered"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '400px' }}
+            >
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title font-semibold text-gray-900 dark:text-white">
+                    Delete Category
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={closeDeleteCategoryModal}
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Are you sure you want to delete the category <strong className="text-gray-900 dark:text-white">"{categoryToDelete}"</strong>? 
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <div className="modal-footer text-[14px] gap-2 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={closeDeleteCategoryModal}
+                    className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteCategory}
+                    className="px-4 py-2 font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg border border-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Status Selection Modal */}
@@ -852,44 +1213,14 @@ export default function MyTasks() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && deleteTask && (
-        <>
-          <div className={`modal-backdrop fade ${isDeleteModalShowing ? 'show' : ''}`} onClick={closeDeleteModal} />
-          <div className={`modal fade ${isDeleteModalShowing ? 'show' : ''}`} onClick={closeDeleteModal} role="dialog" aria-modal="true" tabIndex={-1}>
-            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title font-semibold text-gray-900 dark:text-white">
-                    Delete Task
-                  </h5>
-                  <button type="button" onClick={closeDeleteModal} className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <p className="text-gray-700 dark:text-gray-300">
-                    Are you sure you want to delete the task <span className="font-semibold">"{deleteTask.title}"</span>? This action cannot be undone.
-                  </p>
-                </div>
-                <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <button
-                    type="button"
-                    onClick={closeDeleteModal}
-                    className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteTask}
-                    className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+        <DeleteModal
+          title="Delete Task"
+          message="Are you sure you want to delete the task"
+          itemName={deleteTask.title}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteTask}
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   );
@@ -902,19 +1233,32 @@ function TaskModal({
   onSave,
   isShowing,
   categories = [],
+  defaultCategory = 'Default',
 }: {
   task?: Task;
   onClose: () => void;
   onSave: (taskData: Partial<Task> & { title: string }) => void;
   isShowing: boolean;
   categories?: string[];
+  defaultCategory?: string;
 }) {
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
   const [status, setStatus] = useState<Task['status']>(task?.status || 'PENDING');
   const [priority, setPriority] = useState<Task['priority']>(task?.priority || 'MEDIUM');
   const [dueDate, setDueDate] = useState(task?.dueDate || '');
-  const [category, setCategory] = useState(task?.category || '');
+  // Get initial category - show "Default" if category is "Default" or "General", otherwise show the actual category
+  const getInitialCategory = () => {
+    if (task?.category) {
+      // If the task's category is "General", show "Default" instead (for backward compatibility)
+      // Otherwise, show the actual category (including "Default" if it's already "Default")
+      return task.category === 'General' ? 'Default' : task.category;
+    }
+    // For new tasks, show "Default"
+    return 'Default';
+  };
+  
+  const [category, setCategory] = useState(() => getInitialCategory());
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -1035,10 +1379,13 @@ function TaskModal({
       return;
     }
 
+    // Save category as-is (including "Default")
+    const finalCategory = category || 'Default';
+    
     if (task) {
-      onSave({ title, description, status, priority, dueDate, category } as Partial<Task> & { title: string });
+      onSave({ title, description, status, priority, dueDate, category: finalCategory } as Partial<Task> & { title: string });
     } else {
-      onSave({ title, description, status, priority, dueDate, category, assignedTo: undefined } as Partial<Task> & { title: string });
+      onSave({ title, description, status, priority, dueDate, category: finalCategory, assignedTo: undefined } as Partial<Task> & { title: string });
     }
   };
 
@@ -1064,7 +1411,8 @@ function TaskModal({
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter task title"
+                    className="w-full px-3 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
                 </div>
@@ -1074,7 +1422,8 @@ function TaskModal({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter task description"
+                    className="w-full px-3 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -1369,7 +1718,7 @@ function TaskModal({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category <span className="text-gray-400 text-xs">(optional)</span></label>
                     <div className="relative" ref={categoryRef}>
                       <button
                         type="button"
@@ -1379,40 +1728,68 @@ function TaskModal({
                           setIsPriorityOpen(false);
                           setIsCalendarOpen(false);
                         }}
-                        className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-primary-500 dark:border-primary-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-primary-500 dark:border-primary-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm"
                       >
                         <span className="text-sm">
-                          {category || 'Select Category'}
+                          {category || 'Default'}
                         </span>
                         <ChevronDown className={`w-4 h-4 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
                       </button>
                       
                       {isCategoryOpen && (
                         <div className="custom-dropdown-menu absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg" style={{ zIndex: 10001, maxHeight: '200px', overflowY: 'auto' }}>
-                          {categories.length > 0 ? categories.map((cat) => (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => {
-                                setCategory(cat);
-                                setIsCategoryOpen(false);
-                              }}
-                              className={`w-full px-3 py-2 text-sm text-left transition-colors duration-150 ${
-                                category === cat
-                                  ? 'bg-primary-600 text-white'
-                                  : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
-                              }`}
-                            >
-                              {cat}
-                            </button>
-                          )) : (
-                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                              No categories available
-                            </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategory('Default');
+                              setIsCategoryOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 text-sm text-left transition-colors duration-150 ${
+                              category === 'Default'
+                                ? 'bg-primary-600 text-white'
+                                : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            Default
+                          </button>
+                          {categories.length > 0 && (
+                            <>
+                              {(() => {
+                                const sortedCategories = [...categories].sort((a, b) => {
+                                  if (a === defaultCategory) return -1;
+                                  if (b === defaultCategory) return 1;
+                                  return a.localeCompare(b);
+                                });
+                                
+                                return sortedCategories.map((cat) => (
+                                  <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => {
+                                      setCategory(cat);
+                                      setIsCategoryOpen(false);
+                                    }}
+                                    className={`w-full px-3 py-2 text-sm text-left transition-colors duration-150 flex items-center justify-between ${
+                                      category === cat
+                                        ? 'bg-primary-600 text-white'
+                                        : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }`}
+                                  >
+                                    <span>{cat}</span>
+                                    {cat === defaultCategory && (
+                                      <span className="text-xs text-primary-300 dark:text-primary-400">(Default)</span>
+                                    )}
+                                  </button>
+                                ));
+                              })()}
+                            </>
                           )}
                         </div>
                       )}
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Organize tasks by category (e.g., Work, Personal, Project Name)
+                    </p>
                   </div>
                 </div>
               </div>

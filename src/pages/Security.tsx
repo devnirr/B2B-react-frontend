@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
+import api from '../lib/api';
 import {
   Shield,
   Plus,
@@ -19,10 +21,11 @@ import {
   Unlock,
   Globe,
   Edit,
-  AlertTriangle,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = '2fa' | 'sso';
 type TwoFactorMethod = 'totp' | 'sms' | 'email' | 'backup-code';
@@ -61,150 +64,6 @@ interface SSOConfig {
   updatedAt?: string;
 }
 
-// Delete 2FA Modal Component
-function Delete2FAModal({
-  config,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  config: TwoFactorConfig;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  if (!isShowing) return null;
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        onClick={onClose}
-      />
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="modal-body text-center py-8 px-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-              </div>
-            </div>
-            <h5 id="delete2FAModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-              Delete 2FA Method
-            </h5>
-            <p className="text-gray-600 dark:text-gray-400 mb-1">
-              Are you sure you want to delete
-            </p>
-            <p className="text-gray-900 dark:text-white font-semibold mb-4">
-              "{config.label}"?
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-              This action cannot be undone.
-            </p>
-          </div>
-          <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete 2FA Method
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// Delete SSO Modal Component
-function DeleteSSOModal({
-  sso,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  sso: SSOConfig;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteSSOModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteSSOModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete SSO Configuration
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{sso.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete SSO Configuration
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 export default function Security() {
   const [activeTab, setActiveTab] = useState<TabType>('2fa');
@@ -264,6 +123,7 @@ function TwoFactorSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedConfig, setSelectedConfig] = useState<TwoFactorConfig | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [configToView, setConfigToView] = useState<TwoFactorConfig | null>(null);
@@ -273,53 +133,57 @@ function TwoFactorSection() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showBackupCodesModal, setShowBackupCodesModal] = useState(false);
 
-  // Load 2FA configs from localStorage
-  const [twoFactorConfigs, setTwoFactorConfigs] = useState<TwoFactorConfig[]>(() => {
-    const saved = localStorage.getItem('security-2fa-configs');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Default configs
-    return [
-      {
-        id: 1,
-        method: 'totp' as TwoFactorMethod,
-        status: 'enabled' as TwoFactorStatus,
-        label: 'Authenticator App',
-        secret: 'JBSWY3DPEHPK3PXP',
-        qrCode: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZmZiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMDAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UVIgQ29kZTwvdGV4dD48L3N2Zz4=',
-        backupCodes: ['12345678', '87654321', '11223344', '44332211', '55667788'],
-        lastUsed: new Date(Date.now() - 3600000).toISOString(),
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        method: 'sms' as TwoFactorMethod,
-        status: 'disabled' as TwoFactorStatus,
-        label: 'SMS Verification',
-        phoneNumber: '+1 (555) 123-4567',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 3,
-        method: 'email' as TwoFactorMethod,
-        status: 'enabled' as TwoFactorStatus,
-        label: 'Email Verification',
-        email: 'user@example.com',
-        lastUsed: new Date(Date.now() - 7200000).toISOString(),
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const queryClient = useQueryClient();
+
+  // Fetch 2FA configs from API
+  const { data: twoFactorConfigsData } = useQuery({
+    queryKey: ['security-configuration', 'TWO_FACTOR'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/security-configurations/TWO_FACTOR');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
   });
 
-  // Save to localStorage whenever they change
+  const [twoFactorConfigs, setTwoFactorConfigs] = useState<TwoFactorConfig[]>([]);
+
   useEffect(() => {
-    localStorage.setItem('security-2fa-configs', JSON.stringify(twoFactorConfigs));
+    if (twoFactorConfigsData) {
+      // Ensure it's always an array
+      setTwoFactorConfigs(Array.isArray(twoFactorConfigsData) ? twoFactorConfigsData : []);
+    }
+  }, [twoFactorConfigsData]);
+
+  // Mutation for saving 2FA configs
+  const saveTwoFactorConfigsMutation = useMutation({
+    mutationFn: async (configs: TwoFactorConfig[]) => {
+      return api.post('/security-configurations', {
+        type: 'TWO_FACTOR',
+        data: configs,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security-configuration', 'TWO_FACTOR'] });
+    },
+  });
+
+  useEffect(() => {
+    if (twoFactorConfigs.length > 0) {
+      saveTwoFactorConfigsMutation.mutate(twoFactorConfigs);
+    }
   }, [twoFactorConfigs]);
 
   // Filter configs
   const filteredConfigs = useMemo(() => {
-    let filtered = twoFactorConfigs;
+    // Ensure twoFactorConfigs is always an array
+    if (!Array.isArray(twoFactorConfigs)) {
+      return [];
+    }
+
+    let filtered = [...twoFactorConfigs]; // Create a copy to avoid mutating the original
 
     // Filter by search query
     if (searchQuery) {
@@ -349,6 +213,17 @@ function TwoFactorSection() {
       return a.label.localeCompare(b.label);
     });
   }, [twoFactorConfigs, searchQuery, methodFilter, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredConfigs.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedConfigs = filteredConfigs.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, methodFilter, statusFilter]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -473,9 +348,9 @@ function TwoFactorSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -485,7 +360,7 @@ function TwoFactorSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -499,7 +374,7 @@ function TwoFactorSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -513,7 +388,7 @@ function TwoFactorSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Smartphone className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Smartphone className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -527,14 +402,14 @@ function TwoFactorSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Smartphone className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Smartphone className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <SearchInput
               value={searchQuery}
@@ -580,7 +455,7 @@ function TwoFactorSection() {
       </div>
 
       {/* 2FA Configs Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -619,7 +494,7 @@ function TwoFactorSection() {
                   </td>
                 </tr>
               ) : (
-                filteredConfigs.map((config) => {
+                paginatedConfigs.map((config) => {
                   const MethodIcon = getMethodIcon(config.method);
                   return (
                     <tr
@@ -738,6 +613,16 @@ function TwoFactorSection() {
             </tbody>
           </table>
         </div>
+        {filteredConfigs.length > 0 && totalPages > 1 && (
+          <div className="px-6 pb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredConfigs.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Setup 2FA Modal */}
@@ -770,15 +655,16 @@ function TwoFactorSection() {
       )}
 
       {/* Delete 2FA Modal */}
-      {configToDelete && (
-        <Delete2FAModal
-          config={configToDelete}
+      {configToDelete && isDelete2FAModalShowing && (
+        <DeleteModal
+          title="Delete 2FA Method"
+          message="Are you sure you want to delete"
+          itemName={configToDelete.label}
           onClose={() => {
             setIsDelete2FAModalShowing(false);
             setConfigToDelete(null);
           }}
           onConfirm={handleConfirmDelete2FA}
-          isShowing={isDelete2FAModalShowing}
         />
       )}
 
@@ -857,7 +743,7 @@ function Setup2FAModal({ onClose, onSetup }: Setup2FAModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1019,7 +905,7 @@ function TwoFactorEditModal({ config, onClose, onUpdate, onGenerateBackupCodes }
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1196,7 +1082,7 @@ function QRCodeModal({ config, onClose }: QRCodeModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1543,7 +1429,7 @@ function BackupCodesModal({ config, onClose, onGenerateNew }: BackupCodesModalPr
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1654,63 +1540,64 @@ function SSOSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [ssoToView, setSsoToView] = useState<SSOConfig | null>(null);
   const [ssoToEdit, setSsoToEdit] = useState<SSOConfig | null>(null);
   const [ssoToDelete, setSsoToDelete] = useState<SSOConfig | null>(null);
   const [isDeleteSSOModalShowing, setIsDeleteSSOModalShowing] = useState(false);
 
-  // Load SSO configs from localStorage
-  const [ssoConfigs, setSsoConfigs] = useState<SSOConfig[]>(() => {
-    const saved = localStorage.getItem('security-sso-configs');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Default SSO configs
-    return [
-      {
-        id: 1,
-        provider: 'google' as SSOProvider,
-        name: 'Google Workspace',
-        status: 'active' as SSOStatus,
-        clientId: '1234567890-abcdefghijklmnop.apps.googleusercontent.com',
-        redirectUri: 'https://app.example.com/auth/google/callback',
-        enabledForUsers: ['all'],
-        description: 'Google Workspace SSO integration',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        provider: 'microsoft' as SSOProvider,
-        name: 'Microsoft Azure AD',
-        status: 'inactive' as SSOStatus,
-        clientId: 'abcdef12-3456-7890-abcd-ef1234567890',
-        redirectUri: 'https://app.example.com/auth/microsoft/callback',
-        enabledForUsers: ['admin', 'manager'],
-        description: 'Microsoft Azure AD SSO integration',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 3,
-        provider: 'okta' as SSOProvider,
-        name: 'Okta SSO',
-        status: 'pending' as SSOStatus,
-        metadataUrl: 'https://dev-123456.okta.com/app/abc123/sso/saml/metadata',
-        enabledForUsers: ['all'],
-        description: 'Okta SAML SSO integration',
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const queryClient = useQueryClient();
+
+  // Fetch SSO configs from API
+  const { data: ssoConfigsData } = useQuery({
+    queryKey: ['security-configuration', 'SSO'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/security-configurations/SSO');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
   });
 
-  // Save to localStorage whenever they change
+  const [ssoConfigs, setSsoConfigs] = useState<SSOConfig[]>([]);
+
   useEffect(() => {
-    localStorage.setItem('security-sso-configs', JSON.stringify(ssoConfigs));
+    if (ssoConfigsData) {
+      // Ensure it's always an array
+      setSsoConfigs(Array.isArray(ssoConfigsData) ? ssoConfigsData : []);
+    }
+  }, [ssoConfigsData]);
+
+  // Mutation for saving SSO configs
+  const saveSSOConfigsMutation = useMutation({
+    mutationFn: async (configs: SSOConfig[]) => {
+      return api.post('/security-configurations', {
+        type: 'SSO',
+        data: configs,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security-configuration', 'SSO'] });
+    },
+  });
+
+  useEffect(() => {
+    if (ssoConfigs.length > 0) {
+      saveSSOConfigsMutation.mutate(ssoConfigs);
+    }
   }, [ssoConfigs]);
 
   // Filter SSO configs
   const filteredSSOs = useMemo(() => {
-    let filtered = ssoConfigs;
+    // Ensure ssoConfigs is always an array
+    if (!Array.isArray(ssoConfigs)) {
+      return [];
+    }
+
+    let filtered = [...ssoConfigs]; // Create a copy to avoid mutating the original
 
     // Filter by search query
     if (searchQuery) {
@@ -1739,6 +1626,17 @@ function SSOSection() {
       return a.name.localeCompare(b.name);
     });
   }, [ssoConfigs, searchQuery, providerFilter, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredSSOs.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedSSOs = filteredSSOs.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, providerFilter, statusFilter]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -1842,9 +1740,9 @@ function SSOSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -1854,7 +1752,7 @@ function SSOSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1868,7 +1766,7 @@ function SSOSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1882,7 +1780,7 @@ function SSOSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <Globe className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -1896,14 +1794,14 @@ function SSOSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <SearchInput
               value={searchQuery}
@@ -1951,7 +1849,7 @@ function SSOSection() {
       </div>
 
       {/* SSO Configs Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -1990,7 +1888,7 @@ function SSOSection() {
                   </td>
                 </tr>
               ) : (
-                filteredSSOs.map((sso) => {
+                paginatedSSOs.map((sso) => {
                   const ProviderIcon = getProviderIcon(sso.provider);
                   return (
                     <tr
@@ -2073,6 +1971,16 @@ function SSOSection() {
             </tbody>
           </table>
         </div>
+        {filteredSSOs.length > 0 && totalPages > 1 && (
+          <div className="px-6 pb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredSSOs.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Create SSO Modal */}
@@ -2101,15 +2009,16 @@ function SSOSection() {
       )}
 
       {/* Delete SSO Modal */}
-      {ssoToDelete && (
-        <DeleteSSOModal
-          sso={ssoToDelete}
+      {ssoToDelete && isDeleteSSOModalShowing && (
+        <DeleteModal
+          title="Delete SSO Configuration"
+          message="Are you sure you want to delete"
+          itemName={ssoToDelete.name}
           onClose={() => {
             setIsDeleteSSOModalShowing(false);
             setSsoToDelete(null);
           }}
           onConfirm={handleConfirmDeleteSSO}
-          isShowing={isDeleteSSOModalShowing}
         />
       )}
     </div>
@@ -2192,7 +2101,7 @@ function CreateSSOModal({ onClose, onCreate }: CreateSSOModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2485,7 +2394,7 @@ function SSOEditModal({ sso, onClose, onUpdate }: SSOEditModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

@@ -6,8 +6,6 @@ import {
   Users,
   Plus,
   X,
-  ChevronsLeft,
-  ChevronsRight,
   Edit,
   Trash2,
   Search,
@@ -25,7 +23,10 @@ import { SkeletonPage } from '../components/Skeleton';
 import { useCheckCustomerEmail, useDebounce } from '../utils/emailDuplicateCheck';
 import PhoneInput from '../components/PhoneInput';
 import { ButtonWithWaves, CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 import Breadcrumb from '../components/Breadcrumb';
+import { logDelete } from '../utils/auditLog';
+// logCreate and logUpdate are intentionally unused - reserved for future use
 
 const CustomerType = {
   RETAILER: 'RETAILER',
@@ -67,7 +68,7 @@ interface Customer {
 
 
 export default function Customers() {
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [segmentFilter, setSegmentFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -101,12 +102,17 @@ export default function Customers() {
   }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isContactModalOpen]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', page],
+    queryKey: ['customers', currentPage, searchQuery, segmentFilter, typeFilter],
     queryFn: async () => {
-      const response = await api.get(`/customers?skip=${page * 10}&take=10`);
+      const response = await api.get(`/customers?skip=${(currentPage - 1) * ITEMS_PER_PAGE}&take=${ITEMS_PER_PAGE}`);
       return response.data;
     },
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, segmentFilter, typeFilter]);
 
   // Filter and search customers
   const filteredCustomers = useMemo(() => {
@@ -197,8 +203,9 @@ export default function Customers() {
       const response = await api.delete(`/customers/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      logDelete('Customer', id);
       toast.success('Customer deleted successfully!');
       closeDeleteModal();
     },
@@ -299,7 +306,7 @@ export default function Customers() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -313,7 +320,7 @@ export default function Customers() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -327,7 +334,7 @@ export default function Customers() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <Briefcase className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Briefcase className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -341,7 +348,7 @@ export default function Customers() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Crown className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Crown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -355,7 +362,7 @@ export default function Customers() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <UserPlus className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <UserPlus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -538,95 +545,20 @@ export default function Customers() {
         )}
       </div>
 
-      {data?.data && data.data.length > 0 && (
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-600 dark:text-white">
-            Showing <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> to{' '}
-            <span className="font-medium text-gray-900 dark:text-white">
-              {Math.min((page + 1) * 10, data?.total || 0)}
-            </span>{' '}
-            of <span className="font-medium text-gray-900 dark:text-white">{data?.total || 0}</span> results
+      {data?.data && data.data.length > 0 && (() => {
+        const totalPages = Math.ceil((data?.total || 0) / ITEMS_PER_PAGE);
+        return totalPages > 1 ? (
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={data?.total || 0}
+              onPageChange={setCurrentPage}
+              className="border-0 pt-0 mt-0"
+            />
           </div>
-          <nav aria-label="Page navigation">
-            <ul className="pagination pagination-rounded pagination-primary">
-              <li className="page-item">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="page-link"
-                  aria-label="Previous"
-                >
-                  <ChevronsLeft className="w-3.5 h-3.5" />
-                </button>
-              </li>
-              {(() => {
-                const totalPages = Math.max(1, Math.ceil((data?.total || 0) / 10));
-                const currentPage = page + 1;
-                const pages: (number | string)[] = [];
-
-                if (totalPages <= 7) {
-                  for (let i = 1; i <= totalPages; i++) {
-                    pages.push(i);
-                  }
-                } else {
-                  pages.push(1);
-                  if (currentPage > 3) {
-                    pages.push('...');
-                  }
-                  const start = Math.max(2, currentPage - 1);
-                  const end = Math.min(totalPages - 1, currentPage + 1);
-                  for (let i = start; i <= end; i++) {
-                    if (i !== 1 && i !== totalPages) {
-                      pages.push(i);
-                    }
-                  }
-                  if (currentPage < totalPages - 2) {
-                    pages.push('...');
-                  }
-                  if (totalPages > 1) {
-                    pages.push(totalPages);
-                  }
-                }
-
-                return pages.map((pageNum, idx) => {
-                  if (pageNum === '...') {
-                    return (
-                      <li key={`ellipsis-${idx}`} className="page-item">
-                        <span className="page-link" style={{ cursor: 'default', pointerEvents: 'none' }}>
-                          ...
-                        </span>
-                      </li>
-                    );
-                  }
-                  return (
-                    <li key={pageNum} className="page-item">
-                      <button
-                        type="button"
-                        onClick={() => setPage((pageNum as number) - 1)}
-                        className={`page-link ${currentPage === pageNum ? 'active' : ''}`}
-                      >
-                        {pageNum}
-                      </button>
-                    </li>
-                  );
-                });
-              })()}
-              <li className="page-item">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={!data?.data || data.data.length < 10 || page + 1 >= Math.ceil((data?.total || 0) / 10)}
-                  className="page-link"
-                  aria-label="Next"
-                >
-                  <ChevronsRight className="w-3.5 h-3.5" />
-                </button>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      )}
+        ) : null;
+      })()}
 
       {/* Add Customer Modal */}
       {isModalOpen && (

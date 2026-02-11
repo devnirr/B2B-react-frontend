@@ -5,9 +5,11 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import Chart from 'react-apexcharts';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 export default function Insights() {
   const [timeRange, setTimeRange] = useState<string>('30d');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
@@ -111,9 +113,18 @@ export default function Insights() {
         ...stat,
         orders: stat.orders.size,
       }))
-      .sort((a: any, b: any) => b.revenue - a.revenue)
-      .slice(0, 20);
+      .sort((a: any, b: any) => b.revenue - a.revenue);
   }, [orders, dateRange]);
+
+  // Apply client-side pagination
+  const totalItems = topProducts.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const paginatedTopProducts = topProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when time range changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [timeRange]);
 
   // Calculate trends
   const trends = useMemo(() => {
@@ -327,7 +338,7 @@ export default function Insights() {
               </div>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -357,7 +368,7 @@ export default function Insights() {
               </div>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <ShoppingCart className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -374,7 +385,7 @@ export default function Insights() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -400,7 +411,7 @@ export default function Insights() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -468,7 +479,8 @@ export default function Insights() {
                   </td>
                 </tr>
               ) : (
-                topProducts.map((product: any, index: number) => {
+                paginatedTopProducts.map((product: any, index: number) => {
+                  const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
                   // Calculate trend (compare with previous period)
                   const previousPeriod = orders.filter((order: any) => {
                     const orderDate = new Date(order.orderDate);
@@ -492,12 +504,12 @@ export default function Insights() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <span className={`text-lg font-bold ${
-                            index === 0 ? 'text-yellow-600 dark:text-yellow-400' :
-                            index === 1 ? 'text-gray-400 dark:text-gray-500' :
-                            index === 2 ? 'text-orange-600 dark:text-orange-400' :
+                            globalIndex === 0 ? 'text-yellow-600 dark:text-yellow-400' :
+                            globalIndex === 1 ? 'text-gray-400 dark:text-gray-500' :
+                            globalIndex === 2 ? 'text-orange-600 dark:text-orange-400' :
                             'text-gray-600 dark:text-gray-400'
                           }`}>
-                            #{index + 1}
+                            #{globalIndex + 1}
                           </span>
                         </div>
                       </td>
@@ -545,6 +557,18 @@ export default function Insights() {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              className="border-0 pt-0 mt-0"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

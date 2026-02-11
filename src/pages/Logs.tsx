@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import {
@@ -441,7 +441,7 @@ function AuditLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -455,7 +455,7 @@ function AuditLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -469,7 +469,7 @@ function AuditLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -483,7 +483,7 @@ function AuditLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <User className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <User className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -497,7 +497,7 @@ function AuditLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -856,7 +856,7 @@ function AuditLogsSection() {
                   <div className="flex items-center gap-3">
                     {(() => {
                       const ActionIcon = getActionIcon(selectedLog.action);
-                      return <ActionIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />;
+                      return <ActionIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />;
                     })()}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -871,7 +871,7 @@ function AuditLogsSection() {
                     onClick={() => setSelectedLog(null)}
                     className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -1044,66 +1044,45 @@ function SystemLogsSection() {
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
   const [dateRange, setDateRange] = useState<string>('all');
 
-  // Load system logs from localStorage
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => {
-    const saved = localStorage.getItem('logs-system-logs');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Generate default system logs
-    const logs: SystemLog[] = [];
-    const levels: SystemLogLevel[] = ['info', 'warning', 'error', 'debug', 'critical'];
-    const categories: SystemLogCategory[] = ['api', 'database', 'authentication', 'integration', 'scheduler', 'system', 'security'];
-    const sources = ['API Server', 'Database', 'Auth Service', 'Integration Engine', 'Scheduler', 'System Monitor', 'Security Service'];
-    const messages = [
-      'Database connection established',
-      'API request processed successfully',
-      'Authentication token expired',
-      'Integration sync completed',
-      'Scheduled task executed',
-      'System health check passed',
-      'Security alert triggered',
-      'Failed to connect to external service',
-      'Rate limit exceeded',
-      'Cache miss occurred',
-    ];
-    const now = new Date();
-    
-    for (let i = 0; i < 50; i++) {
-      const date = new Date(now);
-      date.setHours(date.getHours() - Math.floor(i / 3));
-      date.setMinutes(date.getMinutes() - (i % 3) * 20);
-      const level = levels[Math.floor(Math.random() * levels.length)];
-      const category = categories[Math.floor(Math.random() * categories.length)];
-      const source = sources[Math.floor(Math.random() * sources.length)];
-      const message = messages[Math.floor(Math.random() * messages.length)];
-      const resolved = Math.random() > 0.3; // 70% resolved
-      
-      logs.push({
-        id: i + 1,
-        level,
-        category,
-        message,
-        details: level === 'error' || level === 'critical' ? `Detailed error information for ${message}` : undefined,
-        stackTrace: level === 'error' || level === 'critical' ? `Error: ${message}\n  at function (file.js:123)\n  at handler (file.js:456)` : undefined,
-        source,
-        userId: Math.random() > 0.5 ? Math.floor(Math.random() * 4) + 1 : undefined,
-        userName: Math.random() > 0.5 ? ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Williams'][Math.floor(Math.random() * 4)] : undefined,
-        requestId: `req-${Math.random().toString(36).substr(2, 9)}`,
-        metadata: {
-          environment: 'production',
-          version: '1.2.3',
-        },
-        timestamp: date.toISOString(),
-        resolved,
-      });
-    }
-    return logs;
+  const queryClient = useQueryClient();
+
+  // Fetch system logs from API
+  const { data: systemLogsData } = useQuery({
+    queryKey: ['system-logs-configuration'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/system-logs-configurations');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
   });
 
-  // Save to localStorage whenever they change
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+
   useEffect(() => {
-    localStorage.setItem('logs-system-logs', JSON.stringify(systemLogs));
+    if (systemLogsData) {
+      setSystemLogs(systemLogsData);
+    }
+  }, [systemLogsData]);
+
+  // Mutation for saving system logs
+  const saveSystemLogsMutation = useMutation({
+    mutationFn: async (logs: SystemLog[]) => {
+      return api.post('/system-logs-configurations', {
+        data: logs,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system-logs-configuration'] });
+    },
+  });
+
+  useEffect(() => {
+    if (systemLogs.length > 0) {
+      saveSystemLogsMutation.mutate(systemLogs);
+    }
   }, [systemLogs]);
 
   // Filter system logs
@@ -1289,7 +1268,7 @@ function SystemLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1303,7 +1282,7 @@ function SystemLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -1317,7 +1296,7 @@ function SystemLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -1331,7 +1310,7 @@ function SystemLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -1345,7 +1324,7 @@ function SystemLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1607,7 +1586,7 @@ function SystemLogsSection() {
                   <div className="flex items-center gap-3">
                     {(() => {
                       const LevelIcon = getLevelIcon(selectedLog.level);
-                      return <LevelIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />;
+                      return <LevelIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />;
                     })()}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1622,7 +1601,7 @@ function SystemLogsSection() {
                     onClick={() => setSelectedLog(null)}
                     className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>

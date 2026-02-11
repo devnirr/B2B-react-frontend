@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, ShoppingCart, User, Search, Download, Share2, Eye, X, Mail, Link as LinkIcon, Copy, Check, Receipt, RotateCcw, Package, Plus, Trash2} from 'lucide-react';
+import { FileText, ShoppingCart, User, Search, Download, Share2, Eye, X, Mail, Link as LinkIcon, Copy, Check, Receipt, RotateCcw, Package, Plus, Trash2, Edit} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage, SkeletonForm } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown, SearchInput } from '../components/ui';
+import { CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'line-sheets' | 'wholesale-ordering' | 'self-service';
 
@@ -65,6 +66,7 @@ export default function B2BPortal() {
 // Digital Line Sheets Section Component
 function DigitalLineSheetsSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState<any>(null);
   const [shareMethod, setShareMethod] = useState<'link' | 'email'>('link');
@@ -96,7 +98,17 @@ function DigitalLineSheetsSection() {
     },
   });
 
-  const lineSheets = sheetsData || [];
+  const allLineSheets = sheetsData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allLineSheets.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const lineSheets = allLineSheets.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleDownload = (sheet: any) => {
     if (sheet.url) {
@@ -194,7 +206,7 @@ function DigitalLineSheetsSection() {
                     )}
                   </div>
                   <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center flex-shrink-0 ml-4">
-                    <FileText className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                    <FileText className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
@@ -232,6 +244,19 @@ function DigitalLineSheetsSection() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Pagination */}
+      {lineSheets.length > 0 && totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -332,11 +357,235 @@ function DigitalLineSheetsSection() {
   );
 }
 
+// View Order Modal Component
+function ViewOrderModal({ order, onClose }: { order: any; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between z-10">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
+            Order Details - {order.orderNumber}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:text-white hover:text-gray-700 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Order Number
+              </label>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{order.orderNumber}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Status
+              </label>
+              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                order.status === 'CONFIRMED' || order.status === 'FULFILLED' || order.status === 'DELIVERED'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : order.status === 'PENDING' || order.status === 'PROCESSING'
+                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  : order.status === 'CANCELLED' || order.status === 'RETURNED'
+                  ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  : order.status === 'SHIPPED'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+              }`}>
+                {order.status?.replace('_', ' ')}
+              </span>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Customer
+              </label>
+              <p className="text-sm text-gray-900 dark:text-white">{order.customer?.name || '—'}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Order Date
+              </label>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {new Date(order.orderDate).toLocaleDateString()}
+              </p>
+            </div>
+            {order.requiredDate && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  Required Date
+                </label>
+                <p className="text-sm text-gray-900 dark:text-white">
+                  {new Date(order.requiredDate).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Total Amount
+              </label>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                ${parseFloat(order.totalAmount || 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* Shipping Address */}
+          {order.shippingAddress && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Shipping Address
+              </label>
+              <p className="text-sm text-gray-900 dark:text-white whitespace-pre-line">
+                {order.shippingAddress}
+              </p>
+            </div>
+          )}
+
+          {/* Billing Address */}
+          {order.billingAddress && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Billing Address
+              </label>
+              <p className="text-sm text-gray-900 dark:text-white whitespace-pre-line">
+                {order.billingAddress}
+              </p>
+            </div>
+          )}
+
+          {/* Notes */}
+          {order.notes && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Notes
+              </label>
+              <p className="text-sm text-gray-900 dark:text-white whitespace-pre-line">
+                {order.notes}
+              </p>
+            </div>
+          )}
+
+          {/* Order Lines */}
+          {order.orderLines && order.orderLines.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+                Order Items
+              </label>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Product</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">SKU</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Size</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Color</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Quantity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Unit Price</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {order.orderLines.map((line: any, index: number) => (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                            {line.product?.name || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            {line.product?.sku || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            {line.size || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            {line.color || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            {line.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            ${parseFloat(line.unitPrice?.toString() || '0').toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                            ${(parseFloat(line.unitPrice?.toString() || '0') * line.quantity).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Delete Order Modal Wrapper Component
+function DeleteOrderModalWrapper({ order, onClose }: { order: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.delete(`/orders/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Order deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete order');
+    },
+  });
+
+  const handleConfirm = () => {
+    deleteOrderMutation.mutate(order.id);
+  };
+
+  return (
+    <DeleteModal
+      title="Delete Order"
+      message="Are you sure you want to delete order"
+      itemName={order.orderNumber}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+      isLoading={deleteOrderMutation.isPending}
+    />
+  );
+}
+
 // Wholesale Ordering Section Component
 function WholesaleOrderingSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   const statusOptions = [
@@ -376,7 +625,17 @@ function WholesaleOrderingSection() {
     },
   });
 
-  const orders = ordersData || [];
+  const allOrders = ordersData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allOrders.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const orders = allOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -492,21 +751,56 @@ function WholesaleOrderingSection() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setIsOrderModalOpen(true);
-                        }}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                      >
-                        View Details
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsViewModalOpen(true);
+                          }}
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                          title="View Order"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsOrderModalOpen(true);
+                          }}
+                          className="p-2 text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                          title="Edit Order"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Delete Order"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -516,6 +810,28 @@ function WholesaleOrderingSection() {
           order={selectedOrder}
           onClose={() => {
             setIsOrderModalOpen(false);
+            setSelectedOrder(null);
+          }}
+        />
+      )}
+
+      {/* View Order Modal */}
+      {isViewModalOpen && selectedOrder && (
+        <ViewOrderModal
+          order={selectedOrder}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedOrder(null);
+          }}
+        />
+      )}
+
+      {/* Delete Order Modal */}
+      {isDeleteModalOpen && selectedOrder && (
+        <DeleteOrderModalWrapper
+          order={selectedOrder}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
             setSelectedOrder(null);
           }}
         />
@@ -717,7 +1033,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
       >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between z-10">
           <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">
-            {order ? 'Order Details' : 'New Wholesale Order'}
+            {order ? 'Edit Order' : 'New Wholesale Order'}
           </h3>
           <button
             onClick={onClose}
@@ -966,6 +1282,7 @@ function NewOrderModal({ order, onClose }: { order?: any; onClose: () => void })
 function CustomerSelfServiceSection() {
   const [activeView, setActiveView] = useState<'orders' | 'invoices' | 'returns'>('orders');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch customer orders
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -1005,8 +1322,29 @@ function CustomerSelfServiceSection() {
     },
   });
 
-  const orders = ordersData || [];
-  const returns = returnsData || [];
+  const allOrders = ordersData || [];
+  const allReturns = returnsData || [];
+  
+  // Apply client-side pagination based on active view
+  let orders: any[] = [];
+  let returns: any[] = [];
+  let currentTotalItems = 0;
+  let currentTotalPages = 0;
+  
+  if (activeView === 'orders' || activeView === 'invoices') {
+    currentTotalItems = allOrders.length;
+    currentTotalPages = Math.ceil(currentTotalItems / ITEMS_PER_PAGE);
+    orders = allOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  } else {
+    currentTotalItems = allReturns.length;
+    currentTotalPages = Math.ceil(currentTotalItems / ITEMS_PER_PAGE);
+    returns = allReturns.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }
+  
+  // Reset to page 1 when search query or active view changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, activeView]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1145,6 +1483,18 @@ function CustomerSelfServiceSection() {
               </table>
             </div>
           )}
+          {/* Pagination */}
+          {currentTotalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={currentTotalPages}
+                totalItems={currentTotalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1206,6 +1556,18 @@ function CustomerSelfServiceSection() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {/* Pagination */}
+          {currentTotalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={currentTotalPages}
+                totalItems={currentTotalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
             </div>
           )}
         </div>
@@ -1270,6 +1632,18 @@ function CustomerSelfServiceSection() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {/* Pagination */}
+          {currentTotalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={currentTotalPages}
+                totalItems={currentTotalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
             </div>
           )}
         </div>

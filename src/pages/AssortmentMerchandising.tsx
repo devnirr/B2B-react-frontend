@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'featured' | 'markdown';
 
@@ -65,6 +66,7 @@ export default function AssortmentMerchandising() {
 // Featured Collections Section Component
 function FeaturedCollectionsSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   // Fetch collections
@@ -91,7 +93,17 @@ function FeaturedCollectionsSection() {
     },
   });
 
-  const collections = collectionsData || [];
+  const allCollections = collectionsData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allCollections.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const collections = allCollections.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Fetch featured collections from API
   const { data: featuredCollectionsData } = useQuery({
@@ -247,6 +259,18 @@ function FeaturedCollectionsSection() {
         </div>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+
       {/* Featured Collections Summary */}
       {featuredCollectionIds.length > 0 && (
         <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-4">
@@ -266,6 +290,7 @@ function FeaturedCollectionsSection() {
 function MarkdownPlanningSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -399,6 +424,17 @@ function MarkdownPlanningSection() {
       });
   }, [products, inventory, orders, markdownPlans, filterStatus, searchQuery]);
 
+  // Apply client-side pagination
+  const allDeadStockCandidates = deadStockCandidates;
+  const totalItems = allDeadStockCandidates.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const paginatedDeadStockCandidates = allDeadStockCandidates.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or filter status changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus]);
+
   // Create markdown plan mutation
   const createMarkdownPlanMutation = useMutation({
     mutationFn: async (plan: any) => {
@@ -530,7 +566,7 @@ function MarkdownPlanningSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -544,7 +580,7 @@ function MarkdownPlanningSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-              <Percent className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <Percent className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -558,7 +594,7 @@ function MarkdownPlanningSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -577,14 +613,14 @@ function MarkdownPlanningSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Package className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Dead Stock Products Table */}
-      {deadStockCandidates.length === 0 ? (
+      {allDeadStockCandidates.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
@@ -613,7 +649,7 @@ function MarkdownPlanningSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {deadStockCandidates.map((product: any) => (
+                {paginatedDeadStockCandidates.map((product: any) => (
                   <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
@@ -696,6 +732,18 @@ function MarkdownPlanningSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 

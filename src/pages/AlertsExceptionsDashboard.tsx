@@ -27,102 +27,72 @@ export default function AlertsExceptionsDashboard() {
     queryKey: ['alerts-exceptions-dashboard'],
     queryFn: async () => {
       try {
-        const [inventoryResponse, ordersResponse, productsResponse, returnsResponse] = await Promise.all([
-          api.get('/inventory'),
-          api.get('/orders?skip=0&take=10000'),
-          api.get('/products?skip=0&take=10000'),
-          api.get('/returns?skip=0&take=1000').catch(() => ({ data: { data: [] } })),
+        const [alertsResponse, exceptionsResponse, returnsResponse, productsResponse, inventoryResponse, warehousesResponse] = await Promise.all([
+          api.get('/alerts?skip=0&take=10000'),
+          api.get('/exceptions?skip=0&take=10000'),
+          api.get('/returns?skip=0&take=10000').catch(() => ({ data: { data: [] } })),
+          api.get('/products?skip=0&take=10000').catch(() => ({ data: { data: [] } })),
+          api.get('/inventory?skip=0&take=10000').catch(() => ({ data: { data: [] } })),
+          api.get('/warehouses?skip=0&take=1000').catch(() => ({ data: { data: [] } })),
         ]);
         return {
-          inventory: inventoryResponse.data?.data || inventoryResponse.data || [],
-          orders: ordersResponse.data?.data || ordersResponse.data || [],
+          alerts: Array.isArray(alertsResponse.data) ? alertsResponse.data : (alertsResponse.data?.data || []),
+          exceptions: Array.isArray(exceptionsResponse.data) ? exceptionsResponse.data : (exceptionsResponse.data?.data || []),
+          returns: returnsResponse.data?.data || [],
           products: productsResponse.data?.data || productsResponse.data || [],
-          returns: returnsResponse.data?.data || returnsResponse.data || [],
+          inventory: inventoryResponse.data?.data || inventoryResponse.data || [],
+          warehouses: warehousesResponse.data?.data || warehousesResponse.data || [],
         };
       } catch (error) {
-        return { inventory: [], orders: [], products: [], returns: [] };
+        console.error('Error fetching dashboard data:', error);
+        return { alerts: [], exceptions: [], returns: [], products: [], inventory: [], warehouses: [] };
       }
     },
   });
 
-  const inventory = data?.inventory || [];
-  const orders = data?.orders || [];
-  const products = data?.products || [];
+  const alerts = data?.alerts || [];
+  const exceptions = data?.exceptions || [];
   const returns = data?.returns || [];
+  const products = data?.products || [];
+  const inventory = data?.inventory || [];
+  const warehouses = data?.warehouses || [];
 
-  // Calculate operational metrics
+  // Calculate operational metrics from real database data
   const metrics = useMemo(() => {
-    // Low Stock Alerts (quantity <= reorderPoint or <= 10)
-    const lowStockItems = inventory.filter((inv: any) => {
-      const quantity = Number(inv.quantity || 0);
-      const reorderPoint = Number(inv.reorderPoint || 10);
-      return quantity > 0 && quantity <= reorderPoint;
-    });
-
-    // Overstock Alerts (quantity > 3x average monthly sales or > 1000 units)
-    const overstockItems = inventory.filter((inv: any) => {
-      const quantity = Number(inv.quantity || 0);
-      // Simplified: consider overstock if quantity > 1000 or if it's significantly higher than typical
-      return quantity > 1000;
-    });
-
-    // Delayed Purchase Orders (orders pending for more than 7 days)
     const now = new Date();
-    const delayedOrders = orders.filter((order: any) => {
-      if (order.status !== 'PENDING') return false;
-      const orderDate = new Date(order.orderDate || order.createdAt);
-      const daysDiff = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysDiff > 7;
-    });
+    
+    // Low Stock Alerts - from alerts table with type LOW_STOCK
+    const lowStockAlerts = alerts.filter((alert: any) => 
+      alert.type === 'LOW_STOCK' && (alert.status === 'NEW' || alert.status === 'ACKNOWLEDGED')
+    );
 
-    // Demand Spikes (products with sudden increase in order frequency)
-    const demandSpikes = (() => {
-      const productOrderCounts: Record<number, { count: number; recentCount: number; name: string }> = {};
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
-      orders.forEach((order: any) => {
-        const orderDate = new Date(order.orderDate || order.createdAt);
-        order.orderLines?.forEach((line: any) => {
-          const productId = line.productId;
-          if (!productOrderCounts[productId]) {
-            const product = products.find((p: any) => p.id === productId);
-            productOrderCounts[productId] = {
-              count: 0,
-              recentCount: 0,
-              name: product?.name || 'Unknown Product',
-            };
-          }
-          productOrderCounts[productId].count++;
-          if (orderDate >= sevenDaysAgo) {
-            productOrderCounts[productId].recentCount++;
-          }
-        });
-      });
+    // Overstock Alerts - from alerts table with type HIGH_STOCK
+    const overstockAlerts = alerts.filter((alert: any) => 
+      alert.type === 'HIGH_STOCK' && (alert.status === 'NEW' || alert.status === 'ACKNOWLEDGED')
+    );
 
-      // Find products where recent orders are 3x or more than average
-      return Object.entries(productOrderCounts)
-        .filter(([_, data]: [string, any]) => {
-          const avgPerWeek = data.count / 4; // Rough estimate
-          return data.recentCount >= avgPerWeek * 3 && data.recentCount >= 5;
-        })
-        .map(([productId, data]: [string, any]) => ({
-          productId: parseInt(productId),
-          name: data.name,
-          recentOrders: data.recentCount,
-          totalOrders: data.count,
-        }))
-        .slice(0, 10);
-    })();
+    // Delayed Orders - from exceptions table with type ORDER_PROCESSING_DELAY or SHIPMENT_DELAY
+    const delayedExceptions = exceptions.filter((exception: any) => 
+      (exception.type === 'ORDER_PROCESSING_DELAY' || exception.type === 'SHIPMENT_DELAY') &&
+      (exception.status === 'OPEN' || exception.status === 'IN_PROGRESS')
+    );
 
-    // Stuck RMAs (returns pending for more than 14 days)
+    // Demand Spikes - calculated from order exceptions or custom alerts
+    const demandSpikeAlerts = alerts.filter((alert: any) => 
+      alert.type === 'CUSTOM' && 
+      alert.message?.toLowerCase().includes('demand') &&
+      (alert.status === 'NEW' || alert.status === 'ACKNOWLEDGED')
+    );
+
+    // Stuck RMAs - returns that are not completed and older than 14 days
     const stuckRMAs = returns.filter((returnItem: any) => {
-      if (returnItem.status === 'COMPLETED' || returnItem.status === 'CANCELLED') return false;
-      const returnDate = new Date(returnItem.createdAt || returnItem.returnDate);
+      if (returnItem.status === 'COMPLETED' || returnItem.status === 'CANCELLED' || returnItem.status === 'APPROVED') return false;
+      const returnDate = new Date(returnItem.createdAt || returnItem.returnDate || returnItem.date);
       const daysDiff = (now.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24);
       return daysDiff > 14;
     });
 
-    // Alert trends (last 30 days)
+    // Alert trends (last 30 days) - count alerts by creation date
     const alertTrends = (() => {
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -134,9 +104,9 @@ export default function AlertsExceptionsDashboard() {
         dailyAlerts[key] = 0;
       }
 
-      // Count low stock alerts by day
-      lowStockItems.forEach((inv: any) => {
-        const alertDate = new Date(inv.lastUpdated || inv.updatedAt);
+      // Count all alerts by creation date
+      alerts.forEach((alert: any) => {
+        const alertDate = new Date(alert.createdAt);
         if (alertDate >= thirtyDaysAgo) {
           const key = alertDate.toISOString().split('T')[0];
           if (dailyAlerts[key] !== undefined) {
@@ -155,55 +125,104 @@ export default function AlertsExceptionsDashboard() {
       };
     })();
 
+    // Helper function to get product/inventory details from alert metadata
+    const getAlertDetails = (alert: any) => {
+      const metadata = alert.metadata || {};
+      const entityId = alert.entityId;
+      
+      // Try to find product from entityId or metadata
+      let product = null;
+      let inventoryItem: any = null;
+      let warehouse = null;
+      
+      if (alert.entityType === 'Product' && entityId) {
+        product = products.find((p: any) => p.id === entityId);
+      } else if (alert.entityType === 'Inventory' && entityId) {
+        inventoryItem = inventory.find((inv: any) => inv.id === entityId);
+        if (inventoryItem) {
+          product = products.find((p: any) => p.id === inventoryItem.productId);
+          if (inventoryItem.warehouseId) {
+            warehouse = warehouses.find((w: any) => w.id === inventoryItem.warehouseId);
+          }
+        }
+      }
+      
+      return {
+        product,
+        inventoryItem,
+        warehouse,
+        metadata,
+      };
+    };
+
     return {
-      lowStockItems: lowStockItems.length,
-      overstockItems: overstockItems.length,
-      delayedOrders: delayedOrders.length,
-      demandSpikes: demandSpikes.length,
+      lowStockItems: lowStockAlerts.length,
+      overstockItems: overstockAlerts.length,
+      delayedOrders: delayedExceptions.length,
+      demandSpikes: demandSpikeAlerts.length,
       stuckRMAs: stuckRMAs.length,
-      lowStockDetails: lowStockItems.slice(0, 10).map((inv: any) => {
-        const product = products.find((p: any) => p.id === inv.productId);
-        const warehouse = inv.warehouse || {};
+      lowStockDetails: lowStockAlerts.slice(0, 10).map((alert: any) => {
+        const { product, inventoryItem, warehouse, metadata } = getAlertDetails(alert);
+        const inv = inventoryItem || inventory.find((inv: any) => inv.productId === product?.id);
+        const warehouseName = warehouse?.name || 
+          (inv?.warehouseId ? warehouses.find((w: any) => w.id === inv.warehouseId)?.name : null) ||
+          metadata?.warehouseName || 
+          'Unknown Warehouse';
         return {
-          id: inv.id,
-          productName: product?.name || 'Unknown Product',
-          sku: product?.sku || 'N/A',
-          warehouseName: warehouse?.name || 'Unknown Warehouse',
-          quantity: Number(inv.quantity || 0),
-          reorderPoint: Number(inv.reorderPoint || 10),
+          id: alert.id,
+          productName: product?.name || metadata?.productName || alert.title || 'Unknown Product',
+          sku: product?.sku || metadata?.sku || 'N/A',
+          warehouseName,
+          quantity: metadata?.quantity || inv?.quantity || 0,
+          reorderPoint: metadata?.reorderPoint || inv?.reorderPoint || 10,
         };
       }),
-      overstockDetails: overstockItems.slice(0, 10).map((inv: any) => {
-        const product = products.find((p: any) => p.id === inv.productId);
-        const warehouse = inv.warehouse || {};
+      overstockDetails: overstockAlerts.slice(0, 10).map((alert: any) => {
+        const { product, inventoryItem, warehouse, metadata } = getAlertDetails(alert);
+        const inv = inventoryItem || inventory.find((inv: any) => inv.productId === product?.id);
+        const warehouseName = warehouse?.name || 
+          (inv?.warehouseId ? warehouses.find((w: any) => w.id === inv.warehouseId)?.name : null) ||
+          metadata?.warehouseName || 
+          'Unknown Warehouse';
         return {
-          id: inv.id,
-          productName: product?.name || 'Unknown Product',
-          sku: product?.sku || 'N/A',
-          warehouseName: warehouse?.name || 'Unknown Warehouse',
-          quantity: Number(inv.quantity || 0),
+          id: alert.id,
+          productName: product?.name || metadata?.productName || alert.title || 'Unknown Product',
+          sku: product?.sku || metadata?.sku || 'N/A',
+          warehouseName,
+          quantity: metadata?.quantity || inv?.quantity || 0,
         };
       }),
-      delayedOrdersDetails: delayedOrders.slice(0, 10).map((order: any) => {
-        const orderDate = new Date(order.orderDate || order.createdAt);
-        const daysDelayed = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+      delayedOrdersDetails: delayedExceptions.slice(0, 10).map((exception: any) => {
+        const metadata = exception.metadata || {};
+        const exceptionDate = new Date(exception.createdAt);
+        const daysDelayed = Math.floor((now.getTime() - exceptionDate.getTime()) / (1000 * 60 * 60 * 24));
         return {
-          id: order.id,
-          orderNumber: order.orderNumber || `#${order.id}`,
-          customerName: order.customer?.name || 'Unknown Customer',
-          orderDate: orderDate.toLocaleDateString(),
+          id: exception.id,
+          orderNumber: metadata?.orderNumber || exception.entityId ? `#${exception.entityId}` : 'N/A',
+          customerName: metadata?.customerName || 'Unknown Customer',
+          orderDate: exceptionDate.toLocaleDateString(),
           daysDelayed,
-          amount: Number(order.totalAmount || 0),
+          amount: metadata?.amount || 0,
         };
       }),
-      demandSpikesDetails: demandSpikes,
+      demandSpikesDetails: demandSpikeAlerts.slice(0, 10).map((alert: any) => {
+        const metadata = alert.metadata || {};
+        const { product } = getAlertDetails(alert);
+        return {
+          id: alert.id,
+          productId: alert.entityId || metadata?.productId || 0,
+          name: product?.name || metadata?.productName || alert.title || 'Unknown Product',
+          recentOrders: metadata?.recentOrders || 0,
+          totalOrders: metadata?.totalOrders || 0,
+        };
+      }),
       stuckRMAsDetails: stuckRMAs.slice(0, 10).map((returnItem: any) => {
-        const returnDate = new Date(returnItem.createdAt || returnItem.returnDate);
+        const returnDate = new Date(returnItem.createdAt || returnItem.returnDate || returnItem.date);
         const daysStuck = Math.floor((now.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24));
         return {
           id: returnItem.id,
-          returnNumber: returnItem.returnNumber || `#${returnItem.id}`,
-          orderNumber: returnItem.order?.orderNumber || 'N/A',
+          returnNumber: returnItem.rmaNumber || returnItem.returnNumber || `#${returnItem.id}`,
+          orderNumber: returnItem.orderNumber || (returnItem.order ? `#${returnItem.order.id}` : 'N/A'),
           status: returnItem.status || 'PENDING',
           returnDate: returnDate.toLocaleDateString(),
           daysStuck,
@@ -211,7 +230,7 @@ export default function AlertsExceptionsDashboard() {
       }),
       alertTrends,
     };
-  }, [inventory, orders, products, returns]);
+  }, [alerts, exceptions, returns, products, inventory, warehouses]);
 
   // Show skeleton until all data is loaded
   if (isLoading || isFetching || !data) {
@@ -295,7 +314,7 @@ export default function AlertsExceptionsDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Low Stock</span>
@@ -307,7 +326,7 @@ export default function AlertsExceptionsDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Overstock</span>
@@ -319,7 +338,7 @@ export default function AlertsExceptionsDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <Clock className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Delayed Orders</span>
@@ -331,7 +350,7 @@ export default function AlertsExceptionsDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Demand Spikes</span>
@@ -343,7 +362,7 @@ export default function AlertsExceptionsDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-              <RotateCcw className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Stuck RMAs</span>

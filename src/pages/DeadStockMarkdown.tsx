@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   Clock,
@@ -244,7 +244,7 @@ function AgingInventorySection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -258,7 +258,7 @@ function AgingInventorySection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -268,11 +268,11 @@ function AgingInventorySection() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Inventory Value</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                ${summaryMetrics.totalValue.toFixed(2)}
+                ${(parseFloat(summaryMetrics.totalValue) || 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -286,7 +286,7 @@ function AgingInventorySection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -401,10 +401,10 @@ function AgingInventorySection() {
                       {item.availableQty || item.quantity || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      ${(item.product?.price || item.product?.basePrice || 0).toFixed(2)}
+                      ${(parseFloat(item.product?.price || item.product?.basePrice || 0) || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      ${item.inventoryValue.toFixed(2)}
+                      ${(parseFloat(item.inventoryValue) || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -680,7 +680,7 @@ function SlowMoversSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -694,7 +694,7 @@ function SlowMoversSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <TrendingDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -708,7 +708,7 @@ function SlowMoversSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -718,11 +718,11 @@ function SlowMoversSection() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Inventory Value</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                ${summaryMetrics.totalValue.toFixed(2)}
+                ${(parseFloat(summaryMetrics.totalValue) || 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -819,7 +819,7 @@ function SlowMoversSection() {
                       {product.sku}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      ${product.currentPrice.toFixed(2)}
+                      ${(parseFloat(product.currentPrice) || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-white">{product.totalAvailable}</div>
@@ -832,11 +832,11 @@ function SlowMoversSection() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-white">{product.sales30d}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ${product.revenue30d.toFixed(2)}
+                        ${(parseFloat(product.revenue30d) || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {product.dailyVelocity30d.toFixed(2)}/day
+                      {(parseFloat(product.dailyVelocity30d) || 0).toFixed(2)}/day
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {product.daysOfStock !== null ? (
@@ -920,11 +920,23 @@ function MarkdownScenariosSection() {
     },
   });
 
-  // Get markdown plans from localStorage
-  const [markdownPlans, setMarkdownPlans] = useState<any[]>(() => {
-    const stored = localStorage.getItem('markdown-plans');
-    return stored ? JSON.parse(stored) : [];
+  const queryClient = useQueryClient();
+
+  // Fetch markdown plans from API
+  const { data: markdownPlansData, isLoading: _markdownPlansLoading } = useQuery({
+    queryKey: ['markdown-plans'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/markdown-plans?skip=0&take=1000');
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching markdown plans:', error);
+        return [];
+      }
+    },
   });
+
+  const markdownPlans = markdownPlansData || [];
 
   const products = productsData || [];
   const inventory = inventoryData || [];
@@ -963,7 +975,7 @@ function MarkdownScenariosSection() {
         const daysOfStock = dailyVelocity > 0 ? totalAvailable / dailyVelocity : totalAvailable > 0 ? 999 : 0;
 
         // Check if product has existing markdown plan
-        const existingPlan = markdownPlans.find((plan) => plan.productId === product.id);
+        const existingPlan = markdownPlans.find((plan: any) => plan.productId === product.id);
 
         // Generate markdown scenarios
         const currentPrice = parseFloat(product.price || product.basePrice || 0);
@@ -1041,15 +1053,28 @@ function MarkdownScenariosSection() {
       });
   }, [products, inventory, orders, markdownPlans, searchQuery]);
 
+  // Mutation for creating/updating markdown plans
+  const saveMarkdownPlanMutation = useMutation({
+    mutationFn: async (plan: any) => {
+      if (plan.id) {
+        return api.patch(`/markdown-plans/${plan.id}`, plan);
+      } else {
+        return api.post('/markdown-plans', plan);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['markdown-plans'] });
+      toast.success('Markdown plan saved!');
+      setIsModalOpen(false);
+      setSelectedProduct(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to save markdown plan');
+    },
+  });
+
   const saveMarkdownPlan = (plan: any) => {
-    const updated = markdownPlans.some((p) => p.productId === plan.productId)
-      ? markdownPlans.map((p) => (p.productId === plan.productId ? plan : p))
-      : [...markdownPlans, plan];
-    setMarkdownPlans(updated);
-    localStorage.setItem('markdown-plans', JSON.stringify(updated));
-    toast.success(plan.id ? 'Markdown plan updated!' : 'Markdown plan created!');
-    setIsModalOpen(false);
-    setSelectedProduct(null);
+    saveMarkdownPlanMutation.mutate(plan);
   };
 
   const isLoading = productsLoading || inventoryLoading;
@@ -1071,7 +1096,7 @@ function MarkdownScenariosSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-              <Percent className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <Percent className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -1085,7 +1110,7 @@ function MarkdownScenariosSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1096,13 +1121,12 @@ function MarkdownScenariosSection() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Potential Revenue</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 $
-                {markdownCandidates
-                  .reduce((sum: number, p: any) => sum + (p.bestScenario?.revenue || 0), 0)
-                  .toFixed(2)}
+                {(markdownCandidates
+                  .reduce((sum: number, p: any) => sum + (parseFloat(p.bestScenario?.revenue) || 0), 0) || 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1199,14 +1223,14 @@ function MarkdownScenariosSection() {
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="text-gray-600 dark:text-gray-400">
-                        New Price: <span className="font-semibold">${scenario.newPrice.toFixed(2)}</span>
+                        New Price: <span className="font-semibold">${(parseFloat(scenario.newPrice) || 0).toFixed(2)}</span>
                       </div>
                       <div className="text-gray-600 dark:text-gray-400">
                         Expected Sales: <span className="font-semibold">{scenario.expectedSales}</span>
                       </div>
                       <div className="text-gray-600 dark:text-gray-400">
                         Potential Revenue:{' '}
-                        <span className="font-semibold">${scenario.revenue.toFixed(2)}</span>
+                        <span className="font-semibold">${(parseFloat(scenario.revenue) || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -1271,7 +1295,7 @@ function MarkdownPlanModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1284,7 +1308,7 @@ function MarkdownPlanModal({
               {product.name} (SKU: {product.sku})
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Current Price: ${product.currentPrice.toFixed(2)} | Inventory: {product.totalAvailable}
+              Current Price: ${(parseFloat(product.currentPrice) || 0).toFixed(2)} | Inventory: {product.totalAvailable}
             </div>
           </div>
 
@@ -1395,11 +1419,21 @@ function RecoveryTrackingSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [timeRange, setTimeRange] = useState<string>('30d');
 
-  // Get markdown plans from localStorage
-  const [markdownPlans] = useState<any[]>(() => {
-    const stored = localStorage.getItem('markdown-plans');
-    return stored ? JSON.parse(stored) : [];
+  // Fetch markdown plans from API
+  const { data: markdownPlansData } = useQuery({
+    queryKey: ['markdown-plans', 'recovery-tracking'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/markdown-plans?skip=0&take=1000');
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching markdown plans:', error);
+        return [];
+      }
+    },
   });
+
+  const markdownPlans = markdownPlansData || [];
 
   // Fetch orders for recovery analysis
   const { data: ordersData } = useQuery({
@@ -1592,7 +1626,7 @@ function RecoveryTrackingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1606,7 +1640,7 @@ function RecoveryTrackingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1620,7 +1654,7 @@ function RecoveryTrackingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <ArrowUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ArrowUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1635,7 +1669,7 @@ function RecoveryTrackingSection() {
                   : 'text-red-600 dark:text-red-400'
               }`}>
                 ${summaryMetrics.totalRevenueChange >= 0 ? '+' : ''}
-                {summaryMetrics.totalRevenueChange.toFixed(2)}
+                {(parseFloat(summaryMetrics.totalRevenueChange) || 0).toFixed(2)}
               </p>
             </div>
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
@@ -1644,9 +1678,9 @@ function RecoveryTrackingSection() {
                 : 'bg-red-100 dark:bg-red-900/30'
             }`}>
               {summaryMetrics.totalRevenueChange >= 0 ? (
-                <ArrowUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <ArrowUp className="w-5 h-5 text-green-600 dark:text-green-400" />
               ) : (
-                <ArrowDown className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <ArrowDown className="w-5 h-5 text-red-600 dark:text-red-400" />
               )}
             </div>
           </div>
@@ -1745,19 +1779,19 @@ function RecoveryTrackingSection() {
                         {item.discountPercent}% OFF
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ${item.newPrice?.toFixed(2)}
+                        ${(parseFloat(item.newPrice) || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                       {item.baselineSales} units
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ${item.baselineRevenue.toFixed(2)}
+                        ${(parseFloat(item.baselineRevenue) || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {item.markdownSales} units
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ${item.markdownRevenue.toFixed(2)}
+                        ${(parseFloat(item.markdownRevenue) || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1769,7 +1803,7 @@ function RecoveryTrackingSection() {
                         }`}
                       >
                         {item.salesIncrease >= 0 ? '+' : ''}
-                        {item.salesIncrease.toFixed(1)}%
+                        {(parseFloat(item.salesIncrease) || 0).toFixed(1)}%
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1780,11 +1814,11 @@ function RecoveryTrackingSection() {
                             : 'text-red-600 dark:text-red-400'
                         }`}
                       >
-                        {item.revenueChange >= 0 ? '+' : ''}${item.revenueChange.toFixed(2)}
+                        {item.revenueChange >= 0 ? '+' : ''}${(parseFloat(item.revenueChange) || 0).toFixed(2)}
                       </span>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         ({item.revenueChangePercent >= 0 ? '+' : ''}
-                        {item.revenueChangePercent.toFixed(1)}%)
+                        {(parseFloat(item.revenueChangePercent) || 0).toFixed(1)}%)
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

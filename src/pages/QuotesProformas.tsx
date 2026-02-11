@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { FileText, Receipt, Plus, Search, X, Edit, Trash2, Eye, Download, Send, ChevronDown,  Package, Calendar, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { FileText, Receipt, Plus, Search, X, Edit, Trash2, Eye, Download, ChevronDown,  Package, Calendar, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown, SearchInput } from '../components/ui';
+import { CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'quote-builder' | 'proforma-invoices';
 
@@ -65,43 +66,118 @@ export default function QuotesProformas() {
 function QuoteBuilderSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Fetch quotes - using orders as placeholder until backend is ready
+  // Fetch quotes from API
   const { data: quotesData, isLoading } = useQuery({
     queryKey: ['quotes', searchQuery, statusFilter],
     queryFn: async () => {
       try {
-        // TODO: Replace with actual quotes API endpoint when backend is ready
-        const response = await api.get('/orders?skip=0&take=1000');
-        let quotes = (response.data?.data || []).filter((order: any) =>
-          order.status === 'DRAFT' || order.status === 'PENDING'
-        );
-
-        // Filter by status
-        if (statusFilter !== 'all') {
-          quotes = quotes.filter((quote: any) => quote.status === statusFilter);
-        }
-
-        // Filter by search query
-        if (searchQuery) {
-          quotes = quotes.filter((quote: any) =>
-            quote.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            quote.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-
-        return quotes;
+        const params: any = { skip: 0, take: 1000 };
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (searchQuery) params.search = searchQuery;
+        
+        const response = await api.get('/quotes', { params });
+        return response.data?.data || [];
       } catch (error) {
-        return [];
+        // Fallback to orders if quotes API doesn't exist yet
+        try {
+          const response = await api.get('/orders?skip=0&take=1000');
+          let quotes = (response.data?.data || []).filter((order: any) =>
+            order.status === 'DRAFT' || order.status === 'PENDING'
+          );
+          if (statusFilter !== 'all') {
+            quotes = quotes.filter((quote: any) => quote.status === statusFilter);
+          }
+          if (searchQuery) {
+            quotes = quotes.filter((quote: any) =>
+              quote.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              quote.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }
+          return quotes;
+        } catch {
+          return [];
+        }
       }
     },
   });
 
-  const quotes = quotesData || [];
+  const allQuotes = quotesData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allQuotes.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const quotes = allQuotes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/orders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast.success('Quote deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedQuote(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete quote');
+    },
+  });
+
+  const handleDelete = () => {
+    if (selectedQuote) {
+      deleteMutation.mutate(selectedQuote.id);
+    }
+  };
+
+  const handleDownloadQuote = (quote: any) => {
+    try {
+      // Create a simple text representation of the quote
+      const quoteData = {
+        quoteNumber: quote.orderNumber || `QUO-${quote.id}`,
+        customer: quote.customer?.name || 'N/A',
+        validUntil: quote.requiredDate ? new Date(quote.requiredDate).toLocaleDateString() : 'N/A',
+        items: quote.orderLines?.length || 0,
+        totalAmount: `$${parseFloat(quote.totalAmount || 0).toFixed(2)}`,
+        status: quote.status,
+        orderLines: quote.orderLines?.map((line: any) => ({
+          product: line.product?.name || 'N/A',
+          quantity: line.quantity,
+          unitPrice: `$${parseFloat(line.unitPrice || 0).toFixed(2)}`,
+          total: `$${parseFloat(line.totalPrice || line.quantity * line.unitPrice || 0).toFixed(2)}`,
+        })) || [],
+      };
+
+      // Convert to JSON for download
+      const dataStr = JSON.stringify(quoteData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `quote-${quoteData.quoteNumber}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Quote downloaded successfully!');
+    } catch (error) {
+      toast.error('Failed to download quote');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -220,6 +296,16 @@ function QuoteBuilderSection() {
                         <button
                           onClick={() => {
                             setSelectedQuote(quote);
+                            setIsViewModalOpen(true);
+                          }}
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedQuote(quote);
                             setIsEditModalOpen(true);
                           }}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
@@ -229,8 +315,7 @@ function QuoteBuilderSection() {
                         </button>
                         <button
                           onClick={() => {
-                            // TODO: Implement download functionality
-                            toast.success('Quote download started');
+                            handleDownloadQuote(quote);
                           }}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                           title="Download"
@@ -239,13 +324,13 @@ function QuoteBuilderSection() {
                         </button>
                         <button
                           onClick={() => {
-                            // TODO: Implement send functionality
-                            toast.success('Quote sent to customer');
+                            setSelectedQuote(quote);
+                            setIsDeleteModalOpen(true);
                           }}
-                          className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                          title="Send"
+                          className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Delete"
                         >
-                          <Send className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -254,10 +339,22 @@ function QuoteBuilderSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Create/Edit Quote Modal - Placeholder for now */}
+      {/* Create/Edit Quote Modal */}
       {isModalOpen && (
         <QuoteModal
           onClose={() => setIsModalOpen(false)}
@@ -282,6 +379,148 @@ function QuoteBuilderSection() {
           }}
         />
       )}
+
+      {/* View Quote Modal */}
+      {isViewModalOpen && selectedQuote && (
+        <ViewQuoteModal
+          quote={selectedQuote}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedQuote(null);
+          }}
+        />
+      )}
+
+      {/* Delete Quote Modal */}
+      {isDeleteModalOpen && selectedQuote && (
+        <DeleteModal
+          title="Delete Quote"
+          message="Are you sure you want to delete quote"
+          itemName={selectedQuote.orderNumber || `QUO-${selectedQuote.id}`}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedQuote(null);
+          }}
+          onConfirm={handleDelete}
+          isLoading={deleteMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// View Quote Modal Component
+function ViewQuoteModal({ quote, onClose }: { quote: any; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Quote Details</h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Quote Header */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quote Number</label>
+              <p className="text-sm text-gray-900 dark:text-white">{quote.orderNumber || `QUO-${quote.id}`}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+              <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                quote.status === 'ACCEPTED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                quote.status === 'SENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                quote.status === 'REJECTED' || quote.status === 'EXPIRED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+              }`}>
+                {quote.status?.replace('_', ' ')}
+              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer</label>
+              <p className="text-sm text-gray-900 dark:text-white">{quote.customer?.name || '—'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valid Until</label>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {quote.requiredDate ? new Date(quote.requiredDate).toLocaleDateString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Order Lines */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">Items</h4>
+            {quote.orderLines && quote.orderLines.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Product</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Quantity</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Unit Price</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {quote.orderLines.map((line: any, index: number) => (
+                      <tr key={index}>
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                          {line.product?.name || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                          {line.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                          ${parseFloat(line.unitPrice || 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                          ${parseFloat(line.totalPrice || line.quantity * line.unitPrice || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No items</p>
+            )}
+          </div>
+
+          {/* Total */}
+          <div className="flex justify-end">
+            <div className="w-64">
+              <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Total Amount:</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  ${parseFloat(quote.totalAmount || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -508,8 +747,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      // TODO: Replace with actual quotes API endpoint when backend is ready
-      await api.post('/orders', data);
+      await api.post('/quotes', data);
     },
     onSuccess: () => {
       toast.success('Quote created successfully!');
@@ -522,8 +760,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      // TODO: Replace with actual quotes API endpoint when backend is ready
-      await api.patch(`/orders/${quote.id}`, data);
+      await api.patch(`/quotes/${quote.id}`, data);
     },
     onSuccess: () => {
       toast.success('Quote updated successfully!');
@@ -816,7 +1053,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
               <button
                 type="button"
                 onClick={handleAddLine}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center text-[14px] gap-2 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Product
@@ -918,7 +1155,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
                   max="100"
                   value={formData.discountPercent}
                   onChange={(e) => setFormData({ ...formData, discountPercent: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div>
@@ -929,7 +1166,7 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
                   min="0"
                   value={formData.taxRate}
                   onChange={(e) => setFormData({ ...formData, taxRate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
@@ -965,7 +1202,8 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Additional notes..."
+                className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -974,13 +1212,14 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
                 value={formData.terms}
                 onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Terms and conditions..."
+                className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end gap-3 pt-4 border-t text-[14px] border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -1006,47 +1245,123 @@ function QuoteModal({ quote, onClose, onSave }: { quote?: any; onClose: () => vo
 function ProformaInvoicesSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Fetch proforma invoices - using orders as placeholder until backend is ready
+  // Fetch proforma invoices from API
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ['proforma-invoices', searchQuery, statusFilter],
     queryFn: async () => {
       try {
-        // TODO: Replace with actual proforma invoices API endpoint when backend is ready
-        const response = await api.get('/orders?skip=0&take=1000');
-        let invoices = (response.data?.data || []).filter((order: any) =>
-          order.type === 'B2B' || order.type === 'WHOLESALE'
-        );
-
-        // Filter by status
-        if (statusFilter !== 'all') {
-          invoices = invoices.filter((invoice: any) => {
-            if (statusFilter === 'PAID') {
-              return invoice.status === 'FULFILLED' || invoice.status === 'DELIVERED';
-            }
-            return invoice.status === statusFilter;
-          });
-        }
-
-        // Filter by search query
-        if (searchQuery) {
-          invoices = invoices.filter((invoice: any) =>
-            invoice.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            invoice.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-
-        return invoices;
+        const params: any = { skip: 0, take: 1000 };
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (searchQuery) params.search = searchQuery;
+        
+        const response = await api.get('/proforma-invoices', { params });
+        return response.data?.data || [];
       } catch (error) {
-        return [];
+        // Fallback to orders if proforma-invoices API doesn't exist yet
+        try {
+          const response = await api.get('/orders?skip=0&take=1000');
+          let invoices = (response.data?.data || []).filter((order: any) =>
+            order.type === 'B2B' || order.type === 'WHOLESALE'
+          );
+          if (statusFilter !== 'all') {
+            invoices = invoices.filter((invoice: any) => {
+              if (statusFilter === 'PAID') {
+                return invoice.status === 'FULFILLED' || invoice.status === 'DELIVERED';
+              }
+              return invoice.status === statusFilter;
+            });
+          }
+          if (searchQuery) {
+            invoices = invoices.filter((invoice: any) =>
+              invoice.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              invoice.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }
+          return invoices;
+        } catch {
+          return [];
+        }
       }
     },
   });
 
-  const invoices = invoicesData || [];
+  const allInvoices = invoicesData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allInvoices.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const invoices = allInvoices.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/orders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['proforma-invoices'] });
+      toast.success('Proforma invoice deleted successfully!');
+      setIsDeleteModalOpen(false);
+      setSelectedInvoice(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete proforma invoice');
+    },
+  });
+
+  const handleDelete = () => {
+    if (selectedInvoice) {
+      deleteMutation.mutate(selectedInvoice.id);
+    }
+  };
+
+  const handleDownloadInvoice = (invoice: any) => {
+    try {
+      // Create a simple text representation of the invoice
+      const invoiceData = {
+        invoiceNumber: `INV-${invoice.orderNumber || invoice.id}`,
+        customer: invoice.customer?.name || 'N/A',
+        invoiceDate: invoice.orderDate ? new Date(invoice.orderDate).toLocaleDateString() : 'N/A',
+        dueDate: invoice.requiredDate ? new Date(invoice.requiredDate).toLocaleDateString() : 'N/A',
+        items: invoice.orderLines?.length || 0,
+        totalAmount: `$${parseFloat(invoice.totalAmount || 0).toFixed(2)}`,
+        status: invoice.status,
+        orderLines: invoice.orderLines?.map((line: any) => ({
+          product: line.product?.name || 'N/A',
+          quantity: line.quantity,
+          unitPrice: `$${parseFloat(line.unitPrice || 0).toFixed(2)}`,
+          total: `$${parseFloat(line.totalPrice || line.quantity * line.unitPrice || 0).toFixed(2)}`,
+        })) || [],
+      };
+
+      // Convert to JSON for download
+      const dataStr = JSON.stringify(invoiceData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceData.invoiceNumber}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Proforma invoice downloaded successfully!');
+    } catch (error) {
+      toast.error('Failed to download proforma invoice');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1175,7 +1490,7 @@ function ProformaInvoicesSection() {
                         <button
                           onClick={() => {
                             setSelectedInvoice(invoice);
-                            setIsModalOpen(true);
+                            setIsViewModalOpen(true);
                           }}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                           title="View"
@@ -1184,8 +1499,7 @@ function ProformaInvoicesSection() {
                         </button>
                         <button
                           onClick={() => {
-                            // TODO: Implement download functionality
-                            toast.success('Proforma invoice download started');
+                            handleDownloadInvoice(invoice);
                           }}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                           title="Download"
@@ -1194,13 +1508,13 @@ function ProformaInvoicesSection() {
                         </button>
                         <button
                           onClick={() => {
-                            // TODO: Implement send functionality
-                            toast.success('Proforma invoice sent to customer');
+                            setSelectedInvoice(invoice);
+                            setIsDeleteModalOpen(true);
                           }}
-                          className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                          title="Send"
+                          className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Delete"
                         >
-                          <Send className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1209,10 +1523,22 @@ function ProformaInvoicesSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Create/Edit Invoice Modal - Placeholder */}
+      {/* Create/Edit Invoice Modal */}
       {isModalOpen && (
         <ProformaInvoiceModal
           invoice={selectedInvoice}
@@ -1227,6 +1553,154 @@ function ProformaInvoicesSection() {
           }}
         />
       )}
+
+      {/* View Invoice Modal */}
+      {isViewModalOpen && selectedInvoice && (
+        <ViewInvoiceModal
+          invoice={selectedInvoice}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedInvoice(null);
+          }}
+        />
+      )}
+
+      {/* Delete Invoice Modal */}
+      {isDeleteModalOpen && selectedInvoice && (
+        <DeleteModal
+          title="Delete Proforma Invoice"
+          message="Are you sure you want to delete proforma invoice"
+          itemName={`INV-${selectedInvoice.orderNumber || selectedInvoice.id}`}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedInvoice(null);
+          }}
+          onConfirm={handleDelete}
+          isLoading={deleteMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// View Invoice Modal Component
+function ViewInvoiceModal({ invoice, onClose }: { invoice: any; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Proforma Invoice Details</h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Invoice Header */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Number</label>
+              <p className="text-sm text-gray-900 dark:text-white">INV-{invoice.orderNumber || invoice.id}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+              <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                invoice.status === 'FULFILLED' || invoice.status === 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                invoice.status === 'SENT' || invoice.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                invoice.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+              }`}>
+                {invoice.status === 'FULFILLED' || invoice.status === 'DELIVERED' ? 'PAID' : invoice.status?.replace('_', ' ')}
+              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer</label>
+              <p className="text-sm text-gray-900 dark:text-white">{invoice.customer?.name || '—'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Date</label>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {invoice.orderDate ? new Date(invoice.orderDate).toLocaleDateString() : '—'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {invoice.requiredDate ? new Date(invoice.requiredDate).toLocaleDateString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Order Lines */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">Items</h4>
+            {invoice.orderLines && invoice.orderLines.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Product</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Quantity</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Unit Price</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {invoice.orderLines.map((line: any, index: number) => (
+                      <tr key={index}>
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                          {line.product?.name || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                          {line.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                          ${parseFloat(line.unitPrice || 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                          ${parseFloat(line.totalPrice || line.quantity * line.unitPrice || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No items</p>
+            )}
+          </div>
+
+          {/* Total */}
+          <div className="flex justify-end">
+            <div className="w-64">
+              <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Total Amount:</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  ${parseFloat(invoice.totalAmount || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1774,7 +2248,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
               <button
                 type="button"
                 onClick={handleAddLine}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center gap-2 px-4 text-[14px] py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Product
@@ -1971,7 +2445,7 @@ function ProformaInvoiceModal({ invoice, onClose, onSave }: { invoice?: any; onC
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center text-[14px] justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}

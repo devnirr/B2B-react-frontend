@@ -29,7 +29,7 @@ export default function SummaryCard({
           </p>
         </div>
         <div className={`w-12 h-12 ${iconBgColor} rounded-lg flex items-center justify-center`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} />
+          <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
       </div>
     </div>

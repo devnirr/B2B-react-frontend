@@ -293,7 +293,7 @@ function SellInPerformanceSection() {
               </div>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -320,7 +320,7 @@ function SellInPerformanceSection() {
               </div>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <ShoppingCart className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -337,7 +337,7 @@ function SellInPerformanceSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -666,7 +666,7 @@ function ChannelPerformanceSection() {
                 index === 2 ? 'bg-yellow-100 dark:bg-yellow-900/30' :
                 'bg-purple-100 dark:bg-purple-900/30'
               }`}>
-                <Store className={`w-6 h-6 ${
+                <Store className={`w-5 h-5 ${
                   index === 0 ? 'text-blue-600 dark:text-blue-400' :
                   index === 1 ? 'text-green-600 dark:text-green-400' :
                   index === 2 ? 'text-yellow-600 dark:text-yellow-400' :
@@ -1073,7 +1073,7 @@ function CustomerPerformanceSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1087,7 +1087,7 @@ function CustomerPerformanceSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1101,7 +1101,7 @@ function CustomerPerformanceSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1115,7 +1115,7 @@ function CustomerPerformanceSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <ShoppingCart className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>

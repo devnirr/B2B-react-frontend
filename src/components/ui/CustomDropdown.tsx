@@ -23,18 +23,45 @@ export default function CustomDropdown({
   disabled = false
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Calculate menu max height when opening (always position below)
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const maxMenuHeight = 180;
+      
+      // Always position below - just constrain height based on available space
+      // Leave 10px margin from viewport bottom, minimum 100px height
+      const availableSpaceBelow = Math.max(spaceBelow - 10, 100);
+      setMenuMaxHeight(Math.min(maxMenuHeight, availableSpaceBelow));
+    } else {
+      setMenuMaxHeight(null);
+    }
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use a small delay to avoid closing immediately when opening
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
     }
 
     return () => {
@@ -53,6 +80,7 @@ export default function CustomDropdown({
       )}
       <div ref={dropdownRef} className="relative">
         <button
+          ref={buttonRef}
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
@@ -60,16 +88,26 @@ export default function CustomDropdown({
             error ? 'border-red-500' : ''
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          <span className="text-sm">
+          <span className="text-sm whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 text-left">
             {selectedOption?.label || placeholder}
           </span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         
-        {isOpen && (
+        {isOpen && menuMaxHeight !== null && (
           <div 
-            className="custom-dropdown-menu absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden hide-scrollbar" 
-            style={{ zIndex: 10001, maxHeight: '180px', overflowY: 'auto' }}
+            ref={menuRef}
+            className="custom-dropdown-menu absolute bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden hide-scrollbar z-50" 
+            style={{ 
+              top: '100%',
+              left: 0,
+              right: 0,
+              width: '100%',
+              marginTop: '4px',
+              maxHeight: `${menuMaxHeight}px`, 
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
             {options.length === 0 ? (
               <div className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -84,7 +122,7 @@ export default function CustomDropdown({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-3 py-2 text-sm text-left transition-colors duration-150 ${
+                  className={` w-full px-3 py-2 text-sm text-left transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
                     index === 0 ? 'rounded-t-lg' : ''
                   } ${
                     index === options.length - 1 ? 'rounded-b-lg' : ''

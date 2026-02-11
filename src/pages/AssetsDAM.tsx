@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { Image, FileText, BookOpen, Search, Grid, List, Upload, X, Edit, Trash2, Download, Eye} from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
-import { CustomDropdown, SearchInput } from '../components/ui';
+import { CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 
 type TabType = 'images' | 'lookbooks' | 'brand-content';
@@ -67,32 +68,150 @@ export default function AssetsDAM() {
 function ImagesSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUploadModalShowing, setIsUploadModalShowing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [_isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreview, setEditPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  // View modal handlers
+  const openViewModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setIsViewModalShowing(false);
+    setTimeout(() => {
+      setIsViewModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  // Helper function to validate URLs
+  const isValidUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== 'string') return false;
+    // Check if it's a valid URL format (starts with http://, https://, or /)
+    try {
+      // If it starts with http:// or https://, validate as URL
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        new URL(url);
+        return true;
+      }
+      // If it starts with /, it's a relative path (valid)
+      if (url.startsWith('/')) {
+        return true;
+      }
+      // If it's a data URL (base64 image)
+      if (url.startsWith('data:')) {
+        return true;
+      }
+      // Otherwise, it's likely an invalid URL
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   // Fetch images from DAM API (filter by IMAGE type)
-  const { data: assetsData, isLoading } = useQuery({
+  const { data: assetsResponse, isLoading } = useQuery({
     queryKey: ['dam', 'images', searchQuery],
     queryFn: async () => {
-      const response = await api.get('/dam');
-      // Filter only IMAGE type assets
-      const images = (response.data || []).filter((asset: any) => asset.type === 'IMAGE');
-      // Filter by search query if provided
-      if (searchQuery) {
-        return images.filter((asset: any) =>
-          asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+      try {
+        // Fetch all data to filter by IMAGE type (since backend doesn't support type filtering)
+        const response = await api.get(`/dam?skip=0&take=10000`);
+        const allAssets = response.data?.data || response.data || [];
+        // Filter only IMAGE type assets and validate URLs
+        let images = allAssets.filter((asset: any) => {
+          if (asset.type !== 'IMAGE') return false;
+          // Only include assets with valid URLs or no URL (will show placeholder)
+          const hasValidUrl = isValidUrl(asset.thumbnailUrl) || isValidUrl(asset.url);
+          return hasValidUrl || (!asset.thumbnailUrl && !asset.url);
+        });
+        
+        // Filter by search query if provided
+        if (searchQuery) {
+          images = images.filter((asset: any) =>
+            asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        }
+        
+        return {
+          data: images,
+          total: images.length,
+        };
+      } catch (error) {
+        return { data: [], total: 0 };
       }
-      return images;
     },
   });
 
-  const images = assetsData || [];
+  const rawImages = assetsResponse?.data || [];
+  const totalImages = assetsResponse?.total || 0;
+  
+  // Apply client-side pagination
+  const images = rawImages.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  const totalFiltered = totalImages;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (assetData: any) => {
+      const response = await api.post('/dam', assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'images'] });
+      toast.success('Image uploaded successfully!');
+      closeUploadModal();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to upload image');
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, assetData }: { id: number; assetData: any }) => {
+      console.log('Update mutation called:', { id, assetData });
+      const response = await api.patch(`/dam/${id}`, assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'images'] });
+      toast.success('Image updated successfully!');
+      closeEditModal();
+    },
+    onError: (error: any) => {
+      console.error('Update error:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.message) 
+                            ? error.response.data.message.map((m: any) => typeof m === 'string' ? m : Object.values(m).join(', ')).join(', ') 
+                            : 'Failed to update image');
+      toast.error(errorMessage);
+    },
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -100,15 +219,233 @@ function ImagesSection() {
       await api.delete(`/dam/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dam'] });
+      queryClient.invalidateQueries({ queryKey: ['dam', 'images'] });
       toast.success('Image deleted successfully!');
-      setIsDeleteModalOpen(false);
-      setSelectedAsset(null);
+      closeDeleteModal();
     },
     onError: () => {
       toast.error('Failed to delete image');
     },
   });
+
+  // Modal handlers
+  const openUploadModal = () => {
+    setIsUploadModalOpen(true);
+  };
+
+  const closeUploadModal = () => {
+    setIsUploadModalShowing(false);
+    setTimeout(() => {
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }, 300);
+  };
+
+  const openEditModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalShowing(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  const openDeleteModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  // Handle body scroll lock when modals are open
+  useEffect(() => {
+    if (isUploadModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsUploadModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsUploadModalShowing(false);
+    }
+  }, [isUploadModalOpen]);
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsEditModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsEditModalShowing(false);
+    }
+  }, [isEditModalOpen]);
+
+  useEffect(() => {
+    if (isViewModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsViewModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsViewModalShowing(false);
+    }
+  }, [isViewModalOpen]);
+
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsDeleteModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsDeleteModalShowing(false);
+    }
+  }, [isDeleteModalOpen]);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      setUploadFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle edit file selection
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      setEditFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle upload
+  const handleUpload = async (formData: any) => {
+    if (!uploadFile) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    // For now, we'll use a placeholder URL. In production, you'd upload to a file storage service
+    // and get the URL back
+    const assetData = {
+      name: formData.name || uploadFile.name,
+      type: 'IMAGE' as const,
+      url: uploadPreview || URL.createObjectURL(uploadFile), // Placeholder - should be actual upload URL
+      thumbnailUrl: uploadPreview || URL.createObjectURL(uploadFile),
+      description: formData.description || undefined,
+      tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) : undefined,
+      fileSize: uploadFile.size,
+      mimeType: uploadFile.type,
+      productId: formData.productId || undefined,
+    };
+
+    uploadMutation.mutate(assetData);
+  };
+
+  // Handle update
+  const handleUpdate = (formData: any) => {
+    if (!selectedAsset) return;
+
+    // Clean and validate the form data
+    const name = formData.name?.trim();
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+
+    const assetData: any = {
+      name: name,
+    };
+
+    // Only include description if it's not empty
+    if (formData.description && formData.description.trim()) {
+      assetData.description = formData.description.trim();
+    } else {
+      assetData.description = undefined;
+    }
+
+    // Process tags - split by comma, trim, and filter out empty strings
+    if (formData.tags && formData.tags.trim()) {
+      const tagsArray = formData.tags
+        .split(',')
+        .map((tag: string) => tag.trim())
+        .filter((tag: string) => tag.length > 0);
+      assetData.tags = tagsArray.length > 0 ? tagsArray : undefined;
+    } else {
+      assetData.tags = undefined;
+    }
+
+    // If a new file is selected, update the URL and thumbnail
+    if (editFile) {
+      // For now, we'll use a placeholder URL. In production, you'd upload to a file storage service
+      // and get the URL back
+      assetData.url = editPreview || URL.createObjectURL(editFile);
+      assetData.thumbnailUrl = editPreview || URL.createObjectURL(editFile);
+      assetData.fileSize = editFile.size;
+      assetData.mimeType = editFile.type;
+    }
+
+    console.log('Updating image:', selectedAsset.id, assetData);
+    updateMutation.mutate({ id: selectedAsset.id, assetData });
+  };
 
   const handleDelete = () => {
     if (selectedAsset) {
@@ -163,7 +500,7 @@ function ImagesSection() {
               </button>
             </div>
             <button
-              onClick={() => setIsUploadModalOpen(true)}
+              onClick={openUploadModal}
               className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Upload className="w-4 h-4" />
@@ -187,43 +524,43 @@ function ImagesSection() {
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4">
           {images.map((image: any) => (
             <div
               key={image.id}
               className="group relative bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="aspect-square relative bg-gray-100 dark:bg-gray-700">
-                {image.thumbnailUrl || image.url ? (
+                {(isValidUrl(image.thumbnailUrl) || isValidUrl(image.url)) ? (
                   <img
                     src={image.thumbnailUrl || image.url}
                     alt={image.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (placeholder) placeholder.classList.remove('hidden');
                     }}
                   />
-                ) : null}
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Image className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                  </div>
+                )}
                 <div className="hidden absolute inset-0 flex items-center justify-center">
                   <Image className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        setSelectedAsset(image);
-                        setIsEditModalOpen(true);
-                      }}
+                      onClick={() => openEditModal(image)}
                       className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
                       title="Edit"
                     >
                       <Edit className="w-4 h-4 text-gray-900" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (image.url) window.open(image.url, '_blank');
-                      }}
+                      onClick={() => openViewModal(image)}
                       className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
                       title="View"
                     >
@@ -231,11 +568,14 @@ function ImagesSection() {
                     </button>
                     <button
                       onClick={() => {
-                        if (image.url) {
+                        const downloadUrl = image.url || image.thumbnailUrl;
+                        if (downloadUrl && isValidUrl(downloadUrl)) {
                           const link = document.createElement('a');
-                          link.href = image.url;
+                          link.href = downloadUrl;
                           link.download = image.name;
                           link.click();
+                        } else {
+                          toast.error('No valid download URL available');
                         }
                       }}
                       className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
@@ -244,10 +584,7 @@ function ImagesSection() {
                       <Download className="w-4 h-4 text-gray-900" />
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedAsset(image);
-                        setIsDeleteModalOpen(true);
-                      }}
+                      onClick={() => openDeleteModal(image)}
                       className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
                       title="Delete"
                     >
@@ -282,17 +619,21 @@ function ImagesSection() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                    {image.thumbnailUrl || image.url ? (
+                    {(isValidUrl(image.thumbnailUrl) || isValidUrl(image.url)) ? (
                       <img
                         src={image.thumbnailUrl || image.url}
                         alt={image.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (placeholder) placeholder.classList.remove('hidden');
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Image className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                      </div>
-                    )}
+                    ) : null}
+                    <div className={`${(isValidUrl(image.thumbnailUrl) || isValidUrl(image.url)) ? 'hidden' : ''} w-full h-full flex items-center justify-center`}>
+                      <Image className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{image.name}</h4>
@@ -322,19 +663,14 @@ function ImagesSection() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        setSelectedAsset(image);
-                        setIsEditModalOpen(true);
-                      }}
+                      onClick={() => openEditModal(image)}
                       className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                       title="Edit"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (image.url) window.open(image.url, '_blank');
-                      }}
+                      onClick={() => openViewModal(image)}
                       className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                       title="View"
                     >
@@ -342,11 +678,14 @@ function ImagesSection() {
                     </button>
                     <button
                       onClick={() => {
-                        if (image.url) {
+                        const downloadUrl = image.url || image.thumbnailUrl;
+                        if (downloadUrl && isValidUrl(downloadUrl)) {
                           const link = document.createElement('a');
-                          link.href = image.url;
+                          link.href = downloadUrl;
                           link.download = image.name;
                           link.click();
+                        } else {
+                          toast.error('No valid download URL available');
                         }
                       }}
                       className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
@@ -355,10 +694,7 @@ function ImagesSection() {
                       <Download className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedAsset(image);
-                        setIsDeleteModalOpen(true);
-                      }}
+                      onClick={() => openDeleteModal(image)}
                       className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete"
                     >
@@ -372,73 +708,509 @@ function ImagesSection() {
         </div>
       )}
 
-      {/* Upload Modal - Placeholder for now */}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFiltered}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
+        </div>
+      )}
+
+      {/* Upload Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Image</h3>
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Upload functionality will be implemented here.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
+        <>
+          <div className={`modal-backdrop fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} />
+          <div className={`modal fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Upload Image</h5>
+                  <button
+                    type="button"
+                    onClick={closeUploadModal}
+                    className="btn-close"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleUpload({
+                      name: formData.get('name') as string,
+                      description: formData.get('description') as string,
+                      tags: formData.get('tags') as string,
+                    });
+                  }}
+                >
+                  <div className="modal-body p-6">
+                    {/* File Upload */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Image File <span className="text-red-500">*</span>
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
+                        {uploadPreview ? (
+                          <div className="space-y-4">
+                            <img src={uploadPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUploadFile(null);
+                                setUploadPreview(null);
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = '';
+                                }
+                              }}
+                              className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              Click to upload or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              PNG, JPG, GIF up to 10MB
+                            </p>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id="file-upload"
+                            />
+                            <label
+                              htmlFor="file-upload"
+                              className="mt-4 inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors"
+                            >
+                              Select File
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Name */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        defaultValue={uploadFile?.name || ''}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter image name"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        name="description"
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter description (optional)"
+                      />
+                    </div>
+
+                    {/* Tags */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tags
+                      </label>
+                      <input
+                        type="text"
+                        name="tags"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter tags separated by commas (e.g., product, marketing, campaign)"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Separate multiple tags with commas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeUploadModal}
+                      className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!uploadFile || uploadMutation.isPending}
+                      className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {uploadMutation.isPending ? 'Uploading...' : 'Upload Image'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedAsset && (
+        <>
+          <div className={`modal-backdrop fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} />
+          <div className={`modal fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Edit Image</h5>
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="btn-close"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleUpdate({
+                      name: formData.get('name') as string,
+                      description: formData.get('description') as string,
+                      tags: formData.get('tags') as string,
+                    });
+                  }}
+                >
+                  <div className="modal-body p-6">
+                    {/* Preview */}
+                    <div className="mb-4">
+                      {editPreview ? (
+                        <div>
+                          <img
+                            src={editPreview}
+                            alt="New preview"
+                            className="max-h-48 mx-auto rounded-lg"
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                            New image preview
+                          </p>
+                        </div>
+                      ) : (isValidUrl(selectedAsset.thumbnailUrl) || isValidUrl(selectedAsset.url)) ? (
+                        <div>
+                          <img
+                            src={selectedAsset.thumbnailUrl || selectedAsset.url}
+                            alt={selectedAsset.name}
+                            className="max-h-48 mx-auto rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (placeholder) placeholder.classList.remove('hidden');
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                            Current image
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Replace Image */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Replace Image
+                      </label>
+                      <input
+                        ref={editFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditFileSelect}
+                        className="hidden"
+                        id="edit-image-input"
+                      />
+                      <label
+                        htmlFor="edit-image-input"
+                        className="flex items-center justify-center w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+                      >
+                        <div className="flex flex-col items-center">
+                          <Upload className="w-5 h-5 text-gray-400 dark:text-gray-500 mb-1" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {editFile ? editFile.name : 'Click to select a new image'}
+                          </span>
+                          {editFile && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditFile(null);
+                                setEditPreview(null);
+                                if (editFileInputRef.current) {
+                                  editFileInputRef.current.value = '';
+                                }
+                              }}
+                              className="mt-1 text-xs text-red-600 dark:text-red-400 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Select a new image file to replace the current one (optional)
+                      </p>
+                    </div>
+
+                    {/* Name */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        defaultValue={selectedAsset.name}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter image name"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        name="description"
+                        rows={3}
+                        defaultValue={selectedAsset.description || ''}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter description (optional)"
+                      />
+                    </div>
+
+                    {/* Tags */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tags
+                      </label>
+                      <input
+                        type="text"
+                        name="tags"
+                        defaultValue={selectedAsset.tags?.join(', ') || ''}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]"
+                        placeholder="Enter tags separated by commas"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Separate multiple tags with commas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeEditModal}
+                      className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updateMutation.isPending}
+                      className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {updateMutation.isPending ? 'Updating...' : 'Update Image'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* View Modal */}
+      {isViewModalOpen && selectedAsset && (
+        <>
+          <div className={`modal-backdrop fade ${isViewModalShowing ? 'show' : ''}`} onClick={closeViewModal} />
+          <div className={`modal fade ${isViewModalShowing ? 'show' : ''}`} onClick={closeViewModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '50vw', maxHeight: '90vh' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">{selectedAsset.name}</h5>
+                  <button
+                    type="button"
+                    onClick={closeViewModal}
+                    className="btn-close"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="modal-body p-0 overflow-hidden" style={{ maxHeight: 'calc(90vh - 120px)' }}>
+                  <div className="flex flex-col lg:flex-row h-full">
+                    {/* Image Preview Section */}
+                    <div className="flex-1 bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 min-h-[250px] lg:min-h-0">
+                      {(isValidUrl(selectedAsset.thumbnailUrl) || isValidUrl(selectedAsset.url)) ? (
+                        <img
+                          src={selectedAsset.thumbnailUrl || selectedAsset.url}
+                          alt={selectedAsset.name}
+                          className="max-w-full max-h-[30vh] w-auto h-auto rounded-lg object-contain shadow-lg"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (placeholder) placeholder.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div className={`${(isValidUrl(selectedAsset.thumbnailUrl) || isValidUrl(selectedAsset.url)) ? 'hidden' : ''} flex flex-col items-center justify-center h-48 bg-gray-100 dark:bg-gray-700 rounded-lg w-full`}>
+                        <Image className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-2" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No image available</p>
+                      </div>
+                    </div>
+
+                    {/* Asset Details Section */}
+                    <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 p-6 overflow-y-auto">
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                            Name
+                          </label>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedAsset.name}</p>
+                        </div>
+
+                        {selectedAsset.description && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                              Description
+                            </label>
+                            <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{selectedAsset.description}</p>
+                          </div>
+                        )}
+
+                        {selectedAsset.tags && selectedAsset.tags.length > 0 && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                              Tags
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedAsset.tags.map((tag: string, index: number) => (
+                                <span
+                                  key={index}
+                                  className="px-2.5 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          {selectedAsset.fileSize && (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                                File Size
+                              </label>
+                              <p className="text-sm text-gray-900 dark:text-white">
+                                {selectedAsset.fileSize < 1024
+                                  ? `${selectedAsset.fileSize} B`
+                                  : selectedAsset.fileSize < 1024 * 1024
+                                  ? `${(selectedAsset.fileSize / 1024).toFixed(1)} KB`
+                                  : `${(selectedAsset.fileSize / (1024 * 1024)).toFixed(1)} MB`}
+                              </p>
+                            </div>
+                          )}
+
+                          {selectedAsset.mimeType && (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                                Type
+                              </label>
+                              <p className="text-sm text-gray-900 dark:text-white">{selectedAsset.mimeType}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedAsset.createdAt && (
+                          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                              Created At
+                            </label>
+                            <p className="text-sm text-gray-900 dark:text-white">
+                              {new Date(selectedAsset.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const downloadUrl = selectedAsset.url || selectedAsset.thumbnailUrl;
+                      if (downloadUrl && isValidUrl(downloadUrl)) {
+                        const link = document.createElement('a');
+                        link.href = downloadUrl;
+                        link.download = selectedAsset.name;
+                        link.click();
+                      } else {
+                        toast.error('No valid download URL available');
+                      }
+                    }}
+                    className="px-4 text-[14px] py-2 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeViewModal}
+                    className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Image</h3>
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Are you sure you want to delete <span className="font-semibold">"{selectedAsset.name}"</span>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteModal
+          title="Delete Image"
+          message="Are you sure you want to delete"
+          itemName={selectedAsset.name}
+          onClose={closeDeleteModal}
+          onConfirm={handleDelete}
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   );
@@ -447,39 +1219,105 @@ function ImagesSection() {
 // Lookbooks / Line Sheets Section Component
 function LookbooksSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUploadModalShowing, setIsUploadModalShowing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [_isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch lookbooks/line sheets from DAM API (filter by DOCUMENT type and lookbook tags/description)
-  const { data: assetsData, isLoading } = useQuery({
+  const { data: assetsResponse, isLoading } = useQuery({
     queryKey: ['dam', 'lookbooks', searchQuery],
     queryFn: async () => {
-      const response = await api.get('/dam');
-      // Filter DOCUMENT type assets that are lookbooks or line sheets
-      const documents = (response.data || []).filter((asset: any) => {
-        if (asset.type !== 'DOCUMENT') return false;
-        const nameLower = asset.name.toLowerCase();
-        const descLower = asset.description?.toLowerCase() || '';
-        const tagsLower = asset.tags?.join(' ').toLowerCase() || '';
-        const searchText = nameLower + ' ' + descLower + ' ' + tagsLower;
-        return searchText.includes('lookbook') || searchText.includes('line sheet') || searchText.includes('linesheet');
-      });
-      // Filter by search query if provided
-      if (searchQuery) {
-        return documents.filter((asset: any) =>
-          asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+      try {
+        // Fetch all data to filter by type and keywords
+        const response = await api.get(`/dam?skip=0&take=10000`);
+        const allAssets = response.data?.data || response.data || [];
+        // Filter DOCUMENT type assets that are lookbooks or line sheets
+        let documents = allAssets.filter((asset: any) => {
+          if (asset.type !== 'DOCUMENT') return false;
+          const nameLower = asset.name.toLowerCase();
+          const descLower = asset.description?.toLowerCase() || '';
+          const tagsLower = asset.tags?.join(' ').toLowerCase() || '';
+          const searchText = nameLower + ' ' + descLower + ' ' + tagsLower;
+          return searchText.includes('lookbook') || searchText.includes('line sheet') || searchText.includes('linesheet');
+        });
+        // Filter by search query if provided
+        if (searchQuery) {
+          documents = documents.filter((asset: any) =>
+            asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        }
+        return {
+          data: documents,
+          total: documents.length,
+        };
+      } catch (error) {
+        return { data: [], total: 0 };
       }
-      return documents;
     },
   });
 
-  const lookbooks = assetsData || [];
+  const rawLookbooks = assetsResponse?.data || [];
+  const totalLookbooks = assetsResponse?.total || 0;
+  
+  // Apply client-side pagination
+  const lookbooks = rawLookbooks.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  const totalFiltered = totalLookbooks;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (assetData: any) => {
+      const response = await api.post('/dam', assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'lookbooks'] });
+      toast.success('Lookbook uploaded successfully!');
+      closeUploadModal();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to upload lookbook');
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, assetData }: { id: number; assetData: any }) => {
+      console.log('Update mutation called (lookbook):', { id, assetData });
+      const response = await api.patch(`/dam/${id}`, assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'lookbooks'] });
+      toast.success('Lookbook updated successfully!');
+      closeEditModal();
+    },
+    onError: (error: any) => {
+      console.error('Update error (lookbook):', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.message) 
+                            ? error.response.data.message.map((m: any) => typeof m === 'string' ? m : Object.values(m).join(', ')).join(', ') 
+                            : 'Failed to update lookbook');
+      toast.error(errorMessage);
+    },
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -487,15 +1325,176 @@ function LookbooksSection() {
       await api.delete(`/dam/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dam'] });
+      queryClient.invalidateQueries({ queryKey: ['dam', 'lookbooks'] });
       toast.success('Lookbook deleted successfully!');
-      setIsDeleteModalOpen(false);
-      setSelectedAsset(null);
+      closeDeleteModal();
     },
     onError: () => {
       toast.error('Failed to delete lookbook');
     },
   });
+
+  // Modal handlers
+  const openUploadModal = () => {
+    setIsUploadModalOpen(true);
+  };
+
+  const closeUploadModal = () => {
+    setIsUploadModalShowing(false);
+    setTimeout(() => {
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }, 300);
+  };
+
+  const openEditModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalShowing(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  const openDeleteModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  // Handle body scroll lock when modals are open
+  useEffect(() => {
+    if (isUploadModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsUploadModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsUploadModalShowing(false);
+    }
+  }, [isUploadModalOpen]);
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsEditModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsEditModalShowing(false);
+    }
+  }, [isEditModalOpen]);
+
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsDeleteModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsDeleteModalShowing(false);
+    }
+  }, [isDeleteModalOpen]);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type (PDF, DOC, DOCX)
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please select a PDF or Word document');
+        return;
+      }
+      // Validate file size (max 50MB for documents)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('File size must be less than 50MB');
+        return;
+      }
+      setUploadFile(file);
+    }
+  };
+
+  // Handle upload
+  const handleUpload = async (formData: any) => {
+    if (!uploadFile) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    const assetData = {
+      name: formData.name || uploadFile.name,
+      type: 'DOCUMENT' as const,
+      url: URL.createObjectURL(uploadFile), // Placeholder - should be actual upload URL
+      description: formData.description || undefined,
+      tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).concat(['lookbook']) : ['lookbook'],
+      fileSize: uploadFile.size,
+      mimeType: uploadFile.type,
+      productId: formData.productId || undefined,
+    };
+
+    uploadMutation.mutate(assetData);
+  };
+
+  // Handle update
+  const handleUpdate = (formData: any) => {
+    if (!selectedAsset) return;
+
+    // Clean and validate the form data
+    const name = formData.name?.trim();
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+
+    const assetData: any = {
+      name: name,
+    };
+
+    // Only include description if it's not empty
+    if (formData.description && formData.description.trim()) {
+      assetData.description = formData.description.trim();
+    } else {
+      assetData.description = undefined;
+    }
+
+    // Process tags - split by comma, trim, and filter out empty strings
+    if (formData.tags && formData.tags.trim()) {
+      const tagsArray = formData.tags
+        .split(',')
+        .map((tag: string) => tag.trim())
+        .filter((tag: string) => tag.length > 0);
+      assetData.tags = tagsArray.length > 0 ? tagsArray : undefined;
+    } else {
+      assetData.tags = undefined;
+    }
+
+    console.log('Updating lookbook:', selectedAsset.id, assetData);
+    updateMutation.mutate({ id: selectedAsset.id, assetData });
+  };
 
   const handleDelete = () => {
     if (selectedAsset) {
@@ -530,7 +1529,7 @@ function LookbooksSection() {
             />
           </div>
           <button
-            onClick={() => setIsUploadModalOpen(true)}
+            onClick={openUploadModal}
             className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Upload className="w-4 h-4" />
@@ -611,20 +1610,14 @@ function LookbooksSection() {
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedAsset(lookbook);
-                            setIsEditModalOpen(true);
-                          }}
+                          onClick={() => openEditModal(lookbook)}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedAsset(lookbook);
-                            setIsDeleteModalOpen(true);
-                          }}
+                          onClick={() => openDeleteModal(lookbook)}
                           className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete"
                         >
@@ -640,73 +1633,145 @@ function LookbooksSection() {
         </div>
       )}
 
-      {/* Upload Modal - Placeholder */}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFiltered}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
+        </div>
+      )}
+
+      {/* Upload Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Lookbook</h3>
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Upload functionality will be implemented here.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
+        <>
+          <div className={`modal-backdrop fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} />
+          <div className={`modal fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Upload Lookbook</h5>
+                  <button type="button" onClick={closeUploadModal} className="btn-close" aria-label="Close">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleUpload({
+                    name: formData.get('name') as string,
+                    description: formData.get('description') as string,
+                    tags: formData.get('tags') as string,
+                  });
+                }}>
+                  <div className="modal-body p-6">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Document File <span className="text-red-500">*</span>
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
+                        {uploadFile ? (
+                          <div className="space-y-4">
+                            <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{uploadFile.name}</p>
+                            <button type="button" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remove</button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Click to upload or drag and drop</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">PDF, DOC, DOCX up to 50MB</p>
+                            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleFileSelect} className="hidden" id="lookbook-file-upload" />
+                            <label htmlFor="lookbook-file-upload" className="mt-4 inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors">Select File</label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name <span className="text-red-500">*</span></label>
+                      <input type="text" name="name" defaultValue={uploadFile?.name || ''} required className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter lookbook name" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                      <textarea name="description" rows={3} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter description (optional)" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+                      <input type="text" name="tags" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter tags separated by commas" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple tags with commas</p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button type="button" onClick={closeUploadModal} className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" disabled={!uploadFile || uploadMutation.isPending} className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">{uploadMutation.isPending ? 'Uploading...' : 'Upload Lookbook'}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedAsset && (
+        <>
+          <div className={`modal-backdrop fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} />
+          <div className={`modal fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Edit Lookbook</h5>
+                  <button type="button" onClick={closeEditModal} className="btn-close" aria-label="Close"><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleUpdate({
+                    name: formData.get('name') as string,
+                    description: formData.get('description') as string,
+                    tags: formData.get('tags') as string,
+                  });
+                }}>
+                  <div className="modal-body p-6">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name <span className="text-red-500">*</span></label>
+                      <input type="text" name="name" defaultValue={selectedAsset.name} required className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter lookbook name" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                      <textarea name="description" rows={3} defaultValue={selectedAsset.description || ''} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter description (optional)" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+                      <input type="text" name="tags" defaultValue={selectedAsset.tags?.join(', ') || ''} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter tags separated by commas" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple tags with commas</p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button type="button" onClick={closeEditModal} className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" disabled={updateMutation.isPending} className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">{updateMutation.isPending ? 'Updating...' : 'Update Lookbook'}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Lookbook</h3>
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Are you sure you want to delete <span className="font-semibold">"{selectedAsset.name}"</span>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteModal
+          title="Delete Lookbook"
+          message="Are you sure you want to delete"
+          itemName={selectedAsset.name}
+          onClose={closeDeleteModal}
+          onConfirm={handleDelete}
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   );
@@ -717,50 +1782,117 @@ function BrandContentSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'OTHER'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [_isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUploadModalShowing, setIsUploadModalShowing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [_isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch brand content from DAM API (filter by brand-related tags/descriptions)
-  const { data: assetsData, isLoading } = useQuery({
+  const { data: assetsResponse, isLoading } = useQuery({
     queryKey: ['dam', 'brand-content', searchQuery, filterType],
     queryFn: async () => {
-      const response = await api.get('/dam');
-      // Filter assets that are brand-related (have brand tags or are not product-specific)
-      let brandAssets = (response.data || []).filter((asset: any) => {
-        // Include assets without productId (general brand assets) or with brand-related tags
-        const tagsLower = asset.tags?.join(' ').toLowerCase() || '';
-        const descLower = asset.description?.toLowerCase() || '';
-        const nameLower = asset.name.toLowerCase();
-        const searchText = tagsLower + ' ' + descLower + ' ' + nameLower;
-        return !asset.productId ||
-          searchText.includes('brand') ||
-          searchText.includes('logo') ||
-          searchText.includes('marketing') ||
-          searchText.includes('campaign');
-      });
+      try {
+        // Fetch all data to filter by brand-related criteria
+        const response = await api.get(`/dam?skip=0&take=10000`);
+        const allAssets = response.data?.data || response.data || [];
+        // Filter assets that are brand-related (have brand tags or are not product-specific)
+        let brandAssets = allAssets.filter((asset: any) => {
+          // Include assets without productId (general brand assets) or with brand-related tags
+          const tagsLower = asset.tags?.join(' ').toLowerCase() || '';
+          const descLower = asset.description?.toLowerCase() || '';
+          const nameLower = asset.name.toLowerCase();
+          const searchText = tagsLower + ' ' + descLower + ' ' + nameLower;
+          return !asset.productId ||
+            searchText.includes('brand') ||
+            searchText.includes('logo') ||
+            searchText.includes('marketing') ||
+            searchText.includes('campaign');
+        });
 
-      // Filter by type if specified
-      if (filterType !== 'all') {
-        brandAssets = brandAssets.filter((asset: any) => asset.type === filterType);
+        // Filter by type if specified
+        if (filterType !== 'all') {
+          brandAssets = brandAssets.filter((asset: any) => asset.type === filterType);
+        }
+
+        // Filter by search query if provided
+        if (searchQuery) {
+          brandAssets = brandAssets.filter((asset: any) =>
+            asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        }
+
+        return {
+          data: brandAssets,
+          total: brandAssets.length,
+        };
+      } catch (error) {
+        return { data: [], total: 0 };
       }
-
-      // Filter by search query if provided
-      if (searchQuery) {
-        brandAssets = brandAssets.filter((asset: any) =>
-          asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
-      }
-
-      return brandAssets;
     },
   });
 
-  const brandAssets = assetsData || [];
+  const rawBrandAssets = assetsResponse?.data || [];
+  const totalBrandAssets = assetsResponse?.total || 0;
+  
+  // Apply client-side pagination
+  const brandAssets = rawBrandAssets.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  const totalFiltered = totalBrandAssets;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterType]);
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (assetData: any) => {
+      const response = await api.post('/dam', assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'brand-content'] });
+      toast.success('Asset uploaded successfully!');
+      closeUploadModal();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to upload asset');
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, assetData }: { id: number; assetData: any }) => {
+      console.log('Update mutation called (brand asset):', { id, assetData });
+      const response = await api.patch(`/dam/${id}`, assetData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dam', 'brand-content'] });
+      toast.success('Asset updated successfully!');
+      closeEditModal();
+    },
+    onError: (error: any) => {
+      console.error('Update error (brand asset):', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.message) 
+                            ? error.response.data.message.map((m: any) => typeof m === 'string' ? m : Object.values(m).join(', ')).join(', ') 
+                            : 'Failed to update asset');
+      toast.error(errorMessage);
+    },
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -768,15 +1900,191 @@ function BrandContentSection() {
       await api.delete(`/dam/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dam'] });
+      queryClient.invalidateQueries({ queryKey: ['dam', 'brand-content'] });
       toast.success('Asset deleted successfully!');
-      setIsDeleteModalOpen(false);
-      setSelectedAsset(null);
+      closeDeleteModal();
     },
     onError: () => {
       toast.error('Failed to delete asset');
     },
   });
+
+  // Modal handlers
+  const openUploadModal = () => {
+    setIsUploadModalOpen(true);
+  };
+
+  const closeUploadModal = () => {
+    setIsUploadModalShowing(false);
+    setTimeout(() => {
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }, 300);
+  };
+
+  const openEditModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalShowing(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  const openDeleteModal = (asset: any) => {
+    setSelectedAsset(asset);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalShowing(false);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setSelectedAsset(null);
+    }, 300);
+  };
+
+  // Handle body scroll lock when modals are open
+  useEffect(() => {
+    if (isUploadModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsUploadModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsUploadModalShowing(false);
+    }
+  }, [isUploadModalOpen]);
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsEditModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsEditModalShowing(false);
+    }
+  }, [isEditModalOpen]);
+
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsDeleteModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsDeleteModalShowing(false);
+    }
+  }, [isDeleteModalOpen]);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('File size must be less than 50MB');
+        return;
+      }
+      setUploadFile(file);
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setUploadPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setUploadPreview(null);
+      }
+    }
+  };
+
+  // Determine asset type from file
+  const getAssetTypeFromFile = (file: File): 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'OTHER' => {
+    if (file.type.startsWith('image/')) return 'IMAGE';
+    if (file.type.startsWith('video/')) return 'VIDEO';
+    if (file.type.includes('pdf') || file.type.includes('document') || file.type.includes('word')) return 'DOCUMENT';
+    return 'OTHER';
+  };
+
+  // Handle upload
+  const handleUpload = async (formData: any) => {
+    if (!uploadFile) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    const assetType = getAssetTypeFromFile(uploadFile);
+    const assetData = {
+      name: formData.name || uploadFile.name,
+      type: assetType,
+      url: uploadPreview || URL.createObjectURL(uploadFile), // Placeholder - should be actual upload URL
+      thumbnailUrl: uploadPreview || (assetType === 'IMAGE' ? URL.createObjectURL(uploadFile) : undefined),
+      description: formData.description || undefined,
+      tags: formData.tags ? formData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).concat(['brand']) : ['brand'],
+      fileSize: uploadFile.size,
+      mimeType: uploadFile.type,
+      productId: formData.productId || undefined,
+    };
+
+    uploadMutation.mutate(assetData);
+  };
+
+  // Handle update
+  const handleUpdate = (formData: any) => {
+    if (!selectedAsset) return;
+
+    // Clean and validate the form data
+    const name = formData.name?.trim();
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+
+    const assetData: any = {
+      name: name,
+    };
+
+    // Only include description if it's not empty
+    if (formData.description && formData.description.trim()) {
+      assetData.description = formData.description.trim();
+    } else {
+      assetData.description = undefined;
+    }
+
+    // Process tags - split by comma, trim, and filter out empty strings
+    if (formData.tags && formData.tags.trim()) {
+      const tagsArray = formData.tags
+        .split(',')
+        .map((tag: string) => tag.trim())
+        .filter((tag: string) => tag.length > 0);
+      assetData.tags = tagsArray.length > 0 ? tagsArray : undefined;
+    } else {
+      assetData.tags = undefined;
+    }
+
+    console.log('Updating brand asset:', selectedAsset.id, assetData);
+    updateMutation.mutate({ id: selectedAsset.id, assetData });
+  };
 
   const handleDelete = () => {
     if (selectedAsset) {
@@ -865,7 +2173,7 @@ function BrandContentSection() {
                 </button>
               </div>
               <button
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={openUploadModal}
                 className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <Upload className="w-4 h-4" />
@@ -891,7 +2199,7 @@ function BrandContentSection() {
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4">
           {brandAssets.map((asset: any) => {
             const AssetIcon = getAssetIcon(asset.type);
             return (
@@ -917,10 +2225,7 @@ function BrandContentSection() {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          setSelectedAsset(asset);
-                          setIsEditModalOpen(true);
-                        }}
+                        onClick={() => openEditModal(asset)}
                         className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
                         title="Edit"
                       >
@@ -950,10 +2255,7 @@ function BrandContentSection() {
                         <Download className="w-4 h-4 text-gray-900" />
                       </button>
                       <button
-                        onClick={() => {
-                          setSelectedAsset(asset);
-                          setIsDeleteModalOpen(true);
-                        }}
+                        onClick={() => openDeleteModal(asset)}
                         className="p-2 bg-white/90 hover:bg-white rounded-lg transition-colors"
                         title="Delete"
                       >
@@ -1053,20 +2355,14 @@ function BrandContentSection() {
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setIsEditModalOpen(true);
-                          }}
+                          onClick={() => openEditModal(asset)}
                           className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setIsDeleteModalOpen(true);
-                          }}
+                          onClick={() => openDeleteModal(asset)}
                           className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete"
                         >
@@ -1082,73 +2378,151 @@ function BrandContentSection() {
         </div>
       )}
 
-      {/* Upload Modal - Placeholder */}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFiltered}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
+        </div>
+      )}
+
+      {/* Upload Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Brand Asset</h3>
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Upload functionality will be implemented here.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
+        <>
+          <div className={`modal-backdrop fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} />
+          <div className={`modal fade ${isUploadModalShowing ? 'show' : ''}`} onClick={closeUploadModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Upload Brand Asset</h5>
+                  <button type="button" onClick={closeUploadModal} className="btn-close" aria-label="Close"><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleUpload({
+                    name: formData.get('name') as string,
+                    description: formData.get('description') as string,
+                    tags: formData.get('tags') as string,
+                  });
+                }}>
+                  <div className="modal-body p-6">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asset File <span className="text-red-500">*</span></label>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
+                        {uploadPreview ? (
+                          <div className="space-y-4">
+                            <img src={uploadPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                            <button type="button" onClick={() => { setUploadFile(null); setUploadPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remove</button>
+                          </div>
+                        ) : uploadFile ? (
+                          <div className="space-y-4">
+                            <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{uploadFile.name}</p>
+                            <button type="button" onClick={() => { setUploadFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remove</button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Click to upload or drag and drop</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">Images, Videos, Documents up to 50MB</p>
+                            <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" id="brand-asset-file-upload" />
+                            <label htmlFor="brand-asset-file-upload" className="mt-4 inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors">Select File</label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name <span className="text-red-500">*</span></label>
+                      <input type="text" name="name" defaultValue={uploadFile?.name || ''} required className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter asset name" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                      <textarea name="description" rows={3} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter description (optional)" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+                      <input type="text" name="tags" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter tags separated by commas" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple tags with commas</p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button type="button" onClick={closeUploadModal} className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" disabled={!uploadFile || uploadMutation.isPending} className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">{uploadMutation.isPending ? 'Uploading...' : 'Upload Asset'}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedAsset && (
+        <>
+          <div className={`modal-backdrop fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} />
+          <div className={`modal fade ${isEditModalShowing ? 'show' : ''}`} onClick={closeEditModal} role="dialog" aria-modal="true" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-content">
+                <div className="modal-header border-b border-gray-200 dark:border-gray-700">
+                  <h5 className="modal-title text-lg font-semibold text-gray-900 dark:text-white">Edit Brand Asset</h5>
+                  <button type="button" onClick={closeEditModal} className="btn-close" aria-label="Close"><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleUpdate({
+                    name: formData.get('name') as string,
+                    description: formData.get('description') as string,
+                    tags: formData.get('tags') as string,
+                  });
+                }}>
+                  <div className="modal-body p-6">
+                    {selectedAsset.type === 'IMAGE' && (selectedAsset.thumbnailUrl || selectedAsset.url) ? (
+                      <div className="mb-4">
+                        <img src={selectedAsset.thumbnailUrl || selectedAsset.url} alt={selectedAsset.name} className="max-h-48 mx-auto rounded-lg" />
+                      </div>
+                    ) : null}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name <span className="text-red-500">*</span></label>
+                      <input type="text" name="name" defaultValue={selectedAsset.name} required className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter asset name" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                      <textarea name="description" rows={3} defaultValue={selectedAsset.description || ''} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter description (optional)" />
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+                      <input type="text" name="tags" defaultValue={selectedAsset.tags?.join(', ') || ''} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter tags separated by commas" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple tags with commas</p>
+                    </div>
+                  </div>
+                  <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
+                    <button type="button" onClick={closeEditModal} className="px-4 text-[14px] py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" disabled={updateMutation.isPending} className="px-4 text-[14px] py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">{updateMutation.isPending ? 'Updating...' : 'Update Asset'}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Asset</h3>
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Are you sure you want to delete <span className="font-semibold">"{selectedAsset.name}"</span>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setSelectedAsset(null);
-                }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteModal
+          title="Delete Asset"
+          message="Are you sure you want to delete"
+          itemName={selectedAsset.name}
+          onClose={closeDeleteModal}
+          onConfirm={handleDelete}
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   );

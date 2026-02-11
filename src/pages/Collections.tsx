@@ -7,6 +7,8 @@ import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { ButtonWithWaves, CustomDropdown } from '../components/ui';
+import DeleteModal from '../components/ui/DeleteModal';
+import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 
 
 // Waves effect button component matching sample
@@ -63,11 +65,15 @@ export default function Collections() {
 
   const createCollectionMutation = useMutation({
     mutationFn: async (collectionData: any) => {
+      (window as any).__lastCollectionData = collectionData;
       const response = await api.post('/collections', collectionData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      const collectionData = (window as any).__lastCollectionData;
+      logCreate('Collection', data?.id || data?.data?.id, collectionData);
+      delete (window as any).__lastCollectionData;
       toast.success('Collection created successfully!');
       closeModal();
     },
@@ -82,8 +88,9 @@ export default function Collections() {
       const response = await api.patch(`/collections/${id}`, collectionData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; collectionData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      logUpdate('Collection', variables.id, variables.collectionData);
       toast.success('Collection updated successfully!');
       closeEditModal();
     },
@@ -98,8 +105,9 @@ export default function Collections() {
       const response = await api.delete(`/collections/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      logDelete('Collection', id);
       toast.success('Collection deleted successfully!');
       closeDeleteModal();
     },
@@ -353,13 +361,14 @@ export default function Collections() {
       )}
 
       {/* Delete Collection Modal */}
-      {isDeleteModalOpen && selectedCollection && (
-        <DeleteCollectionModal
-          collection={selectedCollection}
+      {isDeleteModalOpen && selectedCollection && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Collection"
+          message="Are you sure you want to delete"
+          itemName={selectedCollection.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteCollectionMutation.mutate(selectedCollection.id)}
           isLoading={deleteCollectionMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
     </div>
@@ -876,81 +885,3 @@ function EditCollectionModal({
   );
 }
 
-// Delete Collection Modal Component
-function DeleteCollectionModal({
-  collection,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  collection: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteCollectionModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteCollectionModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Collection
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{collection.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Collection'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}

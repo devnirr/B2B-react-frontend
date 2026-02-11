@@ -452,11 +452,10 @@ export default function Layout({ children }: LayoutProps) {
   });
 
   // Transform orders into calendar events
-  const calendarEvents = useMemo(() => {
+  const allCalendarEvents = useMemo(() => {
     if (!calendarOrdersData || calendarOrdersData.length === 0) return [];
 
     return calendarOrdersData
-      .slice(0, 3) // Show only latest 3 in dropdown
       .map((order: any) => {
         const orderDate = new Date(order.orderDate || order.createdAt);
         const requiredDate = order.requiredDate ? new Date(order.requiredDate) : null;
@@ -472,6 +471,12 @@ export default function Layout({ children }: LayoutProps) {
       })
       .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [calendarOrdersData]);
+
+  // Show only latest 10 in dropdown
+  const calendarEvents = allCalendarEvents.slice(0, 10);
+  
+  // Total count of upcoming events for badge
+  const calendarEventsCount = allCalendarEvents.length;
 
   const unreadDocumentsCount = documents.filter((doc: { status: 'new' | 'read' }) => doc.status === 'new').length;
   const unreadNotificationsCount = notifications.filter(notif => !notif.read).length;
@@ -816,18 +821,18 @@ export default function Layout({ children }: LayoutProps) {
                   aria-label="Toggle theme"
                 >
                   {/* Sun Icon - Left */}
-                  <div className={`absolute left-1 flex items-center justify-center w-6 h-6 z-10 transition-opacity ${darkMode ? 'opacity-50' : 'opacity-100'
+                  <div className={`absolute left-1 flex items-center justify-center w-5 h-5 z-10 transition-opacity ${darkMode ? 'opacity-50' : 'opacity-100'
                     }`}>
                     <Sun className={`w-5 h-5 ${darkMode ? 'text-white' : 'text-gray-800'}`} strokeWidth={2} />
                   </div>
                   {/* Moon Icon - Right */}
-                  <div className={`absolute right-1 flex items-center justify-center w-6 h-6 z-10 transition-opacity ${darkMode ? 'opacity-100' : 'opacity-50'
+                  <div className={`absolute right-1 flex items-center justify-center w-5 h-5 z-10 transition-opacity ${darkMode ? 'opacity-100' : 'opacity-50'
                     }`}>
                     <Moon className={`w-5 h-5 ${darkMode ? 'text-gray-900' : 'text-gray-600'}`} strokeWidth={2} />
                   </div>
                   {/* Toggle Thumb */}
                   <div
-                    className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-lg transform transition-transform duration-300 ease-in-out ${darkMode ? 'translate-x-8' : 'translate-x-0'
+                    className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transform transition-transform duration-300 ease-in-out ${darkMode ? 'translate-x-8' : 'translate-x-0'
                       }`}
                   />
                 </button>
@@ -1015,17 +1020,31 @@ export default function Layout({ children }: LayoutProps) {
                     setDocumentsDropdownOpen(false);
                     setNotificationsDropdownOpen(false);
                   }}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                   title="Calendar & Events"
                 >
                   <i className="fi fi-rr-calendar text-[20px] text-gray-700 dark:text-white"></i>
+                  {calendarEventsCount > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                      {calendarEventsCount > 9 ? '9+' : calendarEventsCount}
+                    </span>
+                  )}
                 </button>
 
                 {calendarDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                      <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">Upcoming Events</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Next 7 days</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">Upcoming Events</h3>
+                        <Link
+                          to="/calendar"
+                          onClick={() => setCalendarDropdownOpen(false)}
+                          className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+                        >
+                          View All
+                        </Link>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Next 7 days</p>
                     </div>
                     <div className="overflow-y-auto flex-1">
                       {calendarEvents.length === 0 ? (

@@ -250,7 +250,7 @@ function VismaMappingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <MapPin className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -264,7 +264,7 @@ function VismaMappingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -278,7 +278,7 @@ function VismaMappingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -292,7 +292,7 @@ function VismaMappingSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -1097,6 +1097,22 @@ function SyncLogsSection() {
   const [isStartingSync, setIsStartingSync] = useState(false);
   const queryClient = useQueryClient();
 
+  // Fetch mappings to check if any are active
+  const { data: mappingsData } = useQuery({
+    queryKey: ['visma-mappings'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/visma-mappings');
+        return response.data?.data || response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const mappings = mappingsData || [];
+  const activeMappings = mappings.filter((m: any) => m.status === 'active');
+
   // Fetch sync logs from API
   const { data: syncLogsData, isLoading: syncLogsLoading, refetch: refetchSyncLogs } = useQuery({
     queryKey: ['sync-logs', statusFilter],
@@ -1113,9 +1129,27 @@ function SyncLogsSection() {
         return [];
       }
     },
+    // Auto-refresh every 2 seconds if there are in-progress syncs
+    refetchInterval: (query) => {
+      const data = query.state.data as any[] | undefined;
+      if (data && data.some((log: any) => log.status === 'in-progress')) {
+        return 2000; // Refetch every 2 seconds
+      }
+      return false; // Don't auto-refetch if no in-progress syncs
+    },
   });
 
   const syncLogs = syncLogsData || [];
+
+  // Update selected log when sync logs data changes (for real-time updates in modal)
+  useEffect(() => {
+    if (selectedLog && syncLogs.length > 0) {
+      const updatedLog = syncLogs.find((log: any) => log.id === selectedLog.id);
+      if (updatedLog && updatedLog.status !== selectedLog.status) {
+        setSelectedLog(updatedLog);
+      }
+    }
+  }, [syncLogs, selectedLog]);
 
   // Filter sync logs
   const filteredLogs = useMemo(() => {
@@ -1199,6 +1233,19 @@ function SyncLogsSection() {
     }
   };
 
+  const formatDuration = (seconds: number | null): string => {
+    if (seconds === null) return '-';
+    if (seconds < 1) {
+      return `${Math.round(seconds * 1000)}ms`;
+    } else if (seconds < 60) {
+      return `${Math.round(seconds)}s`;
+    } else {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.round(seconds % 60);
+      return `${mins}m ${secs}s`;
+    }
+  };
+
   if (syncLogsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1220,7 +1267,7 @@ function SyncLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <RefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1234,7 +1281,7 @@ function SyncLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1248,7 +1295,7 @@ function SyncLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <X className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <X className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -1262,7 +1309,7 @@ function SyncLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <RefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1276,7 +1323,7 @@ function SyncLogsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Database className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1307,13 +1354,30 @@ function SyncLogsSection() {
             </div>
             <button
               onClick={async () => {
+                // Check if there are active mappings
+                if (activeMappings.length === 0) {
+                  if (mappings.length === 0) {
+                    toast.error('No mappings found. Please create a mapping first.');
+                  } else {
+                    toast.error(
+                      `No active mappings found. You have ${mappings.length} mapping(s) but none are active. Please activate at least one mapping to sync.`,
+                      { duration: 5000 }
+                    );
+                  }
+                  return;
+                }
+
                 setIsStartingSync(true);
                 try {
                   const response = await api.post('/sync-logs/start');
                   if (response.data) {
+                    // Invalidate and refetch immediately
                     await queryClient.invalidateQueries({ queryKey: ['sync-logs'] });
                     await refetchSyncLogs();
-                    toast.success('Sync started successfully!');
+                    toast.success(`Sync started successfully! Processing ${activeMappings.length} active mapping(s).`);
+                    
+                    // The refetchInterval will automatically poll for updates
+                    // No need to manually refetch - it will happen every 2 seconds
                   }
                 } catch (error: any) {
                   console.error('Error starting sync:', error);
@@ -1326,7 +1390,7 @@ function SyncLogsSection() {
               className="flex items-center text-[14px] gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-4 h-4 ${isStartingSync ? 'animate-spin' : ''}`} />
-              Start Sync
+              Start Sync {activeMappings.length > 0 && `(${activeMappings.length})`}
             </button>
           </div>
         </div>
@@ -1377,9 +1441,10 @@ function SyncLogsSection() {
               ) : (
                 paginatedLogs.map((log: any) => {
                   const StatusIcon = getStatusIcon(log.status);
-                  const duration = log.completedAt
-                    ? Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 1000)
+                  const durationMs = log.completedAt
+                    ? new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()
                     : null;
+                  const duration = durationMs !== null ? durationMs / 1000 : null;
 
                   return (
                     <tr
@@ -1422,7 +1487,7 @@ function SyncLogsSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {duration !== null ? `${duration}s` : '-'}
+                          {formatDuration(duration)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1575,8 +1640,21 @@ function SyncLogDetailsModal({ log, onClose }: SyncLogDetailsModalProps) {
 
   const StatusIcon = getStatusIcon(log.status);
   const duration = log.completedAt
-    ? Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 1000)
+    ? (new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 1000
     : null;
+  
+  const formatDuration = (seconds: number | null): string => {
+    if (seconds === null) return '-';
+    if (seconds < 1) {
+      return `${Math.round(seconds * 1000)}ms`;
+    } else if (seconds < 60) {
+      return `${Math.round(seconds)}s`;
+    } else {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.round(seconds % 60);
+      return `${mins}m ${secs}s`;
+    }
+  };
 
   return (
     <div
@@ -1598,7 +1676,7 @@ function SyncLogDetailsModal({ log, onClose }: SyncLogDetailsModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1630,7 +1708,7 @@ function SyncLogDetailsModal({ log, onClose }: SyncLogDetailsModalProps) {
                 Mapping ID
               </label>
               <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
-                {log.mappingId}
+                {log.mappingId ? log.mappingId : 'N/A (Full Sync)'}
               </div>
             </div>
           </div>
@@ -1684,7 +1762,7 @@ function SyncLogDetailsModal({ log, onClose }: SyncLogDetailsModalProps) {
                   Duration
                 </label>
                 <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
-                  {duration} seconds
+                  {formatDuration(duration)}
                 </div>
               </div>
             )}

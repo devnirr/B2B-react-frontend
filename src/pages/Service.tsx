@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   RotateCcw,
@@ -16,6 +16,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'return-status' | 'case-log';
 type ReturnStatus = 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled';
@@ -80,6 +81,7 @@ export default function Service() {
 function ReturnStatusSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
 
   // Fetch returns/RMA data
@@ -188,6 +190,17 @@ function ReturnStatusSection() {
     });
   }, [processedReturns, searchQuery, statusFilter]);
 
+  // Apply client-side pagination
+  const totalPages = Math.ceil(filteredReturns.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedReturns = filteredReturns.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const pending = filteredReturns.filter((item: any) => item.status === 'pending');
@@ -246,9 +259,9 @@ function ReturnStatusSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -258,7 +271,7 @@ function ReturnStatusSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <RotateCcw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <RotateCcw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -272,7 +285,7 @@ function ReturnStatusSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -286,7 +299,7 @@ function ReturnStatusSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <RotateCcw className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <RotateCcw className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -300,14 +313,14 @@ function ReturnStatusSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <SearchInput
               value={searchQuery}
@@ -337,7 +350,7 @@ function ReturnStatusSection() {
 
       {/* Returns Table */}
       {filteredReturns.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <RotateCcw className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -383,7 +396,7 @@ function ReturnStatusSection() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredReturns.map((item: any) => {
+                {paginatedReturns.map((item: any) => {
                   const StatusIcon = getStatusIcon(item.status);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -438,6 +451,18 @@ function ReturnStatusSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredReturns.length}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -457,6 +482,22 @@ interface ReturnDetailsModalProps {
 
 function ReturnDetailsModal({ returnItem, onClose }: ReturnDetailsModalProps) {
   if (!returnItem) return null;
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   const getStatusColor = (status: ReturnStatus) => {
     switch (status) {
@@ -478,8 +519,15 @@ function ReturnDetailsModal({ returnItem, onClose }: ReturnDetailsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Return Details</h2>
@@ -489,7 +537,7 @@ function ReturnDetailsModal({ returnItem, onClose }: ReturnDetailsModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -625,57 +673,60 @@ function CaseLogSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<any>(null);
 
-  // Load cases from localStorage or fetch from API
-  const [cases, setCases] = useState<any[]>(() => {
-    const saved = localStorage.getItem('service-cases');
-    return saved ? JSON.parse(saved) : [];
+  const queryClient = useQueryClient();
+
+  // Fetch cases from API
+  const { data: casesData } = useQuery({
+    queryKey: ['service-cases', statusFilter, priorityFilter, searchQuery],
+    queryFn: async () => {
+      try {
+        const params = new URLSearchParams();
+        if (statusFilter !== 'all') params.append('status', statusFilter.toUpperCase());
+        if (priorityFilter !== 'all') params.append('priority', priorityFilter.toUpperCase());
+        if (searchQuery) params.append('search', searchQuery);
+        params.append('skip', '0');
+        params.append('take', '1000');
+        
+        const response = await api.get(`/service-cases?${params.toString()}`);
+        return response.data?.data || [];
+      } catch (error) {
+        console.error('Error fetching service cases:', error);
+        return [];
+      }
+    },
   });
 
-  // Save cases to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('service-cases', JSON.stringify(cases));
+  const cases = casesData || [];
+
+  // Filter cases (API already filters, but we can do additional client-side filtering if needed)
+  const filteredCases = useMemo(() => {
+    // API handles filtering, but we can do additional sorting
+    return [...cases].sort((a: any, b: any) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }, [cases]);
 
-  // Filter cases
-  const filteredCases = useMemo(() => {
-    let filtered = cases;
+  // Apply client-side pagination
+  const totalPages = Math.ceil(filteredCases.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedCases = filteredCases.slice(startIndex, endIndex);
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((item: any) =>
-        item.caseNumber.toLowerCase().includes(query) ||
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((item: any) => item.status === statusFilter);
-    }
-
-    // Filter by priority
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter((item: any) => item.priority === priorityFilter);
-    }
-
-    // Sort by date (newest first)
-    return filtered.sort((a: any, b: any) => {
-      return new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime();
-    });
-  }, [cases, searchQuery, statusFilter, priorityFilter]);
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, priorityFilter]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
-    const open = filteredCases.filter((item: any) => item.status === 'open');
-    const inProgress = filteredCases.filter((item: any) => item.status === 'in-progress');
-    const resolved = filteredCases.filter((item: any) => item.status === 'resolved');
-    const urgent = filteredCases.filter((item: any) => item.priority === 'urgent');
+    const open = filteredCases.filter((item: any) => item.status === 'OPEN');
+    const inProgress = filteredCases.filter((item: any) => item.status === 'IN_PROGRESS');
+    const resolved = filteredCases.filter((item: any) => item.status === 'RESOLVED');
+    const urgent = filteredCases.filter((item: any) => item.priority === 'URGENT');
 
     return {
       total: filteredCases.length,
@@ -686,62 +737,87 @@ function CaseLogSection() {
     };
   }, [filteredCases]);
 
-  const getStatusColor = (status: CaseStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open':
+      case 'OPEN':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'in-progress':
+      case 'IN_PROGRESS':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-      case 'resolved':
+      case 'RESOLVED':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'closed':
+      case 'CLOSED':
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
     }
   };
 
-  const getPriorityColor = (priority: CasePriority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent':
+      case 'URGENT':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'high':
+      case 'HIGH':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-      case 'medium':
+      case 'MEDIUM':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'low':
+      case 'LOW':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
     }
   };
+
+  // Mutation for creating cases
+  const createCaseMutation = useMutation({
+    mutationFn: async (caseData: any) => {
+      // Generate case number
+      const caseNumber = `CASE-${Date.now()}`;
+      return api.post('/service-cases', {
+        ...caseData,
+        caseNumber,
+        status: caseData.status?.toUpperCase() || 'OPEN',
+        priority: caseData.priority?.toUpperCase() || 'MEDIUM',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['service-cases'] });
+      toast.success('Case created successfully!');
+      setShowCreateModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to create case');
+    },
+  });
+
+  // Mutation for updating cases
+  const updateCaseMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      const updateData: any = { ...updates };
+      if (updateData.status) updateData.status = updateData.status.toUpperCase();
+      if (updateData.priority) updateData.priority = updateData.priority.toUpperCase();
+      return api.patch(`/service-cases/${id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['service-cases'] });
+      toast.success('Case updated successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update case');
+    },
+  });
 
   const handleCreateCase = (caseData: any) => {
-    const newCase = {
-      id: Date.now(),
-      caseNumber: `CASE-${Date.now()}`,
-      ...caseData,
-      createdDate: new Date().toISOString(),
-      updatedDate: new Date().toISOString(),
-    };
-    setCases([...cases, newCase]);
-    setShowCreateModal(false);
-    toast.success('Case created successfully!');
+    createCaseMutation.mutate(caseData);
   };
 
   const handleUpdateCase = (caseId: number, updates: any) => {
-    setCases(cases.map((c: any) => 
-      c.id === caseId 
-        ? { ...c, ...updates, updatedDate: new Date().toISOString() }
-        : c
-    ));
-    toast.success('Case updated successfully!');
+    updateCaseMutation.mutate({ id: caseId, updates });
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -751,7 +827,7 @@ function CaseLogSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -765,7 +841,7 @@ function CaseLogSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -779,7 +855,7 @@ function CaseLogSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -793,14 +869,14 @@ function CaseLogSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters and Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <SearchInput
               value={searchQuery}
@@ -837,7 +913,7 @@ function CaseLogSection() {
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
               New Case
@@ -848,7 +924,7 @@ function CaseLogSection() {
 
       {/* Cases Table */}
       {filteredCases.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -859,15 +935,6 @@ function CaseLogSection() {
                 ? 'Try adjusting your search or filter criteria.'
                 : 'No cases or issues logged yet. Create a new case to get started.'}
             </p>
-            {!searchQuery && statusFilter === 'all' && priorityFilter === 'all' && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create First Case
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -900,7 +967,7 @@ function CaseLogSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredCases.map((item: any) => (
+                {paginatedCases.map((item: any) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -920,16 +987,16 @@ function CaseLogSection() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(item.priority)}`}>
-                        {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+                        {item.priority === 'URGENT' ? 'Urgent' : item.priority === 'HIGH' ? 'High' : item.priority === 'MEDIUM' ? 'Medium' : 'Low'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                        {item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('-', ' ')}
+                        {item.status === 'OPEN' ? 'Open' : item.status === 'IN_PROGRESS' ? 'In Progress' : item.status === 'RESOLVED' ? 'Resolved' : 'Closed'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(item.createdDate).toLocaleDateString()}
+                      {new Date(item.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
@@ -945,6 +1012,18 @@ function CaseLogSection() {
             </tbody>
           </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredCases.length}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -980,6 +1059,21 @@ function CreateCaseModal({ onClose, onCreate }: CreateCaseModalProps) {
   const [category, setCategory] = useState('technical');
   const [priority, setPriority] = useState<CasePriority>('medium');
   const [status, setStatus] = useState<CaseStatus>('open');
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1002,15 +1096,22 @@ function CreateCaseModal({ onClose, onCreate }: CreateCaseModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Case</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1023,7 +1124,7 @@ function CreateCaseModal({ onClose, onCreate }: CreateCaseModalProps) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               placeholder="Enter case title"
               required
             />
@@ -1037,7 +1138,7 @@ function CreateCaseModal({ onClose, onCreate }: CreateCaseModalProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               placeholder="Describe the issue or case details"
               required
             />
@@ -1083,7 +1184,7 @@ function CreateCaseModal({ onClose, onCreate }: CreateCaseModalProps) {
             </div>
           </div>
 
-          <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mb-6 flex justify-end gap-2">
+          <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700/50 border-t text-[14px] border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mb-6 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -1115,6 +1216,21 @@ function CaseDetailsModal({ caseItem, onClose, onUpdate }: CaseDetailsModalProps
   const [status, setStatus] = useState<CaseStatus>(caseItem.status);
   const [priority, setPriority] = useState<CasePriority>(caseItem.priority);
   const [notes, setNotes] = useState(caseItem.notes || '');
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   const handleSave = () => {
     onUpdate(caseItem.id, {
@@ -1126,8 +1242,15 @@ function CaseDetailsModal({ caseItem, onClose, onUpdate }: CaseDetailsModalProps
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{caseItem.title}</h2>
@@ -1137,7 +1260,7 @@ function CaseDetailsModal({ caseItem, onClose, onUpdate }: CaseDetailsModalProps
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1195,13 +1318,13 @@ function CaseDetailsModal({ caseItem, onClose, onUpdate }: CaseDetailsModalProps
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Created Date</p>
                 <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                  {new Date(caseItem.createdDate).toLocaleString()}
+                  {new Date(caseItem.createdAt).toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Last Updated</p>
                 <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                  {new Date(caseItem.updatedDate).toLocaleString()}
+                  {new Date(caseItem.updatedAt).toLocaleString()}
                 </p>
               </div>
             </div>

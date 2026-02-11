@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
@@ -23,7 +23,6 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -71,6 +70,8 @@ interface Task {
   completed: boolean;
   time: string;
   color?: string;
+  category?: string;
+  apiTask?: any; // Store original API task for mutations
 }
 
 export default function ExecutiveOverview() {
@@ -147,7 +148,57 @@ export default function ExecutiveOverview() {
     );
   };
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const queryClient = useQueryClient();
+
+  // Fetch tasks from API for Task Update card
+  const { data: tasksData } = useQuery({
+    queryKey: ['tasks', 'executive-dashboard'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/tasks', { params: { skip: 0, take: 10 } });
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return { data: [] };
+      }
+    },
+  });
+
+  // Map API tasks to the format expected by the component
+  const tasks: Task[] = useMemo(() => {
+    const apiTasks = tasksData?.data || [];
+    return apiTasks.map((task: any) => ({
+      id: task.id.toString(),
+      text: task.title || 'Untitled Task',
+      completed: task.status === 'COMPLETED',
+      time: task.dueDate 
+        ? new Date(task.dueDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+        : new Date(task.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      color: task.priority === 'HIGH' ? 'red' : task.priority === 'MEDIUM' ? 'orange' : 'blue',
+      category: task.category ? (task.category === 'General' ? 'Default' : task.category) : undefined,
+      apiTask: task // Store original task for API calls
+    }));
+  }, [tasksData]);
+
+  // Toggle task completion mutation
+  const toggleTaskMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      await api.patch(`/tasks/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/tasks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   // Handle annual report download
   const handleDownloadAnnualReport = () => {
@@ -318,13 +369,20 @@ export default function ExecutiveOverview() {
 
   // Task management functions
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+    const task = tasks.find(t => t.id === id);
+    if (task && (task as any).apiTask) {
+      const apiTask = (task as any).apiTask;
+      const newStatus = apiTask.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+      toggleTaskMutation.mutate({ id: apiTask.id, status: newStatus });
+    }
   };
 
   const deleteTask = (id: string) => {
-    setTasks(tasks.filter(task => task.id !== id));
+    const task = tasks.find(t => t.id === id);
+    if (task && (task as any).apiTask) {
+      const apiTask = (task as any).apiTask;
+      deleteTaskMutation.mutate(apiTask.id);
+    }
   };
 
   // Drag and drop sensors
@@ -340,16 +398,9 @@ export default function ExecutiveOverview() {
   );
 
   // Handle drag end
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setTasks((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
+  const handleDragEnd = (_event: DragEndEvent) => {
+    // Drag and drop reordering disabled when using API data
+    // Tasks are now managed by the API, so we don't update local state
   };
 
   // Sortable Task Item Component
@@ -420,6 +471,11 @@ export default function ExecutiveOverview() {
         >
           {task.text}
         </span>
+        {task.category && (
+          <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded flex-shrink-0">
+            {task.category}
+          </span>
+        )}
         <span className="text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">{task.time}</span>
         <button
           onClick={() => deleteTask(task.id)}
@@ -959,7 +1015,17 @@ export default function ExecutiveOverview() {
                           stops: [20, 100]
                         }
                       },
-                      tooltip: { enabled: false },
+                      tooltip: {
+                        enabled: true,
+                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        y: {
+                          formatter: (val: number) => {
+                            // Format to 2 decimal places and remove trailing zeros
+                            const formatted = parseFloat(val.toFixed(2));
+                            return formatted.toString();
+                          }
+                        }
+                      },
                       legend: { show: false }
                     }}
                   />
@@ -1026,7 +1092,7 @@ export default function ExecutiveOverview() {
                     },
                     dataLabels: { enabled: false },
                     markers: {
-                      size: 0,
+                      size: 4,
                       colors: ['#FFFFFF'],
                       strokeColors: '#5955D1',
                       strokeWidth: 3,
@@ -1049,8 +1115,15 @@ export default function ExecutiveOverview() {
                     },
                     tooltip: {
                       enabled: true,
-                      theme: 'dark',
-                      y: { formatter: (val: number) => val.toLocaleString() + ' orders' }
+                      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                      marker: { show: true },
+                      y: { 
+                        formatter: (val: number) => {
+                          // Format to 2 decimal places and remove trailing zeros
+                          const formatted = parseFloat(val.toFixed(2));
+                          return formatted.toLocaleString() + ' orders';
+                        }
+                      }
                     },
                     legend: { show: false }
                   }}
@@ -1113,7 +1186,18 @@ export default function ExecutiveOverview() {
                           cutout: '70%',
                           plugins: {
                             legend: { display: false },
-                            tooltip: { enabled: false }
+                            tooltip: {
+                              enabled: true,
+                              callbacks: {
+                                label: (context: any) => {
+                                  const label = context.label || '';
+                                  const value = context.parsed || 0;
+                                  // Format to 2 decimal places and remove trailing zeros
+                                  const formatted = parseFloat(value.toFixed(2));
+                                  return `${label}: ${formatted}`;
+                                }
+                              }
+                            }
                           },
                           maintainAspectRatio: false
                         }}
@@ -1461,7 +1545,16 @@ export default function ExecutiveOverview() {
                               },
                               tooltip: {
                                 enabled: true,
-                                y: { formatter: (val: number) => val.toFixed(1) + '%' }
+                                theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                                y: { 
+                                  formatter: (val: number, opts: any) => {
+                                    // Format to 2 decimal places and remove trailing zeros
+                                    const formatted = parseFloat(val.toFixed(2));
+                                    const type = percentages[opts.seriesIndex]?.type || '';
+                                    return `${type}: ${formatted}%`;
+                                  }
+                                },
+                                x: { show: false }
                               }
                             }}
                           />
@@ -1510,7 +1603,16 @@ export default function ExecutiveOverview() {
                               },
                               tooltip: {
                                 enabled: true,
-                                y: { formatter: (val: number) => val.toFixed(1) + '%' }
+                                theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                                y: { 
+                                  formatter: (val: number, opts: any) => {
+                                    // Format to 2 decimal places and remove trailing zeros
+                                    const formatted = parseFloat(val.toFixed(2));
+                                    const type = percentages[opts.seriesIndex]?.type || '';
+                                    return `${type}: ${formatted}%`;
+                                  }
+                                },
+                                x: { show: false }
                               }
                             }}
                           />
@@ -1523,7 +1625,7 @@ export default function ExecutiveOverview() {
                             <div key={idx} className="flex items-center gap-1 text-xs py-1">
                               <div className={`w-3 h-3 bg-primary ${opacityMap[idx] || 'opacity-100'} rounded`}></div>
                               <span className="text-gray-600 dark:text-gray-400 flex-1">{item.type}</span>
-                              <strong className="text-gray-900 dark:text-white font-semibold">{item.percentage.toFixed(1)}%</strong>
+                              <strong className="text-gray-900 dark:text-white font-semibold">{item.percentage.toFixed(2).replace(/\.?0+$/, '')}%</strong>
                             </div>
                           );
                         }) : (
@@ -2266,21 +2368,13 @@ export default function ExecutiveOverview() {
             <h6 className="text-[14px] font-semibold text-gray-900 dark:text-white mb-0">Task Update</h6>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/tasks')}
+                onClick={() => navigate('/my-tasks')}
                 className="text-sm text-primary hover:text-primary/80 transition-colors"
               >
                 View All
               </button>
               <button
-                onClick={() => {
-                  const newTask: Task = {
-                    id: Date.now().toString(),
-                    text: 'New task',
-                    completed: false,
-                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                  };
-                  setTasks([newTask, ...tasks]);
-                }}
+                onClick={() => navigate('/my-tasks')}
                 className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-md transition-colors flex items-center gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />

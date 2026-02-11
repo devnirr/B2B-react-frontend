@@ -193,7 +193,7 @@ export default function Documents() {
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getFileIconColor(doc.type)}`}>
-                      <FileText className="w-6 h-6" />
+                      <FileText className="w-5 h-5" />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">

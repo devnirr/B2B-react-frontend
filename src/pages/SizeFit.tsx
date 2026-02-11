@@ -1,14 +1,74 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { Ruler, Plus, X, Edit, Trash2, ChevronDown, Globe, ArrowLeftRight, Languages } from 'lucide-react';
+import { Ruler, Plus, X, Edit, Trash2, ChevronDown, Globe, ArrowLeftRight, Languages, Eye } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+// Audit log functions are intentionally unused - reserved for future use
 
 
 type TabType = 'size-charts' | 'localization';
+
+// Preference Dropdown Component
+function PreferenceDropdown({
+  preferenceKey,
+  defaultValue,
+  options,
+  placeholder,
+}: {
+  preferenceKey: string;
+  defaultValue: string;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+}) {
+  const queryClient = useQueryClient();
+
+  // Fetch current preference value
+  const { data: preference } = useQuery({
+    queryKey: ['user-preference', preferenceKey],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/user-preferences/${preferenceKey}/value?default=${defaultValue}`);
+        return response.data || defaultValue;
+      } catch (error) {
+        return defaultValue;
+      }
+    },
+  });
+
+  // Mutation for updating preference
+  const updatePreferenceMutation = useMutation({
+    mutationFn: async (value: string) => {
+      return api.post('/user-preferences', {
+        key: preferenceKey,
+        value,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-preference', preferenceKey] });
+      toast.success('Preference saved');
+    },
+    onError: () => {
+      toast.error('Failed to save preference');
+    },
+  });
+
+  const currentValue = preference || defaultValue;
+
+  return (
+    <CustomDropdown
+      value={currentValue}
+      onChange={(value) => {
+        updatePreferenceMutation.mutate(value);
+      }}
+      options={options}
+      placeholder={placeholder}
+    />
+  );
+}
 
 interface SizeChart {
   id: number;
@@ -29,12 +89,16 @@ export default function SizeFit() {
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [selectedChart, setSelectedChart] = useState<SizeChart | null>(null);
   const [deleteChart, setDeleteChart] = useState<SizeChart | null>(null);
+  const [viewChart, setViewChart] = useState<SizeChart | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
   const categoryFilterRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const queryClient = useQueryClient();
 
@@ -109,13 +173,14 @@ export default function SizeFit() {
 
   // Handle body scroll lock when modal is open
   useEffect(() => {
-    if (isModalOpen || isEditModalOpen || isDeleteModalOpen) {
+    if (isModalOpen || isEditModalOpen || isDeleteModalOpen || isViewModalOpen) {
       document.body.classList.add('modal-open');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (isModalOpen) setIsModalShowing(true);
           if (isEditModalOpen) setIsEditModalShowing(true);
           if (isDeleteModalOpen) setIsDeleteModalShowing(true);
+          if (isViewModalOpen) setIsViewModalShowing(true);
         });
       });
     } else {
@@ -123,8 +188,9 @@ export default function SizeFit() {
       setIsModalShowing(false);
       setIsEditModalShowing(false);
       setIsDeleteModalShowing(false);
+      setIsViewModalShowing(false);
     }
-  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen]);
+  }, [isModalOpen, isEditModalOpen, isDeleteModalOpen, isViewModalOpen]);
 
   const openModal = () => {
     setIsModalOpen(true);
@@ -163,6 +229,19 @@ export default function SizeFit() {
     }, 300);
   };
 
+  const openViewModal = (chart: SizeChart) => {
+    setViewChart(chart);
+    setIsViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setIsViewModalShowing(false);
+    setTimeout(() => {
+      setIsViewModalOpen(false);
+      setViewChart(null);
+    }, 300);
+  };
+
   const handleDeleteChart = () => {
     if (!deleteChart) return;
     deleteMutation.mutate(deleteChart.id);
@@ -187,6 +266,15 @@ export default function SizeFit() {
 
   // Filter charts
   const filteredCharts = sizeCharts;
+  
+  // Pagination
+  const totalPages = Math.ceil(filteredCharts.length / ITEMS_PER_PAGE);
+  const paginatedCharts = filteredCharts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterCategory]);
 
   if (isLoading) {
     return <SkeletonPage />;
@@ -324,7 +412,7 @@ export default function SizeFit() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredCharts.map((chart) => {
+                {paginatedCharts.map((chart) => {
                   const sizes = Object.keys(chart.measurements || {});
                   return (
                     <tr key={chart.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -369,6 +457,13 @@ export default function SizeFit() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-3">
                           <button
+                            onClick={() => openViewModal(chart)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => openEditModal(chart)}
                             className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                             title="Edit"
@@ -389,6 +484,18 @@ export default function SizeFit() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {filteredCharts.length > 0 && totalPages > 1 && (
+          <div className="px-6 pb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredCharts.length}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
@@ -414,6 +521,15 @@ export default function SizeFit() {
         />
       )}
         </>
+      )}
+
+      {/* View Size Chart Modal */}
+      {isViewModalOpen && viewChart && (
+        <ViewSizeChartModal
+          chart={viewChart}
+          onClose={closeViewModal}
+          isShowing={isViewModalShowing}
+        />
       )}
 
       {/* Delete Confirmation Modal */}
@@ -589,12 +705,9 @@ function LocalizationConversionsSection() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Default Language for Size Charts
             </label>
-            <CustomDropdown
-              value={localStorage.getItem('sizeChartLanguage') || 'en'}
-              onChange={(value) => {
-                localStorage.setItem('sizeChartLanguage', value);
-                toast.success('Language preference saved');
-              }}
+            <PreferenceDropdown
+              preferenceKey="sizeChartLanguage"
+              defaultValue="en"
               options={[
                 { value: 'en', label: 'English' },
                 { value: 'es', label: 'Spanish (Español)' },
@@ -618,12 +731,9 @@ function LocalizationConversionsSection() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Default Unit System
             </label>
-            <CustomDropdown
-              value={localStorage.getItem('sizeChartUnitSystem') || 'metric'}
-              onChange={(value) => {
-                localStorage.setItem('sizeChartUnitSystem', value);
-                toast.success('Unit system preference saved');
-              }}
+            <PreferenceDropdown
+              preferenceKey="sizeChartUnitSystem"
+              defaultValue="metric"
               options={[
                 { value: 'metric', label: 'Metric (cm, kg)' },
                 { value: 'imperial', label: 'Imperial (inches, lbs)' },
@@ -639,12 +749,9 @@ function LocalizationConversionsSection() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Default Regional Size System
             </label>
-            <CustomDropdown
-              value={localStorage.getItem('sizeChartRegionalSystem') || 'us'}
-              onChange={(value) => {
-                localStorage.setItem('sizeChartRegionalSystem', value);
-                toast.success('Regional size system preference saved');
-              }}
+            <PreferenceDropdown
+              preferenceKey="sizeChartRegionalSystem"
+              defaultValue="us"
               options={[
                 { value: 'us', label: 'US Sizes' },
                 { value: 'eu', label: 'EU Sizes' },
@@ -702,6 +809,144 @@ function LocalizationConversionsSection() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// View Size Chart Modal Component
+function ViewSizeChartModal({
+  chart,
+  onClose,
+  isShowing,
+}: {
+  chart: SizeChart;
+  onClose: () => void;
+  isShowing: boolean;
+}) {
+  const sizes = Object.keys(chart.measurements || {});
+  const measurementTypes = (() => {
+    const allTypes = new Set<string>();
+    Object.values(chart.measurements || {}).forEach((measurements) => {
+      Object.keys(measurements).forEach((type) => allTypes.add(type));
+    });
+    return Array.from(allTypes);
+  })();
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${
+        isShowing ? 'opacity-100' : 'opacity-0'
+      }`}
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden transform transition-transform duration-300 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+          <h5 className="text-[16px] font-semibold text-gray-900 dark:text-white">View Size Chart</h5>
+          <button type="button" onClick={onClose} className="btn-close p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="modal-body p-6 space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{chart.name}</p>
+              </div>
+
+              {chart.category && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Category</label>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                      {chart.category}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {chart.description && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{chart.description}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  chart.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                }`}>
+                  {chart.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            {/* Measurements Table */}
+            {sizes.length > 0 && measurementTypes.length > 0 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h6 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Measurements</h6>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 dark:border-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase border-r border-gray-200 dark:border-gray-600">
+                          Size
+                        </th>
+                        {measurementTypes.map((type) => (
+                          <th key={type} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase border-r border-gray-200 dark:border-gray-600">
+                            {type}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {sizes.map((size) => (
+                        <tr key={size}>
+                          <td className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{size}</span>
+                          </td>
+                          {measurementTypes.map((type) => (
+                            <td key={type} className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {chart.measurements[size]?.[type] || '—'}
+                              </span>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>Created: {new Date(chart.createdAt).toLocaleDateString()}</span>
+                <span>Updated: {new Date(chart.updatedAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

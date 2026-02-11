@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import {
@@ -82,17 +82,45 @@ export default function B2BTerms() {
     },
   });
 
-  // Load terms from localStorage (in a real app, this would be an API call)
-  const [terms, setTerms] = useState<B2BTerms[]>(() => {
-    const saved = localStorage.getItem('b2b-terms');
-    if (saved) {
-      return JSON.parse(saved);
+  const queryClient = useQueryClient();
+
+  // Fetch terms from API
+  const { data: termsData } = useQuery({
+    queryKey: ['b2b-terms-configuration'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/b2b-terms-configurations');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const [terms, setTerms] = useState<B2BTerms[]>([]);
+
+  useEffect(() => {
+    if (termsData) {
+      setTerms(termsData);
     }
-    return [];
+  }, [termsData]);
+
+  // Mutation for saving terms
+  const saveTermsMutation = useMutation({
+    mutationFn: async (termsData: B2BTerms[]) => {
+      return api.post('/b2b-terms-configurations', {
+        data: termsData,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['b2b-terms-configuration'] });
+    },
   });
 
   useEffect(() => {
-    localStorage.setItem('b2b-terms', JSON.stringify(terms));
+    if (terms.length > 0) {
+      saveTermsMutation.mutate(terms);
+    }
   }, [terms]);
 
   const customers = customersData || [];
@@ -309,7 +337,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -323,7 +351,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <CreditCard className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -337,7 +365,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -351,7 +379,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -365,7 +393,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -379,7 +407,7 @@ export default function B2BTerms() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -719,7 +747,7 @@ function AddTermsModal({
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
           </div>
 
@@ -906,7 +934,7 @@ function EditTermsModal({
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
           </div>
 
@@ -1125,7 +1153,7 @@ function ViewTermsModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

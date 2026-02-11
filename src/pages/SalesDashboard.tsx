@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useMemo } from 'react';
 import api from '../lib/api';
-import { Search, Edit, Trash2, X, AlertTriangle, Inbox } from 'lucide-react';
+import { Search, Edit, X, Inbox } from 'lucide-react';
 import Chart from 'react-apexcharts';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
+import DeleteModal from '../components/ui/DeleteModal';
 
 export default function SalesDashboard() {
   const [salesTimeRange, setSalesTimeRange] = useState<'today' | 'week' | 'month'>('month');
@@ -1245,7 +1246,7 @@ export default function SalesDashboard() {
               {salesByCountry.length > 0 ? salesByCountry.map((item, idx) => (
                 <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded">
                   <div className="flex items-center mb-1">
-                    <div className="w-6 h-6 rounded mr-2 flex items-center justify-center overflow-hidden shrink-0" style={{ aspectRatio: '1' }}>
+                    <div className="w-5 h-5 rounded mr-2 flex items-center justify-center overflow-hidden shrink-0" style={{ aspectRatio: '1' }}>
                       <img
                         src={`https://flagcdn.com/w20/${item.code.toLowerCase()}.png`}
                         alt={`${item.country} flag`}
@@ -1277,7 +1278,7 @@ export default function SalesDashboard() {
                 Array.from({ length: 4 }, (_, idx) => (
                   <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded">
                     <div className="flex items-center mb-1">
-                      <div className="w-6 h-6 rounded mr-2 flex items-center justify-center overflow-hidden shrink-0 bg-gray-200 dark:bg-gray-700" style={{ aspectRatio: '1' }}>
+                      <div className="w-5 h-5 rounded mr-2 flex items-center justify-center overflow-hidden shrink-0 bg-gray-200 dark:bg-gray-700" style={{ aspectRatio: '1' }}>
                         <span style={{ fontSize: '12px' }}>🏳️</span>
                       </div>
                       <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-0">No Country</h5>
@@ -1560,11 +1561,16 @@ export default function SalesDashboard() {
       )}
 
       {/* Delete Sale Modal */}
-      {isDeleteSaleModalOpen && selectedSale && (
-        <DeleteSaleModal
-          sale={selectedSale}
+      {isDeleteSaleModalOpen && selectedSale && isDeleteSaleModalShowing && (
+        <DeleteModal
+          title="Delete Sale"
+          message="Are you sure you want to delete sale"
+          itemName={selectedSale.id?.toString() || ''}
           onClose={closeDeleteSaleModal}
-          isShowing={isDeleteSaleModalShowing}
+          onConfirm={() => {
+            // Handle delete action
+            closeDeleteSaleModal();
+          }}
         />
       )}
 
@@ -1578,11 +1584,16 @@ export default function SalesDashboard() {
       )}
 
       {/* Delete Top Selling Modal */}
-      {isDeleteTopSellingModalOpen && selectedTopSelling && (
-        <DeleteTopSellingModal
-          item={selectedTopSelling}
+      {isDeleteTopSellingModalOpen && selectedTopSelling && isDeleteTopSellingModalShowing && (
+        <DeleteModal
+          title="Delete Top Selling Item"
+          message="Are you sure you want to delete item"
+          itemName={selectedTopSelling.product || ''}
           onClose={closeDeleteTopSellingModal}
-          isShowing={isDeleteTopSellingModalShowing}
+          onConfirm={() => {
+            // Handle delete action
+            closeDeleteTopSellingModal();
+          }}
         />
       )}
     </div>
@@ -1675,92 +1686,6 @@ function EditSaleModal({
   );
 }
 
-// Delete Sale Modal Component
-function DeleteSaleModal({
-  sale,
-  onClose,
-  isShowing,
-}: {
-  sale: any;
-  onClose: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      {/* Modal Backdrop */}
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteSaleModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            {/* Modal Body with Icon */}
-            <div className="modal-body text-center py-8 px-6">
-              {/* Warning Icon */}
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-
-              {/* Title */}
-              <h5 id="deleteSaleModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Sale
-              </h5>
-
-              {/* Description */}
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete sale
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{sale.id}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Handle delete action
-                  onClose();
-                }}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Sale
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Edit Top Selling Modal Component
 function EditTopSellingModal({
@@ -1849,89 +1774,4 @@ function EditTopSellingModal({
 }
 
 // Delete Top Selling Modal Component
-function DeleteTopSellingModal({
-  item,
-  onClose,
-  isShowing,
-}: {
-  item: any;
-  onClose: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      {/* Modal Backdrop */}
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteTopSellingModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            {/* Modal Body with Icon */}
-            <div className="modal-body text-center py-8 px-6">
-              {/* Warning Icon */}
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-
-              {/* Title */}
-              <h5 id="deleteTopSellingModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Top Selling Item
-              </h5>
-
-              {/* Description */}
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete item
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{item.product}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Handle delete action
-                  onClose();
-                }}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Item
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 

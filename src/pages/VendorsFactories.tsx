@@ -11,7 +11,6 @@ import {
   ChevronsRight,
   Edit,
   Trash2,
-  AlertTriangle,
   ChevronDown,
   Search,
   Mail,
@@ -29,6 +28,7 @@ import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { ButtonWithWaves, CustomDropdown, DatePicker, Input, SearchInput } from '../components/ui';
 import PhoneInput from '../components/PhoneInput';
+import DeleteModal from '../components/ui/DeleteModal';
 
 // Types
 interface Vendor {
@@ -315,7 +315,7 @@ export default function VendorsFactories() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -329,7 +329,7 @@ export default function VendorsFactories() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function VendorsFactories() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <XCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -357,7 +357,7 @@ export default function VendorsFactories() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -632,13 +632,14 @@ export default function VendorsFactories() {
       )}
 
       {/* Delete Vendor Modal */}
-      {isDeleteModalOpen && selectedVendor && (
-        <DeleteVendorModal
-          vendor={selectedVendor}
+      {isDeleteModalOpen && selectedVendor && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Vendor"
+          message="Are you sure you want to delete"
+          itemName={selectedVendor.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteVendorMutation.mutate(selectedVendor.id)}
           isLoading={deleteVendorMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
 
@@ -769,7 +770,7 @@ function AddVendorModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1031,7 +1032,7 @@ function EditVendorModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1162,7 +1163,7 @@ function EditVendorModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex text-[14px] items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -1186,72 +1187,6 @@ function EditVendorModal({
 }
 
 // Delete Vendor Modal Component
-function DeleteVendorModal({
-  vendor,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  vendor: Vendor;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${
-        isShowing ? 'opacity-100' : 'opacity-0'
-      }`}
-      onClick={onClose}
-    >
-      <div
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-all duration-300 ${
-          isShowing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Delete Vendor</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                This action cannot be undone
-              </p>
-            </div>
-          </div>
-
-          <p className="text-gray-700 dark:text-gray-300 mb-6">
-            Are you sure you want to delete <span className="font-semibold">{vendor.name}</span>? This will
-            permanently remove the vendor from your database.
-          </p>
-
-          <div className="flex items-center justify-end gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={isLoading}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? 'Deleting...' : 'Delete Vendor'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Price History Modal Component
 function PriceHistoryModal({
@@ -1408,7 +1343,7 @@ function PriceHistoryModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -1609,7 +1544,7 @@ function AddEditPriceModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1889,7 +1824,7 @@ function NegotiationNotesModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -2094,7 +2029,7 @@ function AddEditNoteModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

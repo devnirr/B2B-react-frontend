@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
@@ -193,9 +193,7 @@ export default function StockControl() {
   // const queryClient = useQueryClient();
 
   // Local storage keys
-  const TRANSFERS_KEY = 'stock_control_transfers';
-  const APPROVALS_KEY = 'stock_control_approvals';
-  const CROSSDOCK_KEY = 'stock_control_crossdock';
+  const queryClient = useQueryClient();
 
   // Fetch warehouses
   const { data: warehousesData } = useQuery({
@@ -242,42 +240,95 @@ export default function StockControl() {
     }));
   }, [inventoryData]);
 
-  // Load transfers, approvals, and cross-dock from localStorage
+  // Fetch transfers, approvals, and cross-dock from API
+  const { data: transfersData } = useQuery({
+    queryKey: ['stock-control-configuration', 'TRANSFERS'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/stock-control-configurations/TRANSFERS');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const { data: approvalsData } = useQuery({
+    queryKey: ['stock-control-configuration', 'APPROVALS'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/stock-control-configurations/APPROVALS');
+        return response.data?.data || {};
+      } catch (error) {
+        return {};
+      }
+    },
+  });
+
+  const { data: crossDocksData } = useQuery({
+    queryKey: ['stock-control-configuration', 'CROSS_DOCK'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/stock-control-configurations/CROSS_DOCK');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [approvals, setApprovals] = useState<Record<string | number, Approval[]>>({});
   const [crossDocks, setCrossDocks] = useState<CrossDock[]>([]);
 
   useEffect(() => {
-    // Load transfers
-    try {
-      const stored = localStorage.getItem(TRANSFERS_KEY);
-      if (stored) {
-        setTransfers(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading transfers:', error);
-    }
+    if (transfersData) setTransfers(transfersData);
+  }, [transfersData]);
 
-    // Load approvals
-    try {
-      const stored = localStorage.getItem(APPROVALS_KEY);
-      if (stored) {
-        setApprovals(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading approvals:', error);
-    }
+  useEffect(() => {
+    if (approvalsData) setApprovals(approvalsData);
+  }, [approvalsData]);
 
-    // Load cross-dock
-    try {
-      const stored = localStorage.getItem(CROSSDOCK_KEY);
-      if (stored) {
-        setCrossDocks(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading cross-dock:', error);
-    }
-  }, []);
+  useEffect(() => {
+    if (crossDocksData) setCrossDocks(crossDocksData);
+  }, [crossDocksData]);
+
+  // Mutations for saving
+  const saveTransfersMutation = useMutation({
+    mutationFn: async (data: Transfer[]) => {
+      return api.post('/stock-control-configurations', {
+        type: 'TRANSFERS',
+        data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-control-configuration', 'TRANSFERS'] });
+    },
+  });
+
+  const saveApprovalsMutation = useMutation({
+    mutationFn: async (data: Record<string | number, Approval[]>) => {
+      return api.post('/stock-control-configurations', {
+        type: 'APPROVALS',
+        data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-control-configuration', 'APPROVALS'] });
+    },
+  });
+
+  const saveCrossDocksMutation = useMutation({
+    mutationFn: async (data: CrossDock[]) => {
+      return api.post('/stock-control-configurations', {
+        type: 'CROSS_DOCK',
+        data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-control-configuration', 'CROSS_DOCK'] });
+    },
+  });
 
   // Filter inventory
   const filteredInventory = useMemo(() => {
@@ -727,8 +778,8 @@ export default function StockControl() {
               setApprovals={setApprovals}
               warehouses={warehouses}
               inventory={inventory}
-              storageKey={TRANSFERS_KEY}
-              approvalsKey={APPROVALS_KEY}
+              saveTransfersMutation={saveTransfersMutation}
+              saveApprovalsMutation={saveApprovalsMutation}
             />
           )}
 
@@ -738,7 +789,7 @@ export default function StockControl() {
               setCrossDocks={setCrossDocks}
               warehouses={warehouses}
               inventory={inventory}
-              storageKey={CROSSDOCK_KEY}
+              saveCrossDocksMutation={saveCrossDocksMutation}
             />
           )}
         </div>
@@ -755,8 +806,8 @@ function TransfersTab({
   setApprovals,
   warehouses,
   inventory,
-  storageKey,
-  approvalsKey,
+  saveTransfersMutation,
+  saveApprovalsMutation,
 }: {
   transfers: Transfer[];
   setTransfers: (transfers: Transfer[]) => void;
@@ -764,8 +815,8 @@ function TransfersTab({
   setApprovals: (approvals: Record<string | number, Approval[]>) => void;
   warehouses: Warehouse[];
   inventory: InventoryItem[];
-  storageKey: string;
-  approvalsKey: string;
+  saveTransfersMutation: any;
+  saveApprovalsMutation: any;
 }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateModalShowing, setIsCreateModalShowing] = useState(false);
@@ -875,13 +926,13 @@ function TransfersTab({
     if (!transferToDelete) return;
     const updated = transfers.filter((t) => t.id !== transferToDelete.id);
     setTransfers(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    saveTransfersMutation.mutate(updated);
 
     // Remove approvals for this transfer
     const updatedApprovals = { ...approvals };
     delete updatedApprovals[transferToDelete.id!];
     setApprovals(updatedApprovals);
-    localStorage.setItem(approvalsKey, JSON.stringify(updatedApprovals));
+    saveApprovalsMutation.mutate(updatedApprovals);
 
     toast.success('Transfer deleted successfully');
     closeDeleteModal();
@@ -1100,7 +1151,7 @@ function TransfersTab({
             if (editingTransfer) {
               const updated = transfers.map((t) => (t.id === editingTransfer.id ? { ...editingTransfer, ...transferData } : t));
               setTransfers(updated);
-              localStorage.setItem(storageKey, JSON.stringify(updated));
+              saveTransfersMutation.mutate(updated);
               toast.success('Transfer updated successfully');
             } else {
               const newTransfer: Transfer = {
@@ -1113,7 +1164,7 @@ function TransfersTab({
               };
               const updated = [...transfers, newTransfer];
               setTransfers(updated);
-              localStorage.setItem(storageKey, JSON.stringify(updated));
+              saveTransfersMutation.mutate(updated);
               toast.success('Transfer created successfully');
             }
             closeCreateModal();
@@ -1272,7 +1323,7 @@ function CreateEditTransferModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1495,7 +1546,7 @@ function ViewCrossDockModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1653,7 +1704,7 @@ function ViewTransferModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1790,13 +1841,13 @@ function CrossDockTab({
   setCrossDocks,
   warehouses,
   inventory,
-  storageKey,
+  saveCrossDocksMutation,
 }: {
   crossDocks: CrossDock[];
   setCrossDocks: (crossDocks: CrossDock[]) => void;
   warehouses: Warehouse[];
   inventory: InventoryItem[];
-  storageKey: string;
+  saveCrossDocksMutation: any;
 }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreateModalShowing, setIsCreateModalShowing] = useState(false);
@@ -1905,7 +1956,7 @@ function CrossDockTab({
     if (!crossDockToDelete) return;
     const updated = crossDocks.filter((cd) => cd.id !== crossDockToDelete.id);
     setCrossDocks(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    saveCrossDocksMutation.mutate(updated);
     toast.success('Cross-dock operation deleted successfully');
     closeDeleteModal();
   };
@@ -2124,7 +2175,7 @@ function CrossDockTab({
                 cd.id === editingCrossDock.id ? { ...editingCrossDock, ...crossDockData } : cd
               );
               setCrossDocks(updated);
-              localStorage.setItem(storageKey, JSON.stringify(updated));
+              saveCrossDocksMutation.mutate(updated);
               toast.success('Cross-dock operation updated successfully');
             } else {
               const newCrossDock: CrossDock = {
@@ -2136,7 +2187,7 @@ function CrossDockTab({
               };
               const updated = [...crossDocks, newCrossDock];
               setCrossDocks(updated);
-              localStorage.setItem(storageKey, JSON.stringify(updated));
+              saveCrossDocksMutation.mutate(updated);
               toast.success('Cross-dock operation created successfully');
             }
             closeCreateModal();
@@ -2291,7 +2342,7 @@ function CreateEditCrossDockModal({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

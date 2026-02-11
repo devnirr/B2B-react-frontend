@@ -5,9 +5,6 @@ import api from '../lib/api';
 import {
   RotateCcw,
   Plus,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronDown,
   Clock,
   CheckCircle2,
   Eye,
@@ -21,6 +18,7 @@ import {
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput, DeleteModal } from '../components/ui';
 import { DatePicker } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 // Types
 interface RMA {
@@ -134,7 +132,6 @@ export default function ReturnsRMA() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [reasonFilter, setReasonFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Modal states for RMAs
   const [isRMAModalOpen, setIsRMAModalOpen] = useState(false);
@@ -193,12 +190,12 @@ export default function ReturnsRMA() {
 
   // Fetch RMAs from API
   const { data: rmasData } = useQuery({
-    queryKey: ['returns', currentPage, itemsPerPage, statusFilter],
+    queryKey: ['returns', currentPage, ITEMS_PER_PAGE, statusFilter],
     queryFn: async () => {
       try {
         const params: any = {
-          skip: (currentPage - 1) * itemsPerPage,
-          take: itemsPerPage,
+          skip: (currentPage - 1) * ITEMS_PER_PAGE,
+          take: ITEMS_PER_PAGE,
         };
         if (statusFilter !== 'all') {
           params.status = statusFilter;
@@ -243,12 +240,12 @@ export default function ReturnsRMA() {
 
   // Fetch reverse logistics from API
   const { data: reverseLogisticsData } = useQuery({
-    queryKey: ['reverse-logistics', currentPage, itemsPerPage, statusFilter],
+    queryKey: ['reverse-logistics', currentPage, ITEMS_PER_PAGE, statusFilter],
     queryFn: async () => {
       try {
         const params: any = {
-          skip: (currentPage - 1) * itemsPerPage,
-          take: itemsPerPage,
+          skip: (currentPage - 1) * ITEMS_PER_PAGE,
+          take: ITEMS_PER_PAGE,
         };
         if (statusFilter !== 'all') {
           params.status = statusFilter;
@@ -767,7 +764,7 @@ export default function ReturnsRMA() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredRmas
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                         .map((rma) => (
                           <tr key={rma.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-3 whitespace-nowrap">
@@ -854,48 +851,14 @@ export default function ReturnsRMA() {
               )}
 
               {/* Pagination */}
-              {Math.ceil(filteredRmas.length / itemsPerPage) > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredRmas.length)}</span>{' '}
-                    of <span className="font-medium">{filteredRmas.length}</span> RMAs
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 rotate-90" />
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                      Page {currentPage} of {Math.ceil(filteredRmas.length / itemsPerPage)}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(Math.ceil(filteredRmas.length / itemsPerPage), prev + 1))
-                      }
-                      disabled={currentPage >= Math.ceil(filteredRmas.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(Math.ceil(filteredRmas.length / itemsPerPage))}
-                      disabled={currentPage >= Math.ceil(filteredRmas.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </button>
-                  </div>
+              {Math.ceil(filteredRmas.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredRmas.length / ITEMS_PER_PAGE)}
+                    totalItems={filteredRmas.length}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </>
@@ -995,7 +958,7 @@ export default function ReturnsRMA() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredReverseLogistics
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                         .map((logistics) => (
                           <tr key={logistics.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-3 whitespace-nowrap">
@@ -1069,52 +1032,14 @@ export default function ReturnsRMA() {
               )}
 
               {/* Pagination */}
-              {Math.ceil(filteredReverseLogistics.length / itemsPerPage) > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * itemsPerPage, filteredReverseLogistics.length)}
-                    </span>{' '}
-                    of <span className="font-medium">{filteredReverseLogistics.length}</span> entries
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 rotate-90" />
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                      Page {currentPage} of {Math.ceil(filteredReverseLogistics.length / itemsPerPage)}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((prev) =>
-                          Math.min(Math.ceil(filteredReverseLogistics.length / itemsPerPage), prev + 1)
-                        )
-                      }
-                      disabled={currentPage >= Math.ceil(filteredReverseLogistics.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(Math.ceil(filteredReverseLogistics.length / itemsPerPage))}
-                      disabled={currentPage >= Math.ceil(filteredReverseLogistics.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </button>
-                  </div>
+              {Math.ceil(filteredReverseLogistics.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredReverseLogistics.length / ITEMS_PER_PAGE)}
+                    totalItems={filteredReverseLogistics.length}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </>

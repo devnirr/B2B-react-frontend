@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { 
@@ -15,6 +15,7 @@ import {
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
+import CustomDropdown from '../components/ui/CustomDropdown';
 
 interface Integration {
   id: number;
@@ -220,7 +221,7 @@ export default function MarketingIntegrations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Link2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -237,7 +238,7 @@ export default function MarketingIntegrations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -254,7 +255,7 @@ export default function MarketingIntegrations() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Plus className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Plus className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -264,9 +265,9 @@ export default function MarketingIntegrations() {
       <div className="mb-6 flex justify-end">
         <button
           onClick={() => handleConnect(null)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="flex text-[14px] items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add Integration
         </button>
       </div>
@@ -342,7 +343,7 @@ export default function MarketingIntegrations() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center text-[14px] gap-2">
                         {isConnected ? (
                           <>
                             <button
@@ -370,7 +371,7 @@ export default function MarketingIntegrations() {
                         ) : (
                           <button
                             onClick={() => handleConnect(integration)}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                            className="w-full text-[14px] flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                           >
                             <Plus className="w-4 h-4" />
                             Connect
@@ -436,6 +437,24 @@ function ConnectionModal({
   const isEditing = !!integration?.id;
   const isConnected = integration?.status === 'CONNECTED';
 
+  // Integration Type options
+  const integrationTypeOptions = [
+    { value: 'MARKETING', label: 'Marketing' },
+    { value: 'ANALYTICS', label: 'Analytics' },
+    { value: 'E_COMMERCE', label: 'E-commerce' },
+    { value: 'ACCOUNTING', label: 'Accounting' },
+    { value: 'SHIPPING', label: 'Shipping' },
+    { value: 'OTHER', label: 'Other' },
+  ];
+
+  // Status options
+  const statusOptions = [
+    { value: 'DISCONNECTED', label: 'Disconnected' },
+    { value: 'CONNECTED', label: 'Connected' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'ERROR', label: 'Error' },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -445,9 +464,32 @@ function ConnectionModal({
     onSave(formData);
   };
 
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {integration && (
@@ -483,7 +525,7 @@ function ConnectionModal({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               placeholder="e.g., Google Analytics, Shopify"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -491,36 +533,26 @@ function ConnectionModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Integration Type *
             </label>
-            <select
+            <CustomDropdown
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="MARKETING">Marketing</option>
-              <option value="ANALYTICS">Analytics</option>
-              <option value="E_COMMERCE">E-commerce</option>
-              <option value="ACCOUNTING">Accounting</option>
-              <option value="SHIPPING">Shipping</option>
-              <option value="OTHER">Other</option>
-            </select>
+              onChange={(value) => setFormData({ ...formData, type: value })}
+              options={integrationTypeOptions}
+              placeholder="Select integration type"
+              className="w-full"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Status *
             </label>
-            <select
+            <CustomDropdown
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="DISCONNECTED">Disconnected</option>
-              <option value="CONNECTED">Connected</option>
-              <option value="PENDING">Pending</option>
-              <option value="ERROR">Error</option>
-            </select>
+              onChange={(value) => setFormData({ ...formData, status: value })}
+              options={statusOptions}
+              placeholder="Select status"
+              className="w-full"
+            />
           </div>
 
           <div>
@@ -532,7 +564,7 @@ function ConnectionModal({
               value={formData.apiKey}
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
               placeholder="Enter your API key"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 text-[14px] ::placeholder-[12px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               API keys are encrypted and stored securely
@@ -548,7 +580,7 @@ function ConnectionModal({
               value={formData.apiSecret}
               onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
               placeholder="Enter your API secret"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -561,7 +593,7 @@ function ConnectionModal({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Additional notes or description"
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -579,7 +611,7 @@ function ConnectionModal({
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex text-[14px] justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             {isEditing && (
               <button
                 type="button"

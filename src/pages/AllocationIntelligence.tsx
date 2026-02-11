@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
@@ -16,6 +16,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'recommendations' | 'simulator' | 'fulfillment-signals';
 
@@ -80,6 +81,7 @@ function AllocationRecommendationsSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch pending orders
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -261,6 +263,18 @@ function AllocationRecommendationsSection() {
       .sort((a: any, b: any) => b.priorityScore - a.priorityScore);
   }, [orders, customers, inventory, warehouses, searchQuery, priorityFilter, productFilter]);
 
+  // Pagination
+  const totalItems = allocationRecommendations.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedRecommendations = allocationRecommendations.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, priorityFilter, productFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const highPriority = allocationRecommendations.filter((item: any) => item.priorityScore >= 0.7);
@@ -311,7 +325,7 @@ function AllocationRecommendationsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -325,7 +339,7 @@ function AllocationRecommendationsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -339,7 +353,7 @@ function AllocationRecommendationsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -353,7 +367,7 @@ function AllocationRecommendationsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -367,9 +381,9 @@ function AllocationRecommendationsSection() {
             onChange={setSearchQuery}
             placeholder="Search orders, products, customers..."
             />
-          <div className="flex items-center gap-2">
+          <div className="flex relative items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
-            <div className="min-w-[180px]">
+            <div className=" min-w-[180px]">
               <CustomDropdown
                 value={priorityFilter}
                 onChange={setPriorityFilter}
@@ -449,7 +463,7 @@ function AllocationRecommendationsSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {allocationRecommendations.map((item: any, idx: number) => (
+                {paginatedRecommendations.map((item: any, idx: number) => (
                   <tr key={`${item.order.id}-${item.orderLine.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -533,6 +547,18 @@ function AllocationRecommendationsSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -861,6 +887,7 @@ function AllocationSimulatorSection() {
 function FulfillmentOptimizationSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [signalFilter, setSignalFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch orders
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -990,6 +1017,18 @@ function FulfillmentOptimizationSection() {
       });
   }, [orders, inventory, warehouses, searchQuery, signalFilter]);
 
+  // Pagination
+  const totalItems = fulfillmentSignals.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedSignals = fulfillmentSignals.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, signalFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const bopis = fulfillmentSignals.filter((s: any) => s.type === 'BOPIS');
@@ -1029,7 +1068,7 @@ function FulfillmentOptimizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1043,7 +1082,7 @@ function FulfillmentOptimizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Store className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1057,7 +1096,7 @@ function FulfillmentOptimizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ShoppingCart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1071,7 +1110,7 @@ function FulfillmentOptimizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1153,7 +1192,7 @@ function FulfillmentOptimizationSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {fulfillmentSignals.map((signal: any, idx: number) => (
+                {paginatedSignals.map((signal: any, idx: number) => (
                   <tr key={`${signal.order.id}-${signal.orderLine.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSignalColor(signal.type)}`}>
@@ -1220,6 +1259,18 @@ function FulfillmentOptimizationSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

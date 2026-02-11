@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, DatePicker, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'dpp' | 'compliance';
 
@@ -38,11 +39,10 @@ export default function SustainabilityCompliance() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -65,11 +65,14 @@ export default function SustainabilityCompliance() {
 // Digital Product Passport Section Component
 function DigitalProductPassportSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [selectedPassport, setSelectedPassport] = useState<any>(null);
   const queryClient = useQueryClient();
 
@@ -102,6 +105,20 @@ function DigitalProductPassportSection() {
     }
   }, [isEditModalOpen]);
 
+  useEffect(() => {
+    if (isViewModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsViewModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsViewModalShowing(false);
+    }
+  }, [isViewModalOpen]);
+
   // Fetch products for dropdown
   const { data: productsData } = useQuery({
     queryKey: ['products', 'dropdown'],
@@ -129,6 +146,15 @@ function DigitalProductPassportSection() {
   });
 
   const passports = passportsData || [];
+
+  // Pagination
+  const totalPages = Math.ceil(passports.length / ITEMS_PER_PAGE);
+  const paginatedPassports = passports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -201,12 +227,11 @@ function DigitalProductPassportSection() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Passport ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Manufacturer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Country</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Certifications</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {passports.map((passport: any) => (
+                {paginatedPassports.map((passport: any) => (
                   <tr key={passport.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {passport.product?.name || 'N/A'}
@@ -220,24 +245,18 @@ function DigitalProductPassportSection() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                       {passport.countryOfOrigin || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {passport.certifications && passport.certifications.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {passport.certifications.slice(0, 2).map((cert: string, idx: number) => (
-                            <span key={idx} className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded text-xs">
-                              {cert}
-                            </span>
-                          ))}
-                          {passport.certifications.length > 2 && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">+{passport.certifications.length - 2}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400 dark:text-gray-500">—</span>
-                      )}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedPassport(passport);
+                            setIsViewModalOpen(true);
+                          }}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedPassport(passport);
@@ -265,6 +284,18 @@ function DigitalProductPassportSection() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {passports.length > 0 && totalPages > 1 && (
+            <div className="px-6 pb-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={passports.length}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -310,6 +341,167 @@ function DigitalProductPassportSection() {
           }}
           isShowing={isEditModalShowing}
         />
+      )}
+
+      {/* View Modal */}
+      {isViewModalOpen && selectedPassport && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${
+            isViewModalShowing ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={() => {
+            setIsViewModalShowing(false);
+            setTimeout(() => {
+              setIsViewModalOpen(false);
+              setSelectedPassport(null);
+            }, 300);
+          }}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto transform transition-transform duration-300"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform: isViewModalShowing ? 'scale(1)' : 'scale(0.95)',
+            }}
+          >
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between z-10">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">View Digital Product Passport</h3>
+              <button
+                onClick={() => {
+                  setIsViewModalShowing(false);
+                  setTimeout(() => {
+                    setIsViewModalOpen(false);
+                    setSelectedPassport(null);
+                  }, 300);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Product</label>
+                <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.product?.name || 'N/A'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Passport ID</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.passportId || '—'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Country of Origin</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.countryOfOrigin || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Manufacturer Name</label>
+                <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.manufacturerName || '—'}</p>
+              </div>
+              {selectedPassport.manufacturerAddress && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Manufacturer Address</label>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{selectedPassport.manufacturerAddress}</p>
+                </div>
+              )}
+              {selectedPassport.productionDate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Production Date</label>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {new Date(selectedPassport.productionDate).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              {selectedPassport.materials && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Materials</label>
+                  <div className="space-y-1">
+                    {Array.isArray(selectedPassport.materials) ? (
+                      selectedPassport.materials.map((material: any, idx: number) => (
+                        <p key={idx} className="text-sm text-gray-900 dark:text-white">
+                          {material.name}: {material.percentage}%
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white">{JSON.stringify(selectedPassport.materials)}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedPassport.carbonFootprint !== null && selectedPassport.carbonFootprint !== undefined && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Carbon Footprint</label>
+                    <p className="text-sm text-gray-900 dark:text-white">
+                      {typeof selectedPassport.carbonFootprint === 'number' 
+                        ? `${selectedPassport.carbonFootprint.toFixed(2)} kg CO2`
+                        : `${selectedPassport.carbonFootprint} kg CO2`}
+                    </p>
+                  </div>
+                )}
+                {selectedPassport.waterFootprint !== null && selectedPassport.waterFootprint !== undefined && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Water Footprint</label>
+                    <p className="text-sm text-gray-900 dark:text-white">
+                      {typeof selectedPassport.waterFootprint === 'number'
+                        ? `${selectedPassport.waterFootprint.toFixed(2)} L`
+                        : `${selectedPassport.waterFootprint} L`}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {selectedPassport.recyclability && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Recyclability</label>
+                    <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.recyclability}</p>
+                  </div>
+                )}
+                {selectedPassport.repairability && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Repairability</label>
+                    <p className="text-sm text-gray-900 dark:text-white">{selectedPassport.repairability}</p>
+                  </div>
+                )}
+              </div>
+              {selectedPassport.careInstructions && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Care Instructions</label>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{selectedPassport.careInstructions}</p>
+                </div>
+              )}
+              {selectedPassport.disposalInstructions && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Disposal Instructions</label>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{selectedPassport.disposalInstructions}</p>
+                </div>
+              )}
+              {selectedPassport.traceabilityData && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Traceability Data</label>
+                  <pre className="text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 p-3 rounded-lg overflow-x-auto">
+                    {JSON.stringify(selectedPassport.traceabilityData, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setIsViewModalShowing(false);
+                  setTimeout(() => {
+                    setIsViewModalOpen(false);
+                    setSelectedPassport(null);
+                  }, 300);
+                }}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -466,9 +658,9 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
       const viewportWidth = window.innerWidth;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-      
+
       const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
-      
+
       let top: number;
       if (openUpward) {
         top = Math.max(16, rect.top - calendarHeight - 4);
@@ -478,20 +670,20 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
           top = viewportHeight - calendarHeight - 16;
         }
       }
-      
+
       // Align calendar to the left edge of the input field
       let left = rect.left;
-      
+
       // If calendar goes off the right edge, align to the right edge of the input
       if (left + calendarWidth > viewportWidth - 16) {
         left = rect.right - calendarWidth;
       }
-      
+
       // Ensure calendar doesn't go off the left edge
       if (left < 16) {
         left = 16;
       }
-      
+
       setProductionCalendarPosition({ top, left });
     }
   };
@@ -513,7 +705,7 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
         const target = event.target as Node;
         const isClickInsideCalendar = productionCalendarRef.current?.contains(target);
         const isClickInsideInput = productionCalendarButtonRef.current?.contains(target);
-        
+
         if (!isClickInsideCalendar && !isClickInsideInput) {
           setIsProductionCalendarOpen(false);
         }
@@ -569,7 +761,7 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     const submitData = {
       ...formData,
       productId: parseInt(formData.productId),
@@ -582,7 +774,7 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
     } else {
       createMutation.mutate(submitData);
     }
-    
+
     setIsSaving(false);
   };
 
@@ -706,10 +898,10 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
                         {isProductionCalendarOpen && (
                           <>
                             <div className="fixed inset-0 z-[10001]" onClick={() => setIsProductionCalendarOpen(false)} />
-                            <div 
+                            <div
                               ref={productionCalendarRef}
-                              className="fixed w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 -mt-11 dark:border-gray-700" 
-                              style={{ 
+                              className="fixed w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 -mt-11 dark:border-gray-700"
+                              style={{
                                 zIndex: 10002,
                                 top: `${productionCalendarPosition.top}px`,
                                 left: `${productionCalendarPosition.left}px`,
@@ -787,13 +979,12 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
                                         key={day}
                                         type="button"
                                         onClick={() => handleProductionDateSelect(day)}
-                                        className={`aspect-square rounded text-sm font-medium transition-all ${
-                                          isSelectedDay
-                                            ? 'bg-primary-600 text-white'
-                                            : isTodayDay
-                                              ? 'bg-primary-200 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
-                                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                        }`}
+                                        className={`aspect-square rounded text-sm font-medium transition-all ${isSelectedDay
+                                          ? 'bg-primary-600 text-white'
+                                          : isTodayDay
+                                            ? 'bg-primary-200 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                          }`}
                                       >
                                         {day}
                                       </button>
@@ -928,9 +1119,12 @@ function DPPModal({ passport, products, onClose, onSave, isShowing }: { passport
 function ComplianceEvidenceSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const queryClient = useQueryClient();
 
@@ -949,12 +1143,12 @@ function ComplianceEvidenceSection() {
     queryFn: async () => {
       const response = await api.get('/compliance-evidence');
       let evidence = response.data || [];
-      
+
       // Filter by type
       if (filterType !== 'all') {
         evidence = evidence.filter((e: any) => e.type === filterType);
       }
-      
+
       // Filter by search query
       if (searchQuery) {
         evidence = evidence.filter((e: any) =>
@@ -964,12 +1158,36 @@ function ComplianceEvidenceSection() {
           e.standards?.some((s: string) => s.toLowerCase().includes(searchQuery.toLowerCase()))
         );
       }
-      
+
       return evidence;
     },
   });
 
   const evidence = evidenceData || [];
+
+  // Pagination
+  const totalPages = Math.ceil(evidence.length / ITEMS_PER_PAGE);
+  const paginatedEvidence = evidence.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterType]);
+
+  // Handle view modal show animation
+  useEffect(() => {
+    if (isViewModalOpen) {
+      document.body.classList.add('modal-open');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsViewModalShowing(true);
+        });
+      });
+    } else {
+      document.body.classList.remove('modal-open');
+      setIsViewModalShowing(false);
+    }
+  }, [isViewModalOpen]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -1013,14 +1231,22 @@ function ComplianceEvidenceSection() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search evidence..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 relative w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search evidence..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <CustomDropdown
+                value={filterType}
+                onChange={(value) => setFilterType(value)}
+                options={evidenceTypes}
+                placeholder="Select type..."
               />
             </div>
             <button
@@ -1028,18 +1254,10 @@ function ComplianceEvidenceSection() {
               className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Evidence
+              Add&nbsp;Evidence
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Filter by type:</span>
-            <CustomDropdown
-              value={filterType}
-              onChange={(value) => setFilterType(value)}
-              options={evidenceTypes}
-              placeholder="Select type..."
-            />
-          </div>
+
         </div>
       </div>
 
@@ -1073,7 +1291,7 @@ function ComplianceEvidenceSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {evidence.map((item: any) => (
+                {paginatedEvidence.map((item: any) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</div>
@@ -1112,25 +1330,25 @@ function ComplianceEvidenceSection() {
                       {item.issueDate ? new Date(item.issueDate).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        item.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${item.isActive
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        {item.documentUrl && (
-                          <button
-                            onClick={() => window.open(item.documentUrl, '_blank')}
-                            className="p-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                            title="View Document"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedEvidence(item);
+                            setIsViewModalOpen(true);
+                          }}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedEvidence(item);
@@ -1158,6 +1376,18 @@ function ComplianceEvidenceSection() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {evidence.length > 0 && totalPages > 1 && (
+            <div className="px-6 pb-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={evidence.length}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1187,6 +1417,156 @@ function ComplianceEvidenceSection() {
             setSelectedEvidence(null);
           }}
         />
+      )}
+
+      {/* View Modal */}
+      {isViewModalOpen && selectedEvidence && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${
+            isViewModalShowing ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={() => {
+            setIsViewModalShowing(false);
+            setTimeout(() => {
+              setIsViewModalOpen(false);
+              setSelectedEvidence(null);
+            }, 300);
+          }}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto transform transition-transform duration-300"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform: isViewModalShowing ? 'scale(1)' : 'scale(0.95)',
+            }}
+          >
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between z-10">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">View Compliance Evidence</h3>
+              <button
+                onClick={() => {
+                  setIsViewModalShowing(false);
+                  setTimeout(() => {
+                    setIsViewModalOpen(false);
+                    setSelectedEvidence(null);
+                  }, 300);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedEvidence.name || '—'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Type</label>
+                  <span className="inline-block px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded">
+                    {selectedEvidence.type?.replace('_', ' ') || '—'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Product</label>
+                <p className="text-sm text-gray-900 dark:text-white">{selectedEvidence.product?.name || 'None (General)'}</p>
+              </div>
+              {selectedEvidence.description && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{selectedEvidence.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Issuer</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedEvidence.issuer || '—'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Certificate Number</label>
+                  <p className="text-sm text-gray-900 dark:text-white">{selectedEvidence.certificateNumber || '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Issue Date</label>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {selectedEvidence.issueDate ? new Date(selectedEvidence.issueDate).toLocaleDateString() : '—'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Expiry Date</label>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {selectedEvidence.expiryDate ? new Date(selectedEvidence.expiryDate).toLocaleDateString() : '—'}
+                  </p>
+                </div>
+              </div>
+              {selectedEvidence.documentUrl && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Document URL</label>
+                  <a
+                    href={selectedEvidence.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {selectedEvidence.documentUrl}
+                  </a>
+                </div>
+              )}
+              {selectedEvidence.standards && selectedEvidence.standards.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Standards</label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedEvidence.standards.map((std: string) => (
+                      <span key={std} className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-full text-sm">
+                        {std}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedEvidence.tags && selectedEvidence.tags.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedEvidence.tags.map((tag: string) => (
+                      <span key={tag} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full text-sm">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                  selectedEvidence.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                }`}>
+                  {selectedEvidence.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setIsViewModalShowing(false);
+                  setTimeout(() => {
+                    setIsViewModalOpen(false);
+                    setSelectedEvidence(null);
+                  }, 300);
+                }}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -1257,7 +1637,15 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   // Handle click outside to close modal
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+
+      // Check if click is on DatePicker calendar (rendered via portal)
+      const calendarElement = target.closest('[data-datepicker-calendar="true"]');
+      if (calendarElement) {
+        return; // Don't close modal if clicking on DatePicker calendar
+      }
+
+      if (modalRef.current && !modalRef.current.contains(target)) {
         onClose();
       }
     };
@@ -1297,7 +1685,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     const submitData = {
       ...formData,
       productId: formData.productId ? parseInt(formData.productId) : undefined,
@@ -1310,7 +1698,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
     } else {
       createMutation.mutate(submitData);
     }
-    
+
     setIsSaving(false);
   };
 
@@ -1339,7 +1727,7 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="relative max-w-2xl w-full mx-4 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-        <div 
+        <div
           ref={modalRef}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto relative"
         >
@@ -1354,214 +1742,214 @@ function ComplianceEvidenceModal({ evidence, products, onClose, onSave }: { evid
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product</label>
-            <CustomDropdown
-              value={formData.productId}
-              onChange={(value) => setFormData({ ...formData, productId: value })}
-              options={[
-                { value: '', label: 'None (General)' },
-                ...products.map((p) => ({ value: p.id.toString(), label: p.name })),
-              ]}
-              placeholder="Select product..."
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="Enter evidence name"
-                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product</label>
               <CustomDropdown
-                value={formData.type}
-                onChange={(value) => setFormData({ ...formData, type: value })}
+                value={formData.productId}
+                onChange={(value) => setFormData({ ...formData, productId: value })}
                 options={[
-                  { value: 'CERTIFICATION', label: 'Certification' },
-                  { value: 'TEST_REPORT', label: 'Test Report' },
-                  { value: 'MATERIAL_SAFETY', label: 'Material Safety' },
-                  { value: 'ENVIRONMENTAL_IMPACT', label: 'Environmental Impact' },
-                  { value: 'SUPPLY_CHAIN', label: 'Supply Chain' },
-                  { value: 'OTHER', label: 'Other' },
+                  { value: '', label: 'None (General)' },
+                  ...products.map((p) => ({ value: p.id.toString(), label: p.name })),
                 ]}
+                placeholder="Select product..."
               />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              placeholder="Enter description"
-              className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  placeholder="Enter evidence name"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type *</label>
+                <CustomDropdown
+                  value={formData.type}
+                  onChange={(value) => setFormData({ ...formData, type: value })}
+                  options={[
+                    { value: 'CERTIFICATION', label: 'Certification' },
+                    { value: 'TEST_REPORT', label: 'Test Report' },
+                    { value: 'MATERIAL_SAFETY', label: 'Material Safety' },
+                    { value: 'ENVIRONMENTAL_IMPACT', label: 'Environmental Impact' },
+                    { value: 'SUPPLY_CHAIN', label: 'Supply Chain' },
+                    { value: 'OTHER', label: 'Other' },
+                  ]}
+                />
+              </div>
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issuer</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                placeholder="Enter description"
+                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issuer</label>
+                <input
+                  type="text"
+                  value={formData.issuer}
+                  onChange={(e) => setFormData({ ...formData, issuer: e.target.value })}
+                  placeholder="Enter issuer name"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Certificate Number</label>
+                <input
+                  type="text"
+                  value={formData.certificateNumber}
+                  onChange={(e) => setFormData({ ...formData, certificateNumber: e.target.value })}
+                  placeholder="Enter certificate number"
+                  className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issue Date</label>
+                <DatePicker
+                  value={formData.issueDate}
+                  onChange={(date) => setFormData({ ...formData, issueDate: date || '' })}
+                  placeholder="mm/dd/yyyy"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expiry Date</label>
+                <DatePicker
+                  value={formData.expiryDate}
+                  onChange={(date) => setFormData({ ...formData, expiryDate: date || '' })}
+                  placeholder="mm/dd/yyyy"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Document URL</label>
               <input
-                type="text"
-                value={formData.issuer}
-                onChange={(e) => setFormData({ ...formData, issuer: e.target.value })}
-                placeholder="Enter issuer name"
+                type="url"
+                value={formData.documentUrl}
+                onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
+                placeholder="https://..."
                 className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Certificate Number</label>
-              <input
-                type="text"
-                value={formData.certificateNumber}
-                onChange={(e) => setFormData({ ...formData, certificateNumber: e.target.value })}
-                placeholder="Enter certificate number"
-                className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Standards</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newStandard}
+                  onChange={(e) => setNewStandard(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addStandard();
+                    }
+                  }}
+                  placeholder="Add standard (e.g., REACH, RoHS)"
+                  className="flex-1 ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={addStandard}
+                  className="px-4 py-2 bg-gray-200 text-[14px] dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.standards.map((std: string) => (
+                  <span key={std} className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-full text-sm flex items-center gap-2">
+                    {std}
+                    <button
+                      type="button"
+                      onClick={() => removeStandard(std)}
+                      className="hover:text-primary-600 dark:hover:text-primary-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issue Date</label>
-              <DatePicker
-                value={formData.issueDate}
-                onChange={(date) => setFormData({ ...formData, issueDate: date || '' })}
-                placeholder="mm/dd/yyyy"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add tag"
+                  className="flex-1 ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={addTag}
+                  className="px-4 py-2 bg-gray-200 text-[14px] dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.tags.map((tag: string) => (
+                  <span key={tag} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full text-sm flex items-center gap-2">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="hover:text-gray-600 dark:hover:text-gray-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expiry Date</label>
-              <DatePicker
-                value={formData.expiryDate}
-                onChange={(date) => setFormData({ ...formData, expiryDate: date || '' })}
-                placeholder="mm/dd/yyyy"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Document URL</label>
-            <input
-              type="url"
-              value={formData.documentUrl}
-              onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
-              placeholder="https://..."
-              className="w-full ::placeholder-[12px] text-[14px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Standards</label>
-            <div className="flex gap-2 mb-2">
+            <div className="flex items-center gap-2">
               <input
-                type="text"
-                value={newStandard}
-                onChange={(e) => setNewStandard(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addStandard();
-                  }
-                }}
-                placeholder="Add standard (e.g., REACH, RoHS)"
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
+              <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Active
+              </label>
+            </div>
+            <div className="flex text-[14px] justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                onClick={addStandard}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Add
+                Cancel
               </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.standards.map((std: string) => (
-                <span key={std} className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 rounded-full text-sm flex items-center gap-2">
-                  {std}
-                  <button
-                    type="button"
-                    onClick={() => removeStandard(std)}
-                    className="hover:text-primary-600 dark:hover:text-primary-300"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-                placeholder="Add tag"
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
               <button
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                type="submit"
+                disabled={isSaving || !formData.name || createMutation.isPending || updateMutation.isPending}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add
+                {isSaving || createMutation.isPending || updateMutation.isPending ? 'Saving...' : evidence ? 'Update' : 'Create'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.tags.map((tag: string) => (
-                <span key={tag} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full text-sm flex items-center gap-2">
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="hover:text-gray-600 dark:hover:text-gray-100"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-            />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active
-            </label>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving || !formData.name || createMutation.isPending || updateMutation.isPending}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving || createMutation.isPending || updateMutation.isPending ? 'Saving...' : evidence ? 'Update' : 'Create'}
-            </button>
-          </div>
           </form>
         </div>
       </div>

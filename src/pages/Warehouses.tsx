@@ -2,11 +2,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Warehouse, Plus, X, Edit, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Warehouse, Plus, X, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { ButtonWithWaves, CustomDropdown } from '../components/ui';
+import DeleteModal from '../components/ui/DeleteModal';
+import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 
 
 export default function Warehouses() {
@@ -61,11 +63,15 @@ export default function Warehouses() {
 
   const createWarehouseMutation = useMutation({
     mutationFn: async (warehouseData: any) => {
+      (window as any).__lastWarehouseData = warehouseData;
       const response = await api.post('/warehouses', warehouseData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      const warehouseData = (window as any).__lastWarehouseData;
+      logCreate('Warehouse', data?.id || data?.data?.id, warehouseData);
+      delete (window as any).__lastWarehouseData;
       toast.success('Warehouse created successfully!');
       closeModal();
     },
@@ -80,8 +86,9 @@ export default function Warehouses() {
       const response = await api.patch(`/warehouses/${id}`, warehouseData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; warehouseData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      logUpdate('Warehouse', variables.id, variables.warehouseData);
       toast.success('Warehouse updated successfully!');
       closeEditModal();
     },
@@ -96,8 +103,9 @@ export default function Warehouses() {
       const response = await api.delete(`/warehouses/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      logDelete('Warehouse', id);
       toast.success('Warehouse deleted successfully!');
       closeDeleteModal();
     },
@@ -343,13 +351,14 @@ export default function Warehouses() {
       )}
 
       {/* Delete Warehouse Modal */}
-      {isDeleteModalOpen && selectedWarehouse && (
-        <DeleteWarehouseModal
-          warehouse={selectedWarehouse}
+      {isDeleteModalOpen && selectedWarehouse && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Warehouse"
+          message="Are you sure you want to delete"
+          itemName={selectedWarehouse.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteWarehouseMutation.mutate(selectedWarehouse.id)}
           isLoading={deleteWarehouseMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
     </div>
@@ -927,131 +936,3 @@ function EditWarehouseModal({
 }
 
 // Delete Warehouse Modal Component
-function DeleteWarehouseModal({
-  warehouse,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  warehouse: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
-  const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
-
-  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (isLoading) {
-      e.preventDefault();
-      return;
-    }
-
-    const button = confirmButtonRef.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = Date.now();
-
-    setRipples((prev) => [...prev, { x, y, id }]);
-
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
-    }, 600);
-  };
-
-  return (
-    <>
-      {/* Modal Backdrop */}
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteWarehouseModalLabel"
-        tabIndex={-1}
-        style={{ display: isShowing ? 'block' : 'none' }}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            {/* Modal Body with Icon */}
-            <div className="modal-body text-center py-8 px-6">
-              {/* Warning Icon */}
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-
-              {/* Title */}
-              <h5 id="deleteWarehouseModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Warehouse
-              </h5>
-
-              {/* Description */}
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{warehouse.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                ref={confirmButtonRef}
-                type="button"
-                onClick={(e) => {
-                  handleButtonClick(e);
-                  onConfirm();
-                }}
-                disabled={isLoading}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2 relative overflow-hidden"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Warehouse'}
-                {ripples.map((ripple) => (
-                  <span
-                    key={ripple.id}
-                    className="absolute rounded-full bg-white/30 pointer-events-none animate-ripple"
-                    style={{
-                      left: `${ripple.x}px`,
-                      top: `${ripple.y}px`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  />
-                ))}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}

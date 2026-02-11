@@ -8,8 +8,6 @@ import {
   Plus,
   Search,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Globe,
   Tag,
   Eye,
@@ -20,11 +18,12 @@ import {
   Languages,
   Ruler,
   MapPin,
-  AlertTriangle,
   Edit,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = 'multi-brand-market' | 'localization';
 type BrandStatus = 'active' | 'inactive' | 'ACTIVE' | 'INACTIVE';
@@ -145,9 +144,7 @@ function MultiBrandMarketSection() {
   const [isDeleteBrandModalShowing, setIsDeleteBrandModalShowing] = useState(false);
   const [isDeleteMarketModalShowing, setIsDeleteMarketModalShowing] = useState(false);
   const [brandsCurrentPage, setBrandsCurrentPage] = useState(1);
-  const [brandsItemsPerPage] = useState(10);
   const [marketsCurrentPage, setMarketsCurrentPage] = useState(1);
-  const [marketsItemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -210,9 +207,9 @@ function MultiBrandMarketSection() {
   }, [brands, searchQuery, statusFilter]);
 
   // Brands pagination calculations
-  const brandsTotalPages = Math.max(1, Math.ceil(filteredBrands.length / brandsItemsPerPage));
-  const brandsStartIndex = (brandsCurrentPage - 1) * brandsItemsPerPage;
-  const brandsEndIndex = brandsStartIndex + brandsItemsPerPage;
+  const brandsTotalPages = Math.max(1, Math.ceil(filteredBrands.length / ITEMS_PER_PAGE));
+  const brandsStartIndex = (brandsCurrentPage - 1) * ITEMS_PER_PAGE;
+  const brandsEndIndex = brandsStartIndex + ITEMS_PER_PAGE;
   const paginatedBrands = filteredBrands.slice(brandsStartIndex, brandsEndIndex);
 
   // Reset brands page when filters change
@@ -247,9 +244,9 @@ function MultiBrandMarketSection() {
   }, [markets, searchQuery, statusFilter]);
 
   // Markets pagination calculations
-  const marketsTotalPages = Math.max(1, Math.ceil(filteredMarkets.length / marketsItemsPerPage));
-  const marketsStartIndex = (marketsCurrentPage - 1) * marketsItemsPerPage;
-  const marketsEndIndex = marketsStartIndex + marketsItemsPerPage;
+  const marketsTotalPages = Math.max(1, Math.ceil(filteredMarkets.length / ITEMS_PER_PAGE));
+  const marketsStartIndex = (marketsCurrentPage - 1) * ITEMS_PER_PAGE;
+  const marketsEndIndex = marketsStartIndex + ITEMS_PER_PAGE;
   const paginatedMarkets = filteredMarkets.slice(marketsStartIndex, marketsEndIndex);
 
   // Reset markets page when filters change
@@ -465,7 +462,7 @@ function MultiBrandMarketSection() {
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Tag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <Tag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </div>
@@ -479,7 +476,7 @@ function MultiBrandMarketSection() {
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </div>
@@ -637,82 +634,15 @@ function MultiBrandMarketSection() {
           </div>
 
           {/* Brands Pagination */}
-          {filteredBrands.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Showing <span className="font-medium text-gray-900 dark:text-white">{brandsStartIndex + 1}</span> to{' '}
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {Math.min(brandsEndIndex, filteredBrands.length)}
-                  </span>{' '}
-                  of <span className="font-medium text-gray-900 dark:text-white">{filteredBrands.length}</span> results
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setBrandsCurrentPage(1)}
-                      disabled={brandsCurrentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                      title="First page"
-                    >
-                      &lt;&lt;
-                    </button>
-                    <button
-                      onClick={() => setBrandsCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={brandsCurrentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                      title="Previous page"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, brandsTotalPages) }, (_, i) => {
-                      let pageNum: number;
-                      if (brandsTotalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (brandsCurrentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (brandsCurrentPage >= brandsTotalPages - 2) {
-                        pageNum = brandsTotalPages - 4 + i;
-                      } else {
-                        pageNum = brandsCurrentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setBrandsCurrentPage(pageNum)}
-                          className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                            brandsCurrentPage === pageNum
-                              ? 'bg-primary-600 text-white border-primary-600'
-                              : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      onClick={() => setBrandsCurrentPage(p => Math.min(brandsTotalPages, p + 1))}
-                      disabled={brandsCurrentPage === brandsTotalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                      title="Next page"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setBrandsCurrentPage(brandsTotalPages)}
-                      disabled={brandsCurrentPage === brandsTotalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                      title="Last page"
-                    >
-                      &gt;&gt;
-                    </button>
-                  </div>
-                </div>
-              </div>
+          {brandsTotalPages > 1 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+              <Pagination
+                currentPage={brandsCurrentPage}
+                totalPages={brandsTotalPages}
+                totalItems={filteredBrands.length}
+                onPageChange={setBrandsCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
             </div>
           )}
 
@@ -748,15 +678,17 @@ function MultiBrandMarketSection() {
           )}
 
           {/* Delete Brand Modal */}
-          {brandToDelete && (
-            <DeleteBrandModal
-              brand={brandToDelete}
+          {brandToDelete && isDeleteBrandModalShowing && (
+            <DeleteModal
+              title="Delete Brand"
+              message="Are you sure you want to delete"
+              itemName={brandToDelete.name}
               onClose={() => {
                 setIsDeleteBrandModalShowing(false);
                 setBrandToDelete(null);
               }}
               onConfirm={handleConfirmDeleteBrand}
-              isShowing={isDeleteBrandModalShowing}
+              isLoading={deleteBrandMutation.isPending}
             />
           )}
         </>
@@ -776,7 +708,7 @@ function MultiBrandMarketSection() {
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </div>
@@ -790,7 +722,7 @@ function MultiBrandMarketSection() {
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </div>
@@ -961,82 +893,15 @@ function MultiBrandMarketSection() {
           </div>
 
           {/* Markets Pagination */}
-          {filteredMarkets.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Showing <span className="font-medium text-gray-900 dark:text-white">{marketsStartIndex + 1}</span> to{' '}
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {Math.min(marketsEndIndex, filteredMarkets.length)}
-                  </span>{' '}
-                  of <span className="font-medium text-gray-900 dark:text-white">{filteredMarkets.length}</span> results
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setMarketsCurrentPage(1)}
-                      disabled={marketsCurrentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                      title="First page"
-                    >
-                      &lt;&lt;
-                    </button>
-                    <button
-                      onClick={() => setMarketsCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={marketsCurrentPage === 1}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                      title="Previous page"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, marketsTotalPages) }, (_, i) => {
-                      let pageNum: number;
-                      if (marketsTotalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (marketsCurrentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (marketsCurrentPage >= marketsTotalPages - 2) {
-                        pageNum = marketsTotalPages - 4 + i;
-                      } else {
-                        pageNum = marketsCurrentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setMarketsCurrentPage(pageNum)}
-                          className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                            marketsCurrentPage === pageNum
-                              ? 'bg-primary-600 text-white border-primary-600'
-                              : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      onClick={() => setMarketsCurrentPage(p => Math.min(marketsTotalPages, p + 1))}
-                      disabled={marketsCurrentPage === marketsTotalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                      title="Next page"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setMarketsCurrentPage(marketsTotalPages)}
-                      disabled={marketsCurrentPage === marketsTotalPages}
-                      className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                      title="Last page"
-                    >
-                      &gt;&gt;
-                    </button>
-                  </div>
-                </div>
-              </div>
+          {marketsTotalPages > 1 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+              <Pagination
+                currentPage={marketsCurrentPage}
+                totalPages={marketsTotalPages}
+                totalItems={filteredMarkets.length}
+                onPageChange={setMarketsCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
             </div>
           )}
 
@@ -1072,15 +937,17 @@ function MultiBrandMarketSection() {
           )}
 
           {/* Delete Market Modal */}
-          {marketToDelete && (
-            <DeleteMarketModal
-              market={marketToDelete}
+          {marketToDelete && isDeleteMarketModalShowing && (
+            <DeleteModal
+              title="Delete Market"
+              message="Are you sure you want to delete"
+              itemName={marketToDelete.name}
               onClose={() => {
                 setIsDeleteMarketModalShowing(false);
                 setMarketToDelete(null);
               }}
               onConfirm={handleConfirmDeleteMarket}
-              isShowing={isDeleteMarketModalShowing}
+              isLoading={deleteMarketMutation.isPending}
             />
           )}
         </>
@@ -1252,230 +1119,8 @@ function CreateBrandModal({ onClose, onCreate, markets }: CreateBrandModalProps)
   );
 }
 
-// Delete Brand Modal Component
-function DeleteBrandModal({
-  brand,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  brand: Brand;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteBrandModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteBrandModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Brand
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{brand.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Brand
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
-// Delete Market Modal Component
-function DeleteMarketModal({
-  market,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  market: Market;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteMarketModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteMarketModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Market
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{market.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 text-[14px] bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Market
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
-// Delete Localization Modal Component
-function DeleteLocalizationModal({
-  localization,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  localization: Localization;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteLocalizationModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteLocalizationModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Localization
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete the localization for
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{localization.marketName}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Localization
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Brand Details Modal
 interface BrandDetailsModalProps {
@@ -1529,7 +1174,7 @@ function BrandDetailsModal({ brand, onClose, onUpdate, markets }: BrandDetailsMo
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1682,7 +1327,7 @@ function BrandViewModal({ brand, onClose, markets }: BrandViewModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1847,7 +1492,7 @@ function CreateMarketModal({ onClose, onCreate, brands }: CreateMarketModalProps
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2079,7 +1724,7 @@ function MarketDetailsModal({ market, onClose, onUpdate, brands }: MarketDetails
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2283,7 +1928,7 @@ function MarketViewModal({ market, onClose, brands }: MarketViewModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2430,7 +2075,6 @@ function LocalizationSection() {
   const [isDeleteLocalizationModalShowing, setIsDeleteLocalizationModalShowing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   // Fetch markets from API for localization
   const { data: marketsData, isLoading: marketsLoading } = useQuery({
@@ -2488,9 +2132,9 @@ function LocalizationSection() {
   }, [localizations, searchQuery, marketFilter]);
 
   // Localization pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredLocalizations.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredLocalizations.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedLocalizations = filteredLocalizations.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -2605,7 +2249,7 @@ function LocalizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -2619,7 +2263,7 @@ function LocalizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <Languages className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Languages className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -2633,7 +2277,7 @@ function LocalizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -2647,7 +2291,7 @@ function LocalizationSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Ruler className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Ruler className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -2826,82 +2470,15 @@ function LocalizationSection() {
       </div>
 
       {/* Localization Pagination */}
-      {filteredLocalizations.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredLocalizations.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredLocalizations.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredLocalizations.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -2941,15 +2518,17 @@ function LocalizationSection() {
       )}
 
       {/* Delete Localization Modal */}
-      {localizationToDelete && (
-        <DeleteLocalizationModal
-          localization={localizationToDelete}
+      {localizationToDelete && isDeleteLocalizationModalShowing && (
+        <DeleteModal
+          title="Delete Localization"
+          message="Are you sure you want to delete the localization for"
+          itemName={localizationToDelete.marketName}
           onClose={() => {
             setIsDeleteLocalizationModalShowing(false);
             setLocalizationToDelete(null);
           }}
           onConfirm={handleConfirmDeleteLocalization}
-          isShowing={isDeleteLocalizationModalShowing}
+          isLoading={deleteLocalizationMutation.isPending}
         />
       )}
     </div>
@@ -3017,7 +2596,7 @@ function CreateLocalizationModal({ onClose, onCreate, markets }: CreateLocalizat
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -3180,7 +2759,7 @@ function LocalizationViewModal({ localization, onClose, markets }: LocalizationV
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -3364,7 +2943,7 @@ function LocalizationDetailsModal({ localization, onClose, onUpdate, markets }: 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

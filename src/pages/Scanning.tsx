@@ -18,6 +18,7 @@ import {
 import Breadcrumb from '../components/Breadcrumb';
 import { SearchInput, DeleteModal } from '../components/ui';
 import { CustomDropdown } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 import { SkeletonPage } from '../components/Skeleton';
 
 // Types
@@ -65,7 +66,6 @@ export default function Scanning() {
   const [codeTypeFilter, setCodeTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const itemsPerPage = 10;
   const scanInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
@@ -130,12 +130,12 @@ export default function Scanning() {
 
   // Fetch scan history from API
   const { data: scanHistoryData } = useQuery({
-    queryKey: ['scan-history', currentPage, itemsPerPage, codeTypeFilter],
+    queryKey: ['scan-history', currentPage, codeTypeFilter],
     queryFn: async () => {
       try {
         const params: any = {
-          skip: (currentPage - 1) * itemsPerPage,
-          take: itemsPerPage,
+          skip: (currentPage - 1) * ITEMS_PER_PAGE,
+          take: ITEMS_PER_PAGE,
         };
         if (codeTypeFilter !== 'all') {
           params.codeType = codeTypeFilter;
@@ -321,8 +321,13 @@ export default function Scanning() {
 
   // Pagination - use API pagination
   const totalHistory = scanHistoryData?.total || 0;
-  const totalPages = Math.ceil(totalHistory / itemsPerPage);
+  const totalPages = Math.ceil(totalHistory / ITEMS_PER_PAGE);
   const paginatedHistory = filteredHistory; // Already paginated by API
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [codeTypeFilter]);
 
   // Summary metrics
   const summaryMetrics = useMemo(() => {
@@ -699,45 +704,14 @@ export default function Scanning() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalHistory)}</span> of{' '}
-                    <span className="font-medium">{totalHistory}</span> scans
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      «
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      ‹
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      ›
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(totalPages)}
-                      disabled={currentPage === totalPages}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      »
-                    </button>
-                  </div>
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalHistory}
+                    onPageChange={setCurrentPage}
+                    className="border-0 pt-0 mt-0"
+                  />
                 </div>
               )}
             </>

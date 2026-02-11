@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { ShoppingBag, Plus, CheckCircle, Clock, Send, Edit, Eye, AlertTriangle, DollarSign, Package, Calendar, TrendingUp, X, ChevronDown } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
@@ -164,8 +165,11 @@ export default function AutoPOProposals() {
     queryFn: async () => {
       try {
         const response = await api.get('/inventory');
-        return response.data?.data || [];
+        // Handle both response formats: { data: [...] } or [...]
+        const inventory = response.data?.data || response.data || [];
+        return Array.isArray(inventory) ? inventory : [];
       } catch (error) {
+        console.error('Error fetching inventory:', error);
         return [];
       }
     },
@@ -202,90 +206,159 @@ export default function AutoPOProposals() {
   const products = productsData || [];
 
   // Generate PO proposals based on thresholds
-  const generateProposals = () => {
+  const generateProposals = async () => {
     if (isGenerating) return;
+    
+    // Validate data is loaded
+    if (isLoadingInventory || isLoadingSuppliers || isLoadingProducts) {
+      toast.error('Please wait for data to load...');
+      return;
+    }
+    
+    if (inventory.length === 0) {
+      toast.error('No inventory data available. Please ensure inventory items exist.');
+      return;
+    }
+    
+    if (products.length === 0) {
+      toast.error('No products available. Please ensure products exist.');
+      return;
+    }
+    
+    if (suppliers.length === 0) {
+      toast.error('No suppliers available. Please add at least one supplier.');
+      return;
+    }
     
     setIsGenerating(true);
     
-    // Simulate API call delay for better UX
-    setTimeout(() => {
+    try {
+      console.log('Generating proposals...', {
+        inventoryCount: inventory.length,
+        productsCount: products.length,
+        suppliersCount: suppliers.length,
+      });
+      
+      // Process proposals
       const newProposals = inventory
         .filter((item: any) => {
           const currentQty = item.quantity || 0;
           const reorderPoint = item.reorderPoint || 0;
           return currentQty <= reorderPoint;
         })
-        .map((item: any): POProposal => {
-          const product = products.find((p: any) => p.id === item.productId);
-          const productName = product?.name || 'Unknown Product';
-          const sku = product?.sku || 'N/A';
-          const warehouseName = item.warehouse?.name || 'Warehouse';
-          
-          const currentQty = item.quantity || 0;
-          const reorderPoint = item.reorderPoint || 0;
-          const safetyStock = item.safetyStock || 0;
-          
-          // Calculate suggested quantity
-          const suggestedQty = Math.max(
-            (reorderPoint + safetyStock * 2) - currentQty,
-            safetyStock
-          );
-          
-          // Assign supplier (simplified: use first active supplier or random)
-          const activeSuppliers = suppliers.filter((s: any) => s.isActive);
-          const supplier = activeSuppliers[0] || suppliers[0] || { id: 0, name: 'No Supplier', leadTimeDays: 30 };
-          
-          // MOQ (Minimum Order Quantity) - simulate based on product type
-          // In real system, this would come from supplier data
-          const moqQty = Math.max(50, Math.ceil(suggestedQty / 10) * 10); // Round up to nearest 10, min 50
-          
-          // Adjust quantity to meet MOQ
-          const adjustedQty = Math.max(suggestedQty, moqQty);
-          
-          // Calculate costs (assume 50% of product base price as cost)
-          const unitCost = product ? parseFloat(product.basePrice || 0) * 0.5 : 10;
-          const totalCost = unitCost * adjustedQty;
-          
-          // Lead time
-          const leadTimeDays = supplier.leadTimeDays || 30;
-          const expectedDate = new Date();
-          expectedDate.setDate(expectedDate.getDate() + leadTimeDays);
-          
-          // Calculate stock after PO
-          const stockAfterPO = currentQty + adjustedQty;
-          
-          return {
-            id: `proposal-${item.id}-${Date.now()}`,
-            productId: item.productId,
-            productName,
-            sku,
-            warehouseId: item.warehouseId,
-            warehouseName,
-            supplierId: supplier.id,
-            supplierName: supplier.name,
-            currentQty,
-            reorderPoint,
-            safetyStock,
-            suggestedQty,
-            moqQty,
-            adjustedQty,
-            unitCost,
-            totalCost,
-            leadTimeDays,
-            expectedDate,
-            status: 'DRAFT' as ProposalStatus,
-            thresholdMet: currentQty <= reorderPoint,
-            stockAfterPO,
-            cashImpact: totalCost,
-          };
-        });
+        .map((item: any): POProposal | null => {
+          try {
+            const product = products.find((p: any) => p.id === item.productId);
+            if (!product) {
+              console.warn(`Product not found for inventory item ${item.id}, productId: ${item.productId}`);
+              return null; // Skip items without products
+            }
+            
+            const productName = product.name || 'Unknown Product';
+            const sku = product.sku || 'N/A';
+            const warehouse = item.warehouse || {};
+            const warehouseName = warehouse.name || 'Warehouse';
+            
+            const currentQty = Number(item.quantity) || 0;
+            const reorderPoint = Number(item.reorderPoint) || 0;
+            const safetyStock = Number(item.safetyStock) || 0;
+            
+            // Calculate suggested quantity
+            const suggestedQty = Math.max(
+              (reorderPoint + safetyStock * 2) - currentQty,
+              safetyStock
+            );
+            
+            // Assign supplier - try to find supplier for this product, otherwise use first active supplier
+            let supplier = null;
+            
+            // Try to find supplier associated with product (if product has supplierId)
+            if (product.supplierId) {
+              supplier = suppliers.find((s: any) => s.id === product.supplierId);
+            }
+            
+            // Fallback to first active supplier
+            if (!supplier) {
+              const activeSuppliers = suppliers.filter((s: any) => s.isActive);
+              supplier = activeSuppliers[0] || suppliers[0];
+            }
+            
+            // Final fallback
+            if (!supplier) {
+              supplier = { id: 0, name: 'No Supplier', leadTimeDays: 30, moq: 50 };
+            }
+            
+            // MOQ (Minimum Order Quantity) - use supplier's MOQ if available, otherwise calculate based on suggested quantity
+            const moqQty = supplier && supplier.moq 
+              ? Number(supplier.moq)
+              : Math.max(50, Math.ceil(suggestedQty / 10) * 10); // Fallback: round up to nearest 10, min 50
+            
+            // Adjust quantity to meet MOQ
+            const adjustedQty = Math.max(suggestedQty, moqQty);
+            
+            // Calculate costs (assume 50% of product base price as cost, or use product cost if available)
+            const basePrice = parseFloat(product.basePrice || product.price || '0') || 0;
+            const unitCost = basePrice > 0 ? basePrice * 0.5 : 10;
+            const totalCost = unitCost * adjustedQty;
+            
+            // Lead time
+            const leadTimeDays = Number(supplier.leadTimeDays) || 30;
+            const expectedDate = new Date();
+            expectedDate.setDate(expectedDate.getDate() + leadTimeDays);
+            
+            // Calculate stock after PO
+            const stockAfterPO = currentQty + adjustedQty;
+            
+            return {
+              id: `proposal-${item.id}-${Date.now()}-${Math.random()}`,
+              productId: item.productId,
+              productName,
+              sku,
+              warehouseId: item.warehouseId || warehouse.id || 0,
+              warehouseName,
+              supplierId: supplier.id,
+              supplierName: supplier.name,
+              currentQty,
+              reorderPoint,
+              safetyStock,
+              suggestedQty,
+              moqQty,
+              adjustedQty,
+              unitCost,
+              totalCost,
+              leadTimeDays,
+              expectedDate,
+              status: 'DRAFT' as ProposalStatus,
+              thresholdMet: currentQty <= reorderPoint,
+              stockAfterPO,
+              cashImpact: totalCost,
+            };
+          } catch (error) {
+            console.error(`Error processing inventory item ${item.id}:`, error);
+            return null; // Skip items that cause errors
+          }
+        })
+        .filter((proposal): proposal is POProposal => proposal !== null); // Remove null entries
       
+      if (newProposals.length === 0) {
+        toast('No proposals generated. All inventory items are above their reorder points.', { icon: 'ℹ️' });
+        setIsGenerating(false);
+        return;
+      }
+      
+      console.log('Generated proposals:', newProposals.length, newProposals);
       setProposalsList(newProposals);
       setIsGenerating(false);
       
+      toast.success(`Successfully generated ${newProposals.length} PO proposal(s)!`);
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['inventory', 'auto-po'] });
-    }, 500);
+    } catch (error) {
+      console.error('Error generating proposals:', error);
+      toast.error('Failed to generate proposals. Please try again.');
+      setIsGenerating(false);
+    }
   };
 
   // Auto-generate proposals on mount if inventory is loaded
@@ -457,7 +530,7 @@ export default function AutoPOProposals() {
               <p className="text-[24px] font-bold text-gray-900 dark:text-white">{proposals.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -471,7 +544,7 @@ export default function AutoPOProposals() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-              <Edit className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <Edit className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -485,7 +558,7 @@ export default function AutoPOProposals() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -499,7 +572,7 @@ export default function AutoPOProposals() {
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <DollarSign className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -763,7 +836,7 @@ function ImpactPreviewModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -891,7 +964,7 @@ function ProposalDetailModal({
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

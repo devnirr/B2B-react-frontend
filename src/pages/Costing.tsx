@@ -20,13 +20,35 @@ export default function Costing() {
     },
   });
 
+  // Fetch cost sheets data
+  const { data: costSheetsData } = useQuery({
+    queryKey: ['cost-sheets'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/cost-sheets?skip=0&take=1000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
   const products = productsData || [];
+  const costSheets = costSheetsData || [];
   
-  // Calculate costing data from products
+  // Map costing data from CostSheet records
   const costings = products.map((product: any) => {
     const price = parseFloat(product.price) || 0;
-    const cost = price * 0.6; // Estimate cost as 60% of price
-    const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
+    // Find cost sheet for this product
+    const costSheet = costSheets.find((cs: any) => cs.productId === product.id);
+    
+    const cost = costSheet 
+      ? parseFloat(costSheet.totalCost) || 0 
+      : 0; // Use actual cost from cost sheet, or 0 if not available
+    const margin = costSheet && parseFloat(costSheet.margin) !== null
+      ? parseFloat(costSheet.margin)
+      : (price > 0 && cost > 0 ? ((price - cost) / price) * 100 : 0);
+    
     return {
       id: product.id,
       product: product.name || product.sku || 'Unknown Product',

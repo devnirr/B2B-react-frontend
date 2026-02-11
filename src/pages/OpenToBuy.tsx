@@ -438,7 +438,7 @@ export default function OpenToBuy() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -456,9 +456,9 @@ export default function OpenToBuy() {
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
               {summaryStats.variance >= 0 ? (
-                <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
               ) : (
-                <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
               )}
             </div>
           </div>
@@ -473,7 +473,7 @@ export default function OpenToBuy() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <ShoppingCart className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -487,7 +487,7 @@ export default function OpenToBuy() {
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <DollarSign className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>

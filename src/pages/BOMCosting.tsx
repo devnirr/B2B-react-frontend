@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { List, DollarSign, Calculator, Plus, ChevronRight, ChevronDown, Package, Factory, Users, TrendingUp, X, Edit, Trash2, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -6,6 +6,9 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import { logUpdate, logDelete } from '../utils/auditLog';
+// logCreate is intentionally unused - reserved for future use
 
 
 type TabType = 'bom' | 'cost-sheets' | 'margin-simulator';
@@ -67,6 +70,7 @@ export default function BOMCosting() {
 function BillOfMaterialsSection() {
   const [expandedBoms, setExpandedBoms] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -77,15 +81,33 @@ function BillOfMaterialsSection() {
   const [bomToDelete, setBomToDelete] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Fetch BOMs from API
-  const { data: bomsData, isLoading } = useQuery({
-    queryKey: ['boms'],
+  // Fetch BOMs from API with pagination
+  // When searching, fetch all data for client-side filtering
+  // Otherwise, use server-side pagination
+  const { data: bomsResponse, isLoading } = useQuery({
+    queryKey: ['boms', currentPage, searchQuery],
     queryFn: async () => {
       try {
-        const response = await api.get('/bom?skip=0&take=1000');
-        return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        // If searching, fetch all data for client-side filtering
+        // Otherwise, use pagination
+        const skip = searchQuery ? 0 : (currentPage - 1) * ITEMS_PER_PAGE;
+        const take = searchQuery ? 10000 : ITEMS_PER_PAGE;
+        const response = await api.get(`/bom?skip=${skip}&take=${take}`);
+        // Check if response has pagination structure
+        if (response.data?.data && response.data?.total !== undefined) {
+          return {
+            data: response.data.data,
+            total: response.data.total,
+          };
+        }
+        // Fallback for array response
+        const allBoms = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        return {
+          data: allBoms,
+          total: allBoms.length,
+        };
       } catch (error) {
-        return [];
+        return { data: [], total: 0 };
       }
     },
   });
@@ -104,7 +126,8 @@ function BillOfMaterialsSection() {
   });
 
   const products = productsData || [];
-  const rawBoms = bomsData || [];
+  const rawBoms = bomsResponse?.data || [];
+  const totalBoms = bomsResponse?.total || 0;
 
   // Transform BOMs from API to display format
   const boms = rawBoms.map((bom: any) => {
@@ -146,16 +169,26 @@ function BillOfMaterialsSection() {
 
   const updateBOMMutation = useMutation({
     mutationFn: async ({ id, bomData }: { id: number; bomData: any }) => {
+      console.log('Updating BOM:', id, bomData);
+      // Send only the bomData, not wrapped in an object
       const response = await api.patch(`/bom/${id}`, bomData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; bomData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['boms'] });
+      logUpdate('BOM', variables.id, variables.bomData);
       toast.success('BOM updated successfully!');
       closeEditModal();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update BOM');
+      console.error('BOM Update Error:', error);
+      console.error('Error Response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.message) 
+                            ? error.response.data.message.map((m: any) => typeof m === 'string' ? m : Object.values(m).join(', ')).join(', ') 
+                            : 'Failed to update BOM');
+      console.error('Validation Errors:', error.response?.data?.message);
+      toast.error(errorMessage);
     },
   });
 
@@ -163,8 +196,9 @@ function BillOfMaterialsSection() {
     mutationFn: async (id: number) => {
       await api.delete(`/bom/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['boms'] });
+      logDelete('BOM', id);
       toast.success('BOM deleted successfully!');
       closeDeleteModal();
     },
@@ -244,10 +278,34 @@ function BillOfMaterialsSection() {
     }
   }, [isEditModalOpen]);
 
-  const filteredBoms = boms.filter((bom: any) =>
-    bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bom.sku.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter BOMs based on search query
+  const filteredBoms = useMemo(() => {
+    if (!searchQuery) return boms;
+    const query = searchQuery.toLowerCase();
+    return boms.filter((bom: any) =>
+      bom.name.toLowerCase().includes(query) ||
+      bom.sku.toLowerCase().includes(query)
+    );
+  }, [boms, searchQuery]);
+
+  // Calculate pagination
+  // If searching, use client-side pagination on filtered results
+  // Otherwise, use server-side pagination
+  const totalFiltered = searchQuery ? filteredBoms.length : totalBoms;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  
+  // Apply client-side pagination when searching
+  const paginatedBoms = useMemo(() => {
+    if (searchQuery) {
+      return filteredBoms.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    }
+    return filteredBoms;
+  }, [filteredBoms, searchQuery, currentPage]);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const toggleBOM = (bomId: number) => {
     const newExpanded = new Set(expandedBoms);
@@ -314,7 +372,7 @@ function BillOfMaterialsSection() {
 
       {/* BOM List */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        {filteredBoms.length === 0 ? (
+        {paginatedBoms.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <List className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -326,7 +384,7 @@ function BillOfMaterialsSection() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredBoms.map((bom: any) => (
+            {paginatedBoms.map((bom: any) => (
               <div key={bom.id} className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -341,14 +399,14 @@ function BillOfMaterialsSection() {
                       )}
                     </button>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{bom.name}</h3>
+                      <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white">{bom.name}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">SKU: {bom.sku}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
                       <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost</p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <p className="text-[16px] font-semibold text-gray-900 dark:text-white">
                         ${bom.totalCost.toFixed(2)}
                       </p>
                     </div>
@@ -398,6 +456,17 @@ function BillOfMaterialsSection() {
             ))}
           </div>
         )}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              onPageChange={setCurrentPage}
+              className="border-0 pt-0 mt-0"
+            />
+          </div>
+        )}
       </div>
 
       {/* Add BOM Modal */}
@@ -421,7 +490,12 @@ function BillOfMaterialsSection() {
           bom={selectedBOM}
           products={products}
           onClose={closeEditModal}
-          onSubmit={(bomData) => updateBOMMutation.mutate({ id: selectedBOM.id, bomData })}
+          onSubmit={(data: any) => {
+            // Extract bomData from the data object if it contains { id, bomData }
+            const bomData = ('bomData' in data) ? data.bomData : data;
+            const id = ('id' in data) ? data.id : selectedBOM.id;
+            updateBOMMutation.mutate({ id, bomData });
+          }}
           isLoading={updateBOMMutation.isPending}
           isShowing={isEditModalShowing}
         />
@@ -445,7 +519,7 @@ function BillOfMaterialsSection() {
                 <div className="modal-body">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                      <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                      <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -525,7 +599,14 @@ function BOMModal({
     name: bom?.name || '',
     status: bom?.status || 'ACTIVE',
     description: bom?.description || '',
-    components: bom?.items || [],
+    components: (bom?.items || bom?.components || []).map((comp: any) => ({
+      name: comp.name || '',
+      productId: comp.productId || undefined,
+      quantity: parseFloat(comp.quantity) || 1,
+      unit: comp.unit || 'pcs',
+      cost: parseFloat(comp.cost) || 0,
+      notes: comp.notes || '',
+    })),
   });
 
   const [componentForm, setComponentForm] = useState({
@@ -551,10 +632,11 @@ function BOMModal({
         ...formData.components,
         {
           name: componentForm.name,
+          productId: undefined,
           quantity: componentForm.quantity,
           unit: componentForm.unit,
           cost: componentForm.cost,
-          notes: componentForm.notes,
+          notes: componentForm.notes || undefined,
         },
       ],
     });
@@ -579,12 +661,41 @@ function BOMModal({
       return;
     }
 
-    const bomData = {
-      name: formData.name,
+    // Clean and validate components - remove undefined values
+    // Note: productId is automatically set by backend using the BOM's productId
+    const cleanComponents = formData.components
+      .filter((comp: any) => comp.name && comp.name.trim())
+      .map((comp: any) => {
+        const component: any = {
+          name: comp.name.trim(),
+          quantity: Number(comp.quantity) || 1,
+          unit: comp.unit || 'pcs',
+          cost: Number(comp.cost) || 0,
+        };
+        
+        // Only include notes if it's not empty
+        if (comp.notes && comp.notes.trim()) {
+          component.notes = comp.notes.trim();
+        }
+        
+        return component;
+      });
+
+    if (cleanComponents.length === 0) {
+      toast.error('Please add at least one valid component');
+      return;
+    }
+
+    const bomData: any = {
+      name: formData.name.trim(),
       status: formData.status,
-      description: formData.description,
-      components: formData.components,
+      components: cleanComponents,
     };
+    
+    // Only include description if it's not empty
+    if (formData.description && formData.description.trim()) {
+      bomData.description = formData.description.trim();
+    }
 
     if (bom) {
       onSubmit({ id: bom.id, bomData });
@@ -794,6 +905,7 @@ function BOMModal({
 // Cost Sheets Section Component
 function CostSheetsSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalShowing, setIsModalShowing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -804,15 +916,33 @@ function CostSheetsSection() {
   const [costSheetToDelete, setCostSheetToDelete] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Fetch cost sheets from API
-  const { data: costSheetsData, isLoading } = useQuery({
-    queryKey: ['cost-sheets'],
+  // Fetch cost sheets from API with pagination
+  // When searching, fetch all data for client-side filtering
+  // Otherwise, use server-side pagination
+  const { data: costSheetsResponse, isLoading } = useQuery({
+    queryKey: ['cost-sheets', currentPage, searchQuery],
     queryFn: async () => {
       try {
-        const response = await api.get('/cost-sheets?skip=0&take=1000');
-        return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        // If searching, fetch all data for client-side filtering
+        // Otherwise, use pagination
+        const skip = searchQuery ? 0 : (currentPage - 1) * ITEMS_PER_PAGE;
+        const take = searchQuery ? 10000 : ITEMS_PER_PAGE;
+        const response = await api.get(`/cost-sheets?skip=${skip}&take=${take}`);
+        // Check if response has pagination structure
+        if (response.data?.data && response.data?.total !== undefined) {
+          return {
+            data: response.data.data,
+            total: response.data.total,
+          };
+        }
+        // Fallback for array response
+        const allCostSheets = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        return {
+          data: allCostSheets,
+          total: allCostSheets.length,
+        };
       } catch (error) {
-        return [];
+        return { data: [], total: 0 };
       }
     },
   });
@@ -831,7 +961,10 @@ function CostSheetsSection() {
   });
 
   const products = productsData || [];
-  const costSheets = (costSheetsData || []).map((sheet: any) => ({
+  const rawCostSheets = costSheetsResponse?.data || [];
+  const totalCostSheets = costSheetsResponse?.total || 0;
+  
+  const costSheets = rawCostSheets.map((sheet: any) => ({
     id: sheet.id,
     productId: sheet.productId,
     productName: sheet.product?.name || sheet.product?.sku || 'Product',
@@ -863,16 +996,25 @@ function CostSheetsSection() {
 
   const updateCostSheetMutation = useMutation({
     mutationFn: async ({ id, costSheetData }: { id: number; costSheetData: any }) => {
+      console.log('Updating Cost Sheet:', id, costSheetData);
+      // Send only the costSheetData, not wrapped in an object
       const response = await api.patch(`/cost-sheets/${id}`, costSheetData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; costSheetData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['cost-sheets'] });
+      logUpdate('CostSheet', variables.id, variables.costSheetData);
       toast.success('Cost sheet updated successfully!');
       closeEditModal();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update cost sheet');
+      console.error('Cost Sheet Update Error:', error);
+      console.error('Error Response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.message) 
+                            ? error.response.data.message.map((m: any) => typeof m === 'string' ? m : Object.values(m).join(', ')).join(', ') 
+                            : 'Failed to update cost sheet');
+      toast.error(errorMessage);
     },
   });
 
@@ -880,8 +1022,9 @@ function CostSheetsSection() {
     mutationFn: async (id: number) => {
       await api.delete(`/cost-sheets/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['cost-sheets'] });
+      logDelete('CostSheet', id);
       toast.success('Cost sheet deleted successfully!');
       closeDeleteModal();
     },
@@ -965,19 +1108,43 @@ function CostSheetsSection() {
     }
   }, [isEditModalOpen]);
 
-  const filteredCostSheets = costSheets.filter((sheet: any) =>
-    sheet.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sheet.sku.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter cost sheets based on search query
+  const filteredCostSheets = useMemo(() => {
+    if (!searchQuery) return costSheets;
+    const query = searchQuery.toLowerCase();
+    return costSheets.filter((sheet: any) =>
+      sheet.productName.toLowerCase().includes(query) ||
+      sheet.sku.toLowerCase().includes(query)
+    );
+  }, [costSheets, searchQuery]);
+
+  // Calculate pagination
+  // If searching, use client-side pagination on filtered results
+  // Otherwise, use server-side pagination
+  const totalFiltered = searchQuery ? filteredCostSheets.length : totalCostSheets;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  
+  // Apply client-side pagination when searching
+  const paginatedCostSheets = useMemo(() => {
+    if (searchQuery) {
+      return filteredCostSheets.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    }
+    return filteredCostSheets;
+  }, [filteredCostSheets, searchQuery, currentPage]);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   if (isLoading) {
     return <SkeletonPage />;
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <SearchInput
             value={searchQuery}
           onChange={setSearchQuery}
@@ -995,7 +1162,7 @@ function CostSheetsSection() {
 
       {/* Cost Sheets List */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {filteredCostSheets.length === 0 ? (
+        {paginatedCostSheets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <DollarSign className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -1037,7 +1204,7 @@ function CostSheetsSection() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredCostSheets.map((sheet: any) => (
+                {paginatedCostSheets.map((sheet: any) => (
                   <tr key={sheet.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {sheet.productName}
@@ -1089,6 +1256,17 @@ function CostSheetsSection() {
             </table>
           </div>
         )}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              onPageChange={setCurrentPage}
+              className="border-0 pt-0 mt-0"
+            />
+          </div>
+        )}
       </div>
 
       {/* Add Cost Sheet Modal */}
@@ -1112,7 +1290,12 @@ function CostSheetsSection() {
           costSheet={selectedCostSheet}
           products={products}
           onClose={closeEditModal}
-          onSubmit={(costSheetData) => updateCostSheetMutation.mutate({ id: selectedCostSheet.id, costSheetData })}
+          onSubmit={(data: any) => {
+            // Extract costSheetData from the data object if it contains { id, costSheetData }
+            const costSheetData = ('costSheetData' in data) ? data.costSheetData : data;
+            const id = ('id' in data) ? data.id : selectedCostSheet.id;
+            updateCostSheetMutation.mutate({ id, costSheetData });
+          }}
           isLoading={updateCostSheetMutation.isPending}
           isShowing={isEditModalShowing}
         />
@@ -1136,7 +1319,7 @@ function CostSheetsSection() {
                 <div className="modal-body">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                      <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                      <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -1230,13 +1413,22 @@ function CostSheetModal({
       return;
     }
 
-    const costSheetData = {
-      materials: formData.materials,
-      labor: formData.labor,
-      overhead: formData.overhead,
-      sellingPrice: formData.sellingPrice || null,
-      notes: formData.notes || null,
+    // Clean the data - convert to numbers and remove null/undefined values
+    const costSheetData: any = {
+      materials: Number(formData.materials) || 0,
+      labor: Number(formData.labor) || 0,
+      overhead: Number(formData.overhead) || 0,
     };
+    
+    // Only include sellingPrice if it's a valid number > 0
+    if (formData.sellingPrice && !isNaN(Number(formData.sellingPrice)) && Number(formData.sellingPrice) > 0) {
+      costSheetData.sellingPrice = Number(formData.sellingPrice);
+    }
+    
+    // Only include notes if it's not empty
+    if (formData.notes && formData.notes.trim()) {
+      costSheetData.notes = formData.notes.trim();
+    }
 
     if (costSheet) {
       onSubmit({ id: costSheet.id, costSheetData });
@@ -1676,7 +1868,7 @@ function MarginSimulatorSection() {
       <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-lg shadow-sm border border-primary-200 dark:border-primary-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">Pricing Summary</h3>
           </div>
           <button

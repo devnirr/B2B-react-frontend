@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Plus } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
+import { SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 export default function ContentReadiness() {
-  const [searchQuery, _setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', 'content-readiness'],
@@ -22,43 +25,91 @@ export default function ContentReadiness() {
 
   const products = productsData || [];
 
-  // Transform products into content readiness format
-  const content = products.slice(0, 20).map((product: any, index: number) => {
+  // Fetch DAM assets for content readiness
+  const { data: damAssetsData } = useQuery({
+    queryKey: ['dam-assets', 'content-readiness'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/dam?skip=0&take=10000');
+        return response.data?.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  const damAssets = damAssetsData || [];
+
+  // Transform products into content readiness format based on actual DAM assets
+  const content = products.map((product: any) => {
     const hasImages = product.images && product.images.length > 0;
     const hasDescription = product.description && product.description.length > 0;
     
-    let type = 'Images';
-    let status = 'Draft';
-    let items = 0;
+    // Get DAM assets for this product
+    const productAssets = damAssets.filter((asset: any) => asset.productId === product.id);
+    const imageAssets = productAssets.filter((asset: any) => asset.type === 'IMAGE');
+    const videoAssets = productAssets.filter((asset: any) => asset.type === 'VIDEO');
+    const documentAssets = productAssets.filter((asset: any) => asset.type === 'DOCUMENT');
     
-    if (index % 3 === 0) {
-      type = 'Images';
-      items = hasImages ? product.images.length : 0;
-      status = hasImages ? 'Ready' : 'Draft';
-    } else if (index % 3 === 1) {
-      type = 'Copy';
-      items = hasDescription ? 1 : 0;
-      status = hasDescription ? 'In Review' : 'Draft';
-    } else {
-      type = 'Video';
-      items = 0;
-      status = 'Draft';
+    // Create content items based on actual assets
+    const contentItems = [];
+    
+    // Images content
+    if (imageAssets.length > 0 || hasImages) {
+      contentItems.push({
+        id: `${product.id}-images`,
+        name: `${product.name || product.sku || 'Product'} - Images`,
+        type: 'Images',
+        status: imageAssets.length > 0 || hasImages ? 'Ready' : 'Draft',
+        items: imageAssets.length || (hasImages ? product.images.length : 0),
+      });
     }
     
-    return {
-      id: product.id,
-      name: `${product.name || product.sku || 'Product'} Content Set`,
-      type,
-      status,
-      items,
-    };
-  });
+    // Copy content
+    if (documentAssets.length > 0 || hasDescription) {
+      contentItems.push({
+        id: `${product.id}-copy`,
+        name: `${product.name || product.sku || 'Product'} - Copy`,
+        type: 'Copy',
+        status: hasDescription ? 'In Review' : 'Draft',
+        items: documentAssets.length || (hasDescription ? 1 : 0),
+      });
+    }
+    
+    // Video content
+    if (videoAssets.length > 0) {
+      contentItems.push({
+        id: `${product.id}-video`,
+        name: `${product.name || product.sku || 'Product'} - Video`,
+        type: 'Video',
+        status: videoAssets.length > 0 ? 'Ready' : 'Draft',
+        items: videoAssets.length,
+      });
+    }
+    
+    return contentItems;
+  }).flat(); // Flatten the array of arrays
 
   // Filter by search query
-  const filteredContent = content.filter((item: any) => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContent = useMemo(() => {
+    if (!searchQuery) return content;
+    const query = searchQuery.toLowerCase();
+    return content.filter((item: any) => 
+      item.name.toLowerCase().includes(query) ||
+      item.type.toLowerCase().includes(query)
+    );
+  }, [content, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredContent.length / ITEMS_PER_PAGE);
+  const paginatedContent = useMemo(() => {
+    return filteredContent.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [filteredContent, currentPage]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   if (isLoading) {
     return <SkeletonPage />;
@@ -81,8 +132,18 @@ export default function ContentReadiness() {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="mb-6">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search content..."
+          className="max-w-md"
+        />
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {filteredContent.length === 0 ? (
+        {paginatedContent.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -108,7 +169,7 @@ export default function ContentReadiness() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredContent.map((item: any) => (
+              {paginatedContent.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {item.name}
@@ -133,6 +194,18 @@ export default function ContentReadiness() {
               ))}
             </tbody>
           </table>
+        )}
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredContent.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         )}
       </div>
     </div>

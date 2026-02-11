@@ -1558,7 +1558,7 @@ export default function Omnichannel() {
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                                <Store className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                                <Store className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                               </div>
                               <div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">

@@ -17,7 +17,6 @@ import {
   Eye,
   CheckCircle,
   Trash2,
-  AlertTriangle,
   Edit,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +25,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = 'vat-reports' | 'region-rules';
 
@@ -260,6 +260,68 @@ function VATReportsSection() {
     return Array.from(regions).sort();
   }, [vatReports]);
 
+  // Download VAT report as CSV
+  const handleDownloadReport = (report: any) => {
+    try {
+      // Create CSV content
+      const csvRows: string[] = [];
+      
+      // Header section
+      csvRows.push('VAT Report');
+      csvRows.push('');
+      csvRows.push(`Region,${report.region}`);
+      csvRows.push(`Period,${report.period.charAt(0).toUpperCase() + report.period.slice(1)}`);
+      csvRows.push(`Date Range,${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`);
+      csvRows.push(`Invoice Count,${report.invoiceCount}`);
+      csvRows.push(`Subtotal,${report.currency} ${report.subtotal.toFixed(2)}`);
+      csvRows.push(`VAT Amount,${report.currency} ${report.totalTax.toFixed(2)}`);
+      csvRows.push(`Total Amount,${report.currency} ${report.totalAmount.toFixed(2)}`);
+      csvRows.push(`Average Tax Rate,${report.avgTaxRate.toFixed(2)}%`);
+      csvRows.push('');
+      csvRows.push('Invoice Details');
+      csvRows.push('');
+      
+      // Invoice details header
+      csvRows.push('Invoice Number,Date,Subtotal,Tax Rate,Tax Amount,Total Amount');
+      
+      // Invoice details rows
+      if (report.invoices && report.invoices.length > 0) {
+        report.invoices.forEach((invoice: any) => {
+          const invoiceNumber = invoice.invoiceNumber || `INV-${invoice.id}`;
+          const date = new Date(invoice.createdAt || invoice.sentAt).toLocaleDateString();
+          const subtotal = parseFloat(invoice.subtotal || 0).toFixed(2);
+          const taxRate = parseFloat(invoice.taxRate || 0).toFixed(2);
+          const taxAmount = parseFloat(invoice.taxAmount || 0).toFixed(2);
+          const totalAmount = parseFloat(invoice.totalAmount || 0).toFixed(2);
+          const currency = invoice.currency || 'USD';
+          
+          csvRows.push(`${invoiceNumber},${date},${currency} ${subtotal},${taxRate}%,${currency} ${taxAmount},${currency} ${totalAmount}`);
+        });
+      }
+      
+      // Create CSV string
+      const csvContent = csvRows.join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `VAT_Report_${report.region}_${new Date(report.startDate).toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('VAT report downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      toast.error('Failed to download VAT report');
+    }
+  };
+
   if (isLoadingInvoices) {
     return <SkeletonPage />;
   }
@@ -277,7 +339,7 @@ function VATReportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -291,7 +353,7 @@ function VATReportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -305,7 +367,7 @@ function VATReportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Receipt className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -319,7 +381,7 @@ function VATReportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <FileText className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -478,9 +540,9 @@ function VATReportsSection() {
                           className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
-                          View
                         </button>
                         <button
+                          onClick={() => handleDownloadReport(report)}
                           className="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                           title="Download Report"
                         >
@@ -498,7 +560,11 @@ function VATReportsSection() {
 
       {/* VAT Report Details Modal */}
       {selectedReport && (
-        <VATReportDetailsModal report={selectedReport} onClose={() => setSelectedReport(null)} />
+        <VATReportDetailsModal 
+          report={selectedReport} 
+          onClose={() => setSelectedReport(null)}
+          onDownload={handleDownloadReport}
+        />
       )}
     </div>
   );
@@ -508,23 +574,31 @@ function VATReportsSection() {
 interface VATReportDetailsModalProps {
   report: any;
   onClose: () => void;
+  onDownload: (report: any) => void;
 }
 
-function VATReportDetailsModal({ report, onClose }: VATReportDetailsModalProps) {
+function VATReportDetailsModal({ report, onClose, onDownload }: VATReportDetailsModalProps) {
   if (!report) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">VAT Report Details</h2>
+            <h2 className="text-[16px] font-bold text-gray-900 dark:text-white">VAT Report Details</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {report.region} - {report.period.charAt(0).toUpperCase() + report.period.slice(1)}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => onDownload(report)}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
               title="Download Report"
             >
@@ -534,7 +608,7 @@ function VATReportDetailsModal({ report, onClose }: VATReportDetailsModalProps) 
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -884,7 +958,7 @@ function RegionRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -898,7 +972,7 @@ function RegionRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -912,7 +986,7 @@ function RegionRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Receipt className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -926,7 +1000,7 @@ function RegionRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -1183,17 +1257,20 @@ function RegionRulesSection() {
       )}
 
       {/* Delete Rule Modal */}
-      {ruleToDelete && (
-        <DeleteRuleModal
-          rule={ruleToDelete}
+      {ruleToDelete && showDeleteModal && (
+        <DeleteModal
+          title="Delete Region Rule"
+          message={`Are you sure you want to delete the tax rule for "${ruleToDelete.region}" (${ruleToDelete.country})`}
+          itemName=""
           onClose={() => {
             setShowDeleteModal(false);
             setRuleToDelete(null);
           }}
           onConfirm={() => {
             handleDeleteRule(ruleToDelete.id);
+            setShowDeleteModal(false);
+            setRuleToDelete(null);
           }}
-          isShowing={showDeleteModal}
         />
       )}
     </div>
@@ -1723,63 +1800,3 @@ function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
   );
 }
 
-// Delete Rule Modal Component
-interface DeleteRuleModalProps {
-  rule: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}
-
-function DeleteRuleModal({ rule, onClose, onConfirm, isShowing }: DeleteRuleModalProps) {
-  if (!isShowing) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-            </div>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
-            Delete Region Rule
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-1 text-center">
-            Are you sure you want to delete the tax rule for
-          </p>
-          <p className="text-gray-900 dark:text-white font-semibold mb-4 text-center">
-            "{rule.region}" ({rule.country})?
-          </p>
-          <p className="text-sm text-red-600 dark:text-red-400 font-medium text-center mb-6">
-            This action cannot be undone.
-          </p>
-          <div className="flex items-center justify-end gap-3 text-[14px]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Rule
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

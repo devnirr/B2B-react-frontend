@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingBag, Plus } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
+import { SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 export default function Purchasing() {
-  const [searchQuery, _setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['orders', 'purchasing'],
@@ -23,30 +26,47 @@ export default function Purchasing() {
   const orders = ordersData || [];
 
   // Transform orders into purchase orders format
-  const purchaseOrders = orders.map((order: any) => {
-    const customerName = order.customer?.name || 'Supplier';
-    const amount = parseFloat(order.totalAmount) || 0;
-    let status = 'Pending';
-    if (order.status === 'DELIVERED' || order.status === 'FULFILLED') {
-      status = 'Received';
-    } else if (order.status === 'CONFIRMED' || order.status === 'PROCESSING') {
-      status = 'Approved';
-    }
-    
-    return {
-      id: order.id,
-      poNumber: order.orderNumber || `PO-${order.id}`,
-      supplier: customerName,
-      amount: `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      status,
-    };
-  });
+  const purchaseOrders = useMemo(() => {
+    return orders.map((order: any) => {
+      const customerName = order.customer?.name || 'Supplier';
+      const amount = parseFloat(order.totalAmount) || 0;
+      let status = 'Pending';
+      if (order.status === 'DELIVERED' || order.status === 'FULFILLED') {
+        status = 'Received';
+      } else if (order.status === 'CONFIRMED' || order.status === 'PROCESSING') {
+        status = 'Approved';
+      }
+      
+      return {
+        id: order.id,
+        poNumber: order.orderNumber || `PO-${order.id}`,
+        supplier: customerName,
+        amount: `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        status,
+      };
+    });
+  }, [orders]);
 
   // Filter by search query
-  const filteredPOs = purchaseOrders.filter((po: any) => 
-    po.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    po.supplier.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPOs = useMemo(() => {
+    if (!searchQuery) return purchaseOrders;
+    const query = searchQuery.toLowerCase();
+    return purchaseOrders.filter((po: any) => 
+      po.poNumber.toLowerCase().includes(query) ||
+      po.supplier.toLowerCase().includes(query)
+    );
+  }, [purchaseOrders, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPOs.length / ITEMS_PER_PAGE);
+  const paginatedPOs = useMemo(() => {
+    return filteredPOs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [filteredPOs, currentPage]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   if (isLoading) {
     return <SkeletonPage />;
@@ -69,8 +89,18 @@ export default function Purchasing() {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="mb-6">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search purchase orders..."
+          className="max-w-md"
+        />
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {filteredPOs.length === 0 ? (
+        {paginatedPOs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <ShoppingBag className="w-12 h-12 text-gray-400 dark:text-gray-500" />
@@ -96,7 +126,7 @@ export default function Purchasing() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredPOs.map((po: any) => (
+              {paginatedPOs.map((po: any) => (
                 <tr key={po.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {po.poNumber}
@@ -121,6 +151,18 @@ export default function Purchasing() {
               ))}
             </tbody>
           </table>
+        )}
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPOs.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         )}
       </div>
     </div>

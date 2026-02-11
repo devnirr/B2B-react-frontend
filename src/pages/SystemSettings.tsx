@@ -6,8 +6,6 @@ import { SkeletonPage } from '../components/Skeleton';
 import {
   Plus,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   X,
   CheckCircle,
@@ -16,10 +14,11 @@ import {
   Receipt,
   Warehouse,
   Edit,
-  AlertTriangle,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = 'sku-ean-rules' | 'tax-defaults' | 'warehouse-defaults';
 type RuleType = 'sku' | 'ean' | 'barcode';
@@ -47,7 +46,9 @@ interface TaxDefault {
   id: string | number;
   name: string;
   type: TaxType;
-  rate: number;
+  rate?: number;
+  taxRate?: number | null;
+  vatRate?: number | null;
   country: string;
   region?: string;
   isDefault: boolean;
@@ -139,7 +140,6 @@ function SKUEANRulesSection() {
   const [ruleToDelete, setRuleToDelete] = useState<NumberingRule | null>(null);
   const [isDeleteRuleModalShowing, setIsDeleteRuleModalShowing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -195,9 +195,9 @@ function SKUEANRulesSection() {
   }, [rules, searchQuery, typeFilter, statusFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredRules.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredRules.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedRules = filteredRules.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -243,11 +243,25 @@ function SKUEANRulesSection() {
   // Update numbering rule mutation
   const updateRuleMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string | number; updates: any }) => {
-      const response = await api.patch(`/numbering-rules/${id}`, {
-        ...updates,
-        type: updates.type?.toUpperCase(),
-        status: updates.status?.toUpperCase(),
-      });
+      // Build payload with only allowed fields and proper enum conversion
+      const payload: any = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.type !== undefined) {
+        const typeStr = String(updates.type).toUpperCase();
+        payload.type = typeStr; // SKU, EAN, BARCODE
+      }
+      if (updates.prefix !== undefined) payload.prefix = updates.prefix;
+      if (updates.suffix !== undefined) payload.suffix = updates.suffix;
+      if (updates.length !== undefined) payload.length = updates.length;
+      if (updates.format !== undefined) payload.format = updates.format;
+      if (updates.status !== undefined) {
+        const statusStr = String(updates.status).toUpperCase();
+        payload.status = statusStr; // ACTIVE, INACTIVE
+      }
+      if (updates.description !== undefined) payload.description = updates.description;
+      // Note: currentSequence and sequenceStart are not in the DTO, so we don't send them
+      
+      const response = await api.patch(`/numbering-rules/${id}`, payload);
       return response.data;
     },
     onSuccess: () => {
@@ -300,10 +314,13 @@ function SKUEANRulesSection() {
   }
 
   const generateExample = (rule: NumberingRule) => {
-    const sequence = rule.currentSequence.toString().padStart(rule.length - (rule.prefix.length + rule.suffix.length), '0');
+    const prefix = rule.prefix || '';
+    const suffix = rule.suffix || '';
+    const sequenceLength = rule.length - (prefix.length + suffix.length);
+    const sequence = rule.currentSequence.toString().padStart(Math.max(1, sequenceLength), '0');
     return rule.format
-      .replace('{prefix}', rule.prefix)
-      .replace('{suffix}', rule.suffix)
+      .replace('{prefix}', prefix)
+      .replace('{suffix}', suffix)
       .replace('{sequence}', sequence);
   };
 
@@ -320,7 +337,7 @@ function SKUEANRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Hash className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Hash className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -334,7 +351,7 @@ function SKUEANRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -348,7 +365,7 @@ function SKUEANRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Hash className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Hash className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -362,7 +379,7 @@ function SKUEANRulesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Hash className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Hash className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -549,82 +566,15 @@ function SKUEANRulesSection() {
       </div>
 
       {/* Pagination */}
-      {filteredRules.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredRules.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredRules.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRules.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -655,15 +605,16 @@ function SKUEANRulesSection() {
       )}
 
       {/* Delete Rule Modal */}
-      {ruleToDelete && (
-        <DeleteRuleModal
-          rule={ruleToDelete}
+      {ruleToDelete && isDeleteRuleModalShowing && (
+        <DeleteModal
+          title="Delete Numbering Rule"
+          message="Are you sure you want to delete"
+          itemName={ruleToDelete.name}
           onClose={() => {
             setIsDeleteRuleModalShowing(false);
             setRuleToDelete(null);
           }}
           onConfirm={handleConfirmDeleteRule}
-          isShowing={isDeleteRuleModalShowing}
         />
       )}
     </div>
@@ -678,11 +629,14 @@ interface RuleViewModalProps {
 
 function RuleViewModal({ rule, onClose }: RuleViewModalProps) {
   const generateExample = (rule: NumberingRule) => {
-    const sequence = rule.currentSequence.toString().padStart(rule.length - (rule.prefix.length + rule.suffix.length), '0');
+    const prefix = rule.prefix || '';
+    const suffix = rule.suffix || '';
+    const sequenceLength = rule.length - (prefix.length + suffix.length);
+    const sequence = rule.currentSequence.toString().padStart(Math.max(1, sequenceLength), '0');
     return rule.format
-      .replace('{prefix}', rule.prefix)
+      .replace('{prefix}', prefix)
       .replace('{sequence}', sequence)
-      .replace('{suffix}', rule.suffix);
+      .replace('{suffix}', suffix);
   };
 
   return (
@@ -892,7 +846,7 @@ function CreateRuleModal({ onClose, onCreate }: CreateRuleModalProps) {
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1062,8 +1016,8 @@ interface RuleEditModalProps {
 function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
   const [name, setName] = useState(rule.name);
   const [type, setType] = useState<RuleType>(rule.type);
-  const [prefix, setPrefix] = useState(rule.prefix);
-  const [suffix, setSuffix] = useState(rule.suffix);
+  const [prefix, setPrefix] = useState(rule.prefix || '');
+  const [suffix, setSuffix] = useState(rule.suffix || '');
   const [length, setLength] = useState(rule.length);
   const [currentSequence, setCurrentSequence] = useState(rule.currentSequence);
   const [format, setFormat] = useState(rule.format);
@@ -1071,10 +1025,13 @@ function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
   const [description, setDescription] = useState(rule.description || '');
 
   const generateExample = () => {
-    const sequence = currentSequence.toString().padStart(length - (prefix.length + suffix.length), '0');
+    const prefixValue = prefix || '';
+    const suffixValue = suffix || '';
+    const sequenceLength = length - (prefixValue.length + suffixValue.length);
+    const sequence = currentSequence.toString().padStart(Math.max(1, sequenceLength), '0');
     return format
-      .replace('{prefix}', prefix)
-      .replace('{suffix}', suffix)
+      .replace('{prefix}', prefixValue)
+      .replace('{suffix}', suffixValue)
       .replace('{sequence}', sequence);
   };
 
@@ -1082,13 +1039,13 @@ function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
     onUpdate(rule.id, {
       name: name.trim(),
       type,
-      prefix: prefix.trim(),
-      suffix: suffix.trim(),
+      prefix: prefix.trim() || null,
+      suffix: suffix.trim() || null,
       length,
-      currentSequence,
+      // Note: currentSequence is not updatable via the API
       format: format.trim(),
       status,
-      description: description.trim(),
+      description: description.trim() || null,
     });
     onClose();
   };
@@ -1284,79 +1241,6 @@ function RuleEditModal({ rule, onClose, onUpdate }: RuleEditModalProps) {
 }
 
 // Delete Rule Modal Component
-function DeleteRuleModal({
-  rule,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  rule: NumberingRule;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteRuleModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteRuleModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Numbering Rule
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{rule.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Rule
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Tax Defaults Section
 function TaxDefaultsSection() {
@@ -1368,7 +1252,6 @@ function TaxDefaultsSection() {
   const [taxToDelete, setTaxToDelete] = useState<TaxDefault | null>(null);
   const [isDeleteTaxModalShowing, setIsDeleteTaxModalShowing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -1387,7 +1270,11 @@ function TaxDefaultsSection() {
     },
   });
 
-  const taxDefaults: TaxDefault[] = taxDefaultsData || [];
+  // Map backend response to include rate field for compatibility
+  const taxDefaults: TaxDefault[] = (taxDefaultsData || []).map((tax: any) => ({
+    ...tax,
+    rate: Number(tax.taxRate ?? tax.vatRate ?? tax.rate ?? 0),
+  }));
 
   // Filter tax defaults
   const filteredTaxes = useMemo(() => {
@@ -1413,9 +1300,9 @@ function TaxDefaultsSection() {
   }, [taxDefaults, searchQuery, typeFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredTaxes.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredTaxes.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedTaxes = filteredTaxes.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -1428,7 +1315,9 @@ function TaxDefaultsSection() {
     const total = taxDefaults.length;
     const defaults = taxDefaults.filter((tax) => tax.isDefault);
     const vatTaxes = taxDefaults.filter((tax) => tax.type === 'vat');
-    const avgRate = taxDefaults.reduce((sum, tax) => sum + tax.rate, 0) / taxDefaults.length;
+    const avgRate = taxDefaults.length > 0 
+      ? taxDefaults.reduce((sum, tax) => sum + (tax.rate || tax.taxRate || tax.vatRate || 0), 0) / taxDefaults.length 
+      : 0;
 
     return {
       total,
@@ -1441,10 +1330,25 @@ function TaxDefaultsSection() {
   // Create tax default mutation
   const createTaxMutation = useMutation({
     mutationFn: async (taxData: any) => {
-      const response = await api.post('/tax-defaults', {
-        ...taxData,
-        type: taxData.type?.toUpperCase().replace('-', '_') || 'VAT',
-      });
+      // Convert type to enum format
+      let typeValue = 'VAT';
+      if (taxData.type) {
+        const typeStr = taxData.type.toUpperCase();
+        typeValue = typeStr.includes('_') ? typeStr : typeStr.replace('-', '_');
+      }
+      
+      const payload = {
+        name: taxData.name,
+        type: typeValue,
+        taxRate: taxData.taxRate,
+        vatRate: taxData.vatRate,
+        country: taxData.country,
+        region: taxData.region || null,
+        isDefault: taxData.isDefault || false,
+        description: taxData.description || null,
+      };
+      
+      const response = await api.post('/tax-defaults', payload);
       return response.data;
     },
     onSuccess: () => {
@@ -1460,10 +1364,20 @@ function TaxDefaultsSection() {
   // Update tax default mutation
   const updateTaxMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string | number; updates: any }) => {
-      const response = await api.patch(`/tax-defaults/${id}`, {
-        ...updates,
-        type: updates.type?.toUpperCase().replace('-', '_'),
-      });
+      const payload: any = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.type !== undefined) {
+        const typeStr = updates.type.toUpperCase();
+        payload.type = typeStr.includes('_') ? typeStr : typeStr.replace('-', '_');
+      }
+      if (updates.taxRate !== undefined) payload.taxRate = updates.taxRate;
+      if (updates.vatRate !== undefined) payload.vatRate = updates.vatRate;
+      if (updates.country !== undefined) payload.country = updates.country;
+      if (updates.region !== undefined) payload.region = updates.region || null;
+      if (updates.isDefault !== undefined) payload.isDefault = updates.isDefault;
+      if (updates.description !== undefined) payload.description = updates.description || null;
+      
+      const response = await api.patch(`/tax-defaults/${id}`, payload);
       return response.data;
     },
     onSuccess: () => {
@@ -1528,7 +1442,7 @@ function TaxDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Receipt className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1542,7 +1456,7 @@ function TaxDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1556,7 +1470,7 @@ function TaxDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Receipt className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1570,7 +1484,7 @@ function TaxDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Receipt className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -1680,7 +1594,7 @@ function TaxDefaultsSection() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {tax.rate}%
+                        {((tax.rate || tax.taxRate || tax.vatRate || 0) as number).toFixed(2)}%
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1746,82 +1660,15 @@ function TaxDefaultsSection() {
       </div>
 
       {/* Pagination */}
-      {filteredTaxes.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredTaxes.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredTaxes.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTaxes.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -1851,15 +1698,16 @@ function TaxDefaultsSection() {
       )}
 
       {/* Delete Tax Modal */}
-      {taxToDelete && (
-        <DeleteTaxModal
-          tax={taxToDelete}
+      {taxToDelete && isDeleteTaxModalShowing && (
+        <DeleteModal
+          title="Delete Tax Default"
+          message="Are you sure you want to delete"
+          itemName={taxToDelete.name}
           onClose={() => {
             setIsDeleteTaxModalShowing(false);
             setTaxToDelete(null);
           }}
           onConfirm={handleConfirmDeleteTax}
-          isShowing={isDeleteTaxModalShowing}
         />
       )}
     </div>
@@ -1893,10 +1741,12 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
       toast.error('Please fill in all required fields');
       return;
     }
+    const rateValue = parseFloat(rate.toString()) || 0;
     onCreate({
       name: name.trim(),
       type,
-      rate: parseFloat(rate.toString()),
+      taxRate: rateValue,
+      vatRate: rateValue,
       country: country.trim(),
       region: region.trim(),
       isDefault,
@@ -1919,7 +1769,7 @@ function CreateTaxModal({ onClose, onCreate }: CreateTaxModalProps) {
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2107,7 +1957,7 @@ function TaxViewModal({ tax, onClose }: TaxViewModalProps) {
                 Rate
               </label>
               <div className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] text-gray-900 dark:text-white">
-                {tax.rate}%
+                {((tax.rate || tax.taxRate || tax.vatRate || 0) as number).toFixed(2)}%
               </div>
             </div>
 
@@ -2182,7 +2032,7 @@ interface TaxEditModalProps {
 function TaxEditModal({ tax, onClose, onUpdate }: TaxEditModalProps) {
   const [name, setName] = useState(tax.name);
   const [type, setType] = useState<TaxType>(tax.type);
-  const [rate, setRate] = useState(tax.rate);
+  const [rate, setRate] = useState(tax.rate || tax.taxRate || tax.vatRate || 0);
   const [country, setCountry] = useState(tax.country);
   const [region, setRegion] = useState(tax.region || '');
   const [isDefault, setIsDefault] = useState(tax.isDefault);
@@ -2195,10 +2045,12 @@ function TaxEditModal({ tax, onClose, onUpdate }: TaxEditModalProps) {
   ];
 
   const handleSave = () => {
+    const rateValue = rate ? (typeof rate === 'number' ? rate : parseFloat(String(rate) || '0')) : 0;
     onUpdate(tax.id, {
       name: name.trim(),
       type,
-      rate: parseFloat(rate.toString()),
+      taxRate: rateValue,
+      vatRate: rateValue,
       country: country.trim(),
       region: region.trim(),
       isDefault,
@@ -2365,80 +2217,6 @@ function TaxEditModal({ tax, onClose, onUpdate }: TaxEditModalProps) {
   );
 }
 
-// Delete Tax Modal Component
-function DeleteTaxModal({
-  tax,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  tax: TaxDefault;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteTaxModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteTaxModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Tax Default
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{tax.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Tax Default
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Warehouse Defaults Section
 function WarehouseDefaultsSection() {
@@ -2448,9 +2226,8 @@ function WarehouseDefaultsSection() {
   const [warehouseToView, setWarehouseToView] = useState<WarehouseDefault | null>(null);
   const [warehouseToEdit, setWarehouseToEdit] = useState<WarehouseDefault | null>(null);
   const [warehouseToDelete, setWarehouseToDelete] = useState<WarehouseDefault | null>(null);
-  const [isDeleteWarehouseModalShowing, setIsDeleteWarehouseModalShowing] = useState(false);
+  const [_isDeleteWarehouseModalShowing, setIsDeleteWarehouseModalShowing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -2499,9 +2276,9 @@ function WarehouseDefaultsSection() {
   }, [warehouses, searchQuery, statusFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredWarehouses.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredWarehouses.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedWarehouses = filteredWarehouses.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -2614,7 +2391,7 @@ function WarehouseDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Warehouse className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -2628,7 +2405,7 @@ function WarehouseDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -2642,7 +2419,7 @@ function WarehouseDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <CheckCircle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -2656,7 +2433,7 @@ function WarehouseDefaultsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Warehouse className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -2832,82 +2609,15 @@ function WarehouseDefaultsSection() {
       </div>
 
       {/* Pagination */}
-      {filteredWarehouses.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredWarehouses.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredWarehouses.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredWarehouses.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -2939,14 +2649,15 @@ function WarehouseDefaultsSection() {
 
       {/* Delete Warehouse Modal */}
       {warehouseToDelete && (
-        <DeleteWarehouseModal
-          warehouse={warehouseToDelete}
+        <DeleteModal
+          title="Delete Warehouse Default"
+          message="Are you sure you want to delete"
+          itemName={warehouseToDelete.name}
           onClose={() => {
             setIsDeleteWarehouseModalShowing(false);
             setWarehouseToDelete(null);
           }}
           onConfirm={handleConfirmDeleteWarehouse}
-          isShowing={isDeleteWarehouseModalShowing}
         />
       )}
     </div>
@@ -3014,7 +2725,7 @@ function CreateWarehouseModal({ onClose, onCreate }: CreateWarehouseModalProps) 
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -3621,79 +3332,5 @@ function WarehouseViewModal({ warehouse, onClose }: WarehouseViewModalProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-// Delete Warehouse Modal Component
-interface DeleteWarehouseModalProps {
-  warehouse: WarehouseDefault;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}
-
-function DeleteWarehouseModal({ warehouse, onClose, onConfirm, isShowing }: DeleteWarehouseModalProps) {
-  if (!isShowing) return null;
-
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteWarehouseModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteWarehouseModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Warehouse Default
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{warehouse.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Warehouse Default
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
   );
 }

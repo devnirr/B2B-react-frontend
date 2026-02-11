@@ -1,17 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Barcode, Plus, Edit, Download, X, Check, AlertCircle, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Barcode, Plus, Edit, Download, X, Check, AlertCircle } from 'lucide-react';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 
 export default function SkuEanBarcodes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'missing-sku' | 'missing-ean' | 'missing-barcode'>('all');
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditModalShowing, setIsEditModalShowing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -68,7 +69,7 @@ export default function SkuEanBarcodes() {
     products.forEach((product) => {
       const colors = product.colors || [];
       const sizes = product.sizes || [];
-      
+
       if (colors.length === 0 && sizes.length === 0) {
         // No variants, just the base product
         variants.push({
@@ -83,7 +84,7 @@ export default function SkuEanBarcodes() {
         // Generate variants for each color-size combination
         const colorList = colors.length > 0 ? colors : [null];
         const sizeList = sizes.length > 0 ? sizes : [null];
-        
+
         colorList.forEach((color: string | null) => {
           sizeList.forEach((size: string | null) => {
             const variantSuffix = [color, size].filter(Boolean).join('-').toUpperCase().replace(/\s+/g, '-');
@@ -107,28 +108,27 @@ export default function SkuEanBarcodes() {
   // Filter variants
   const filteredVariants = useMemo(() => {
     return allVariants.filter((variant) => {
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         variant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         variant.variantSku.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (variant.variantEan && variant.variantEan.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+
       const matchesFilter = filterType === 'all' ||
         (filterType === 'missing-sku' && !variant.variantSku) ||
         (filterType === 'missing-ean' && !variant.variantEan) ||
         (filterType === 'missing-barcode' && !variant.variantEan);
-      
+
       return matchesSearch && matchesFilter;
     });
   }, [allVariants, searchQuery, filterType]);
 
   // Pagination
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredVariants.length / itemsPerPage);
-  const paginatedVariants = filteredVariants.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredVariants.length / ITEMS_PER_PAGE);
+  const paginatedVariants = filteredVariants.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // Reset to page 0 when search or filter changes
+  // Reset to page 1 when search or filter changes
   useEffect(() => {
-    setPage(0);
+    setCurrentPage(1);
   }, [searchQuery, filterType]);
 
   const openEditModal = (variant: any) => {
@@ -158,13 +158,13 @@ export default function SkuEanBarcodes() {
       toast('No missing SKUs', { icon: 'ℹ️' });
       return;
     }
-    
+
     // Generate SKUs for products missing them
     const updates = productsToUpdate.map((variant) => {
       const baseSku = variant.sku || `PROD-${variant.id}`;
       const suffix = [variant.variantColor, variant.variantSize].filter(Boolean).join('-').toUpperCase().replace(/\s+/g, '-');
       const newSku = suffix ? `${baseSku}-${suffix}` : baseSku;
-      
+
       return {
         id: variant.id,
         sku: newSku,
@@ -184,7 +184,7 @@ export default function SkuEanBarcodes() {
       toast('No missing EANs', { icon: 'ℹ️' });
       return;
     }
-    
+
     toast(`Generating EANs for ${productsToUpdate.length} products...`, { icon: 'ℹ️' });
     // Generate EAN-13 format (13 digits)
     const updates = productsToUpdate.map((variant: any) => {
@@ -192,7 +192,7 @@ export default function SkuEanBarcodes() {
       const baseNumber = variant.id.toString().padStart(6, '0');
       const variantNumber = variant.variantKey.split('-').slice(-2).join('').substring(0, 6).padStart(6, '0');
       const newEan = `200${baseNumber}${variantNumber}`.substring(0, 13);
-      
+
       return {
         id: variant.id,
         ean: newEan,
@@ -215,34 +215,18 @@ export default function SkuEanBarcodes() {
             <h1 className="text-[24px] font-bold text-gray-900 dark:text-white">SKU / EAN / Barcodes</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1  text-[14px]">Manage product identifiers, generate barcodes, and track variants</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={bulkGenerateSkus}
-              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Generate Missing SKUs
-            </button>
-            <button
-              onClick={bulkGenerateEans}
-              className="flex items-center text-[14px] gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Generate Missing EANs
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-gray-800 w-full flex items-center justify-between rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-              placeholder="Search by SKU, EAN, or product name..."
+            placeholder="Search by SKU, EAN, or product name..."
             className="flex-1"
-            />
+          />
           <div className="flex items-center gap-2">
             <CustomDropdown
               value={filterType}
@@ -257,6 +241,22 @@ export default function SkuEanBarcodes() {
               className="min-w-[180px]"
             />
           </div>
+        </div>
+        <div className="flex items-center gap-2 w-full justify-end">
+          <button
+            onClick={bulkGenerateSkus}
+            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Generate Missing SKUs
+          </button>
+          <button
+            onClick={bulkGenerateEans}
+            className="flex items-center text-[14px] gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Generate Missing EANs
+          </button>
         </div>
       </div>
 
@@ -417,48 +417,14 @@ export default function SkuEanBarcodes() {
         )}
 
         {/* Pagination */}
-        {filteredVariants.length > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
-            <div className="text-sm text-gray-600 dark:text-white">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{page * itemsPerPage + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min((page + 1) * itemsPerPage, filteredVariants.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredVariants.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(0)}
-                disabled={page === 0}
-                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </button>
-              <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                Page {page + 1} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronsRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage(totalPages - 1)}
-                disabled={page >= totalPages - 1}
-                className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronsRight className="w-4 h-4" />
-              </button>
-            </div>
+        {filteredVariants.length > 0 && totalPages > 1 && (
+          <div className="px-6 pb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredVariants.length}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
@@ -506,11 +472,11 @@ function EditSkuEanModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // For variants, we need to update the base product
     // In a real system, you might have variant-specific SKU/EAN storage
     const updateData: any = {};
-    
+
     if (product.variantColor || product.variantSize) {
       // This is a variant - in a real system, you'd update variant-specific fields
       // For now, we'll update the base product

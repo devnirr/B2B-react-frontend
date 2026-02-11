@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, TrendingUp, Layers, Calendar as CalendarIcon, BarChart3, X, Edit, Trash2, AlertTriangle, Inbox,  ChevronLeft, ChevronRight, Package, ArrowUp, ArrowDown, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, TrendingUp, Layers, Calendar as CalendarIcon, BarChart3, X, Edit, Trash2, Inbox,  ChevronLeft, ChevronRight, Package, ArrowUp, ArrowDown, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown } from '../components/ui';
 import { validators } from '../utils/validation';
+import DeleteModal from '../components/ui/DeleteModal';
+import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 import Chart from 'react-apexcharts';
 import {
   DndContext,
@@ -133,11 +135,15 @@ function CollectionPlanner() {
 
   const createCollectionMutation = useMutation({
     mutationFn: async (collectionData: any) => {
+      (window as any).__lastCollectionData = collectionData;
       const response = await api.post('/collections', collectionData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      const collectionData = (window as any).__lastCollectionData;
+      logCreate('Collection', data?.id || data?.data?.id, collectionData);
+      delete (window as any).__lastCollectionData;
       toast.success('Collection created successfully!');
       closeModal();
     },
@@ -152,8 +158,9 @@ function CollectionPlanner() {
       const response = await api.patch(`/collections/${id}`, collectionData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; collectionData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      logUpdate('Collection', variables.id, variables.collectionData);
       toast.success('Collection updated successfully!');
       closeEditModal();
     },
@@ -168,8 +175,9 @@ function CollectionPlanner() {
       const response = await api.delete(`/collections/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
+      logDelete('Collection', id);
       toast.success('Collection deleted successfully!');
       closeDeleteModal();
     },
@@ -337,13 +345,14 @@ function CollectionPlanner() {
         />
       )}
 
-      {isDeleteModalOpen && selectedCollection && (
-        <DeleteCollectionModal
-          collection={selectedCollection}
+      {isDeleteModalOpen && selectedCollection && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Collection"
+          message="Are you sure you want to delete"
+          itemName={selectedCollection.name}
           onClose={closeDeleteModal}
           onConfirm={() => deleteCollectionMutation.mutate(selectedCollection.id)}
           isLoading={deleteCollectionMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
     </div>
@@ -697,7 +706,7 @@ function DropCalendar() {
 
 // Style Performance Tracking Component
 function StylePerformanceTracking() {
-  const [timeRange, setTimeRange] = useState<'30d' | '90d' | '6m' | '1y'>('30d');
+  const [timeRange] = useState<'30d' | '90d' | '6m' | '1y'>('30d');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Check for dark mode
@@ -797,19 +806,61 @@ function StylePerformanceTracking() {
       .slice(0, 10); // Top 10 styles
   }, [products, orders]);
 
-  // Calculate performance trends (simplified - comparing current vs previous period)
+  // Calculate performance trends by comparing current period with previous period
   const performanceTrends = useMemo(() => {
+    if (!orders || orders.length === 0) {
+      return stylePerformance.map((style) => ({
+        ...style,
+        trend: 'neutral' as const,
+        change: 0,
+      }));
+    }
+
+    const now = new Date();
+    const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month
+    const previousPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1); // Start of previous month
+    const previousPeriodEnd = new Date(now.getFullYear(), now.getMonth(), 0); // End of previous month
+
     return stylePerformance.map((style) => {
-      // Simplified trend calculation (in real app, compare with previous period)
-      const trend = Math.random() > 0.5 ? 'up' : 'down';
-      const change = Math.random() * 20;
+      // Calculate revenue for current period
+      const currentPeriodOrders = orders.filter((order: any) => {
+        const orderDate = new Date(order.orderDate || order.createdAt);
+        return orderDate >= currentPeriodStart && 
+               order.orderLines?.some((line: any) => 
+                 line.product?.style === style.name || 
+                 products.find((p: any) => p.id === line.productId)?.style === style.name
+               );
+      });
+      const currentRevenue = currentPeriodOrders.reduce((sum: number, order: any) => {
+        return sum + (parseFloat(order.totalAmount) || 0);
+      }, 0);
+
+      // Calculate revenue for previous period
+      const previousPeriodOrders = orders.filter((order: any) => {
+        const orderDate = new Date(order.orderDate || order.createdAt);
+        return orderDate >= previousPeriodStart && orderDate <= previousPeriodEnd &&
+               order.orderLines?.some((line: any) => 
+                 line.product?.style === style.name || 
+                 products.find((p: any) => p.id === line.productId)?.style === style.name
+               );
+      });
+      const previousRevenue = previousPeriodOrders.reduce((sum: number, order: any) => {
+        return sum + (parseFloat(order.totalAmount) || 0);
+      }, 0);
+
+      // Calculate trend
+      const change = previousRevenue > 0 
+        ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
+        : (currentRevenue > 0 ? 100 : 0);
+      const trend = change > 5 ? 'up' : change < -5 ? 'down' : 'neutral';
+
       return {
         ...style,
         trend,
-        change: trend === 'up' ? change : -change,
+        change: Math.abs(change),
       };
     });
-  }, [stylePerformance]);
+  }, [stylePerformance, orders, products]);
 
   // Chart data for top performing styles
   const chartData = useMemo(() => {
@@ -873,8 +924,33 @@ function StylePerformanceTracking() {
       },
     },
     tooltip: {
-      y: {
-        formatter: (value: number) => `$${value.toLocaleString()}`,
+      theme: isDarkMode ? 'dark' : 'light',
+      custom: function({ series, dataPointIndex, w }: any) {
+        const styleName = w.globals.categoryLabels[dataPointIndex];
+        const revenueValue = series[0][dataPointIndex];
+        const ordersValue = series[1][dataPointIndex];
+        
+        return `
+          <div class="apexcharts-tooltip-title" style="font-family: Helvetica, Arial, sans-serif; font-size: 12px;">${styleName}</div>
+          <div class="apexcharts-tooltip-series-group" style="order: 1; display: flex; align-items: center; gap: 8px;">
+            <span class="apexcharts-tooltip-marker" style="background-color: #5955D1; width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
+            <div class="apexcharts-tooltip-text" style="font-family: Helvetica, Arial, sans-serif; font-size: 12px;">
+              <div class="apexcharts-tooltip-y-group">
+                <span class="apexcharts-tooltip-text-label">Revenue: </span>
+                <span class="apexcharts-tooltip-text-value">$${revenueValue.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          <div class="apexcharts-tooltip-series-group" style="order: 2; display: flex; align-items: center; gap: 8px;">
+            <span class="apexcharts-tooltip-marker" style="background-color: #10B981; width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
+            <div class="apexcharts-tooltip-text" style="font-family: Helvetica, Arial, sans-serif; font-size: 12px;">
+              <div class="apexcharts-tooltip-y-group">
+                <span class="apexcharts-tooltip-text-label">Orders: </span>
+                <span class="apexcharts-tooltip-text-value">${ordersValue.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        `;
       },
     },
     grid: {
@@ -904,20 +980,6 @@ function StylePerformanceTracking() {
           <h2 className="text-[14px] font-semibold text-gray-900 dark:text-white">Style Performance Tracking</h2>
           <p className="text-[12px] text-gray-600 dark:text-gray-400 mt-1">Track and analyze style performance metrics</p>
         </div>
-        <div className="flex items-center gap-2">
-          <CustomDropdown
-            value={timeRange}
-            onChange={(value) => setTimeRange(value as '30d' | '90d' | '6m' | '1y')}
-            options={[
-              { value: '30d', label: 'Last 30 days' },
-              { value: '90d', label: 'Last 90 days' },
-              { value: '6m', label: 'Last 6 months' },
-              { value: '1y', label: 'Last year' },
-            ]}
-            placeholder="Select time range"
-            className="min-w-[180px]"
-          />
-        </div>
       </div>
 
       {/* Summary Cards */}
@@ -931,7 +993,7 @@ function StylePerformanceTracking() {
               </p>
             </div>
             <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-              <Package className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <Package className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -945,7 +1007,7 @@ function StylePerformanceTracking() {
               </p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <Layers className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Layers className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -959,7 +1021,7 @@ function StylePerformanceTracking() {
               </p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -973,7 +1035,7 @@ function StylePerformanceTracking() {
               </p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1208,6 +1270,9 @@ function DroppableColumn({
   onEdit: (collection: any) => void;
   onDelete: (collection: any) => void;
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const { setNodeRef, isOver } = useDroppable({
     id: lifecycle,
     data: {
@@ -1216,10 +1281,21 @@ function DroppableColumn({
     },
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = items.slice(startIndex, endIndex);
+
+  // Reset to page 1 when items change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [items.length]);
+
   return (
     <div
       ref={setNodeRef}
-      className={`bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 min-h-[400px] transition-colors ${
+      className={`bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 min-h-[400px] transition-colors flex flex-col ${
         isOver ? 'bg-primary-50 dark:bg-primary-900/20 border-2 border-primary-500 border-dashed' : ''
       }`}
     >
@@ -1230,17 +1306,17 @@ function DroppableColumn({
         </span>
       </div>
       <SortableContext
-        items={items.map((item: any) => item.id)}
+        items={paginatedItems.map((item: any) => item.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-3">
+        <div className="space-y-3 flex-1">
           {items.length === 0 ? (
             <div className="text-center py-8 text-gray-400 dark:text-gray-500">
               <Inbox className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No collections</p>
             </div>
           ) : (
-            items.map((collection: any) => (
+            paginatedItems.map((collection: any) => (
               <DraggableCollectionCard
                 key={collection.id}
                 collection={collection}
@@ -1251,6 +1327,54 @@ function DroppableColumn({
           )}
         </div>
       </SortableContext>
+      
+      {/* Pagination */}
+      {items.length > itemsPerPage && (
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col gap-2">
+            <div className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
+              Showing {startIndex + 1} to {Math.min(endIndex, items.length)} of {items.length}
+            </div>
+            <div className="flex items-center justify-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-[10px] border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+                title="First page"
+              >
+                &lt;&lt;
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-[10px] border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+                title="Previous page"
+              >
+                &lt;
+              </button>
+              <span className="px-2 py-1 text-[10px] text-gray-700 dark:text-gray-300 font-medium min-w-[60px] text-center">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-[10px] border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+                title="Next page"
+              >
+                &gt;
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 text-[10px] border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700 dark:text-gray-300"
+                title="Last page"
+              >
+                &gt;&gt;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1305,9 +1429,9 @@ function DateDetailModal({
         <div
           className="modal-dialog modal-dialog-centered"
           onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '45rem' }}
+          style={{ maxWidth: '70rem' }}
         >
-          <div className="modal-content w-full max-h-[90vh] flex flex-col">
+          <div className="modal-content w-full max-h-[90vh] flex flex-col w-auto">
             <div className="modal-header">
               <h5 id="dateDetailModalLabel" className="modal-title text-[14px] font-semibold text-gray-900 dark:text-white">
                 Drops on {formattedDate}
@@ -2025,81 +2149,4 @@ function EditCollectionModal({
 }
 
 // Delete Collection Modal Component
-function DeleteCollectionModal({
-  collection,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  collection: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteCollectionModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteCollectionModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Collection
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{collection.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Collection'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 

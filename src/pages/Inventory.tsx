@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Warehouse, Plus, X, ChevronsLeft, ChevronsRight, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Warehouse, Plus, X, ChevronsLeft, ChevronsRight, Edit, Trash2 } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { ButtonWithWaves, CustomDropdown } from '../components/ui';
+import DeleteModal from '../components/ui/DeleteModal';
+import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 
 
 export default function Inventory() {
@@ -69,11 +71,15 @@ export default function Inventory() {
 
   const createInventoryMutation = useMutation({
     mutationFn: async (inventoryData: any) => {
+      (window as any).__lastInventoryData = inventoryData;
       const response = await api.post('/inventory', inventoryData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      const inventoryData = (window as any).__lastInventoryData;
+      logCreate('Inventory', data?.id || data?.data?.id, inventoryData);
+      delete (window as any).__lastInventoryData;
       toast.success('Inventory item created successfully!');
       closeModal();
     },
@@ -88,8 +94,9 @@ export default function Inventory() {
       const response = await api.patch(`/inventory/${id}`, inventoryData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, variables: { id: number; inventoryData: any }) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      logUpdate('Inventory', variables.id, variables.inventoryData);
       toast.success('Inventory item updated successfully!');
       closeEditModal();
     },
@@ -104,8 +111,9 @@ export default function Inventory() {
       const response = await api.delete(`/inventory/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, id: number) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      logDelete('Inventory', id);
       toast.success('Inventory item deleted successfully!');
       closeDeleteModal();
     },
@@ -388,13 +396,14 @@ export default function Inventory() {
       )}
 
       {/* Delete Inventory Modal */}
-      {isDeleteModalOpen && selectedInventory && (
-        <DeleteInventoryModal
-          inventory={selectedInventory}
+      {isDeleteModalOpen && selectedInventory && isDeleteModalShowing && (
+        <DeleteModal
+          title="Delete Inventory"
+          message={`Are you sure you want to delete inventory for "${selectedInventory.product?.name || 'Product'}" at "${selectedInventory.warehouse?.name || 'Warehouse'}"`}
+          itemName=""
           onClose={closeDeleteModal}
           onConfirm={() => deleteInventoryMutation.mutate(selectedInventory.id)}
           isLoading={deleteInventoryMutation.isPending}
-          isShowing={isDeleteModalShowing}
         />
       )}
     </div>
@@ -897,81 +906,3 @@ function EditInventoryModal({
   );
 }
 
-// Delete Inventory Modal Component
-function DeleteInventoryModal({
-  inventory,
-  onClose,
-  onConfirm,
-  isLoading,
-  isShowing,
-}: {
-  inventory: any;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteInventoryModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteInventoryModalLabel" className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Delete Inventory
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete inventory for
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{inventory.product?.name || 'Product'}" at "{inventory.warehouse?.name || 'Warehouse'}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isLoading}
-                className="px-5 py-2.5 ml-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-65 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete Inventory'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}

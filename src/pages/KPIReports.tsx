@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, Download, Calendar, Filter, ChevronDown } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Download, Calendar, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
@@ -8,7 +8,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import Chart from 'react-apexcharts';
 
 export default function KPIReports() {
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y' | 'all'>('30d');
+  const [dateRange] = useState<'7d' | '30d' | '90d' | '1y' | 'all'>('30d');
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>(['revenue', 'orders', 'customers', 'profit']);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
@@ -58,7 +58,7 @@ export default function KPIReports() {
   const getDateRange = () => {
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (dateRange) {
       case '7d':
         startDate.setDate(endDate.getDate() - 7);
@@ -75,7 +75,7 @@ export default function KPIReports() {
       default:
         startDate.setFullYear(2020, 0, 1);
     }
-    
+
     return {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
@@ -120,7 +120,7 @@ export default function KPIReports() {
   // Calculate KPIs
   const kpis = useMemo(() => {
     const orders = salesReport?.orders || [];
-    
+
     // Revenue KPI
     const totalRevenue = orders.reduce((sum: number, order: any) => sum + Number(order.totalAmount || 0), 0);
     const previousRevenue = 0; // Calculate from previous period if needed
@@ -206,20 +206,36 @@ export default function KPIReports() {
     const orders = salesReport?.orders || [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const now = new Date();
-    const monthlyData: Record<string, { revenue: number; orders: number; customers: Set<number> }> = {};
+    const monthlyData: Record<string, { 
+      revenue: number; 
+      orders: number; 
+      customers: Set<number>;
+      profit: number;
+      aov: number;
+      clv: number;
+    }> = {};
 
     for (let i = 11; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
-      monthlyData[key] = { revenue: 0, orders: 0, customers: new Set() };
+      monthlyData[key] = { 
+        revenue: 0, 
+        orders: 0, 
+        customers: new Set(),
+        profit: 0,
+        aov: 0,
+        clv: 0,
+      };
     }
 
     orders.forEach((order: any) => {
       const orderDate = new Date(order.orderDate || order.createdAt);
       const key = `${orderDate.getFullYear()}-${orderDate.getMonth()}`;
       if (monthlyData[key]) {
-        monthlyData[key].revenue += Number(order.totalAmount || 0);
+        const orderAmount = Number(order.totalAmount || 0);
+        monthlyData[key].revenue += orderAmount;
         monthlyData[key].orders += 1;
+        monthlyData[key].profit += orderAmount * 0.3; // 30% margin
         const customerId = order.customerId || order.customer?.id;
         if (customerId) monthlyData[key].customers.add(customerId);
       }
@@ -234,6 +250,17 @@ export default function KPIReports() {
       revenue: sortedKeys.map(key => monthlyData[key].revenue),
       orders: sortedKeys.map(key => monthlyData[key].orders),
       customers: sortedKeys.map(key => monthlyData[key].customers.size),
+      profit: sortedKeys.map(key => monthlyData[key].profit),
+      aov: sortedKeys.map(key => {
+        const monthData = monthlyData[key];
+        return monthData.orders > 0 ? monthData.revenue / monthData.orders : 0;
+      }),
+      clv: sortedKeys.map(key => {
+        const monthData = monthlyData[key];
+        const aov = monthData.orders > 0 ? monthData.revenue / monthData.orders : 0;
+        return aov * 2.5; // Simplified CLV calculation
+      }),
+      conversion: sortedKeys.map(() => 0), // Would need visitor data
     };
   }, [salesReport]);
 
@@ -267,27 +294,27 @@ export default function KPIReports() {
   const handleExportReport = () => {
     try {
       // Get date range label
-      const dateRangeLabel = 
+      const dateRangeLabel =
         dateRange === '7d' ? 'Last 7 Days' :
-        dateRange === '30d' ? 'Last 30 Days' :
-        dateRange === '90d' ? 'Last 90 Days' :
-        dateRange === '1y' ? 'Last Year' :
-        'All Time';
+          dateRange === '30d' ? 'Last 30 Days' :
+            dateRange === '90d' ? 'Last 90 Days' :
+              dateRange === '1y' ? 'Last Year' :
+                'All Time';
 
       // Build CSV content
       const csvRows: string[] = [];
-      
+
       // Header section
       csvRows.push('KPI Reports Export');
       csvRows.push(`Date Range: ${dateRangeLabel}`);
       csvRows.push(`Export Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
       csvRows.push(`Period: ${startDate} to ${endDate}`);
       csvRows.push(''); // Empty row
-      
+
       // KPI Summary section
       csvRows.push('KPI Summary');
       csvRows.push(['KPI', 'Current Value', 'Growth (%)', 'Status'].join(','));
-      
+
       Object.entries(kpis).forEach(([, kpi]) => {
         const status = kpi.growth > 0 ? 'Positive' : kpi.growth < 0 ? 'Negative' : 'Stable';
         const growthValue = kpi.growth !== 0 ? kpi.growth.toFixed(2) : '-';
@@ -298,15 +325,15 @@ export default function KPIReports() {
           status,
         ].join(','));
       });
-      
+
       csvRows.push(''); // Empty row
-      
+
       // Monthly Trends section
       if (selectedKPIs.length > 0 && monthlyTrends.categories.length > 0) {
         csvRows.push('Monthly Trends');
         const headerRow = ['Month', ...selectedKPIs.map(kpi => kpis[kpi as keyof typeof kpis]?.label || kpi)].join(',');
         csvRows.push(headerRow);
-        
+
         monthlyTrends.categories.forEach((month, index) => {
           const rowData = [month];
           selectedKPIs.forEach(kpi => {
@@ -326,7 +353,7 @@ export default function KPIReports() {
           csvRows.push(rowData.join(','));
         });
       }
-      
+
       // Create and download CSV
       const csvContent = csvRows.join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -338,7 +365,7 @@ export default function KPIReports() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('KPI report exported successfully!');
     } catch (error) {
       console.error('Error exporting report:', error);
@@ -348,10 +375,14 @@ export default function KPIReports() {
 
   // Chart configuration
   const kpiChartConfig = {
-    series: selectedKPIs.map(kpi => ({
-      name: kpis[kpi as keyof typeof kpis]?.label || kpi,
-      data: monthlyTrends[kpi === 'revenue' ? 'revenue' : kpi === 'orders' ? 'orders' : 'customers'] || [],
-    })),
+    series: selectedKPIs.map(kpi => {
+      const trendKey = kpi as keyof typeof monthlyTrends;
+      const trendData = monthlyTrends[trendKey];
+      return {
+        name: kpis[kpi as keyof typeof kpis]?.label || kpi,
+        data: Array.isArray(trendData) ? trendData.map(v => typeof v === 'number' ? v : 0) : [],
+      };
+    }),
     chart: {
       height: 400,
       type: 'line' as const,
@@ -405,6 +436,32 @@ export default function KPIReports() {
     },
     tooltip: {
       theme: isDarkMode ? 'dark' : 'light',
+      custom: function({ series, dataPointIndex, w }: any) {
+        const month = monthlyTrends.categories[dataPointIndex];
+        let tooltipContent = `<div class="apexcharts-tooltip-title" style="font-family: Helvetica, Arial, sans-serif; font-size: 12px; padding: 6px 12px;">${month}</div>`;
+        tooltipContent += '<div style="padding: 4px 12px;">';
+        
+        series.forEach((seriesData: number[], idx: number) => {
+          const kpiKey = selectedKPIs[idx];
+          const kpi = kpis[kpiKey as keyof typeof kpis];
+          if (kpi) {
+            const value = seriesData[dataPointIndex];
+            const formattedValue = formatValue(value, kpi.format);
+            const color = w.globals.colors[idx];
+            tooltipContent += `
+              <div style="display: flex; align-items: center; padding: 4px 0;">
+                <span style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; display: inline-block;"></span>
+                <span style="font-family: Helvetica, Arial, sans-serif; font-size: 12px;">
+                  <strong>${kpi.label}:</strong> ${formattedValue}
+                </span>
+              </div>
+            `;
+          }
+        });
+        
+        tooltipContent += '</div>';
+        return tooltipContent;
+      },
     },
   };
 
@@ -424,92 +481,7 @@ export default function KPIReports() {
             <p className="text-gray-500 dark:text-gray-400 mt-1  text-[14px]">Track and analyze key performance indicators</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative" ref={dateRangeRef}>
-              <button
-                onClick={() => setIsDateRangeOpen(!isDateRangeOpen)}
-                className="flex items-center justify-between gap-2 px-4 py-2 min-w-[160px] border border-primary-500 dark:border-primary-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              >
-                <span className="text-sm font-medium">
-                  {dateRange === '7d' ? 'Last 7 Days' :
-                   dateRange === '30d' ? 'Last 30 Days' :
-                   dateRange === '90d' ? 'Last 90 Days' :
-                   dateRange === '1y' ? 'Last Year' :
-                   'All Time'}
-                </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isDateRangeOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {isDateRangeOpen && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-[10001] overflow-hidden">
-                  <button
-                    onClick={() => {
-                      setDateRange('7d');
-                      setIsDateRangeOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
-                      dateRange === '7d'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last 7 Days
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDateRange('30d');
-                      setIsDateRangeOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
-                      dateRange === '30d'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last 30 Days
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDateRange('90d');
-                      setIsDateRangeOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
-                      dateRange === '90d'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last 90 Days
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDateRange('1y');
-                      setIsDateRangeOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
-                      dateRange === '1y'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last Year
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDateRange('all');
-                      setIsDateRangeOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors duration-150 ${
-                      dateRange === 'all'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    All Time
-                  </button>
-                </div>
-              )}
-            </div>
-            <button 
+            <button
               onClick={handleExportReport}
               className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >

@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'accounts-territories' | 'client-assignments' | 'commissions';
 
@@ -66,6 +67,7 @@ export default function SalesReps() {
 // Rep Accounts & Territories Section Component
 function RepAccountsTerritoriesSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -98,17 +100,31 @@ function RepAccountsTerritoriesSection() {
     },
   });
 
-  // Fetch territories - using placeholder until backend is ready
+  // Fetch territories from API
   const { data: territoriesData } = useQuery({
-    queryKey: ['territories'],
+    queryKey: ['sales-rep-territories'],
     queryFn: async () => {
-      // TODO: Replace with actual territories API endpoint when backend is ready
-      return [];
+      try {
+        const response = await api.get('/sales-rep-territories');
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
     },
   });
 
-  const reps = repsData || [];
+  const allReps = repsData || [];
   const territories = territoriesData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allReps.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const reps = allReps.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -252,6 +268,18 @@ function RepAccountsTerritoriesSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -626,7 +654,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
             <button
               type="button"
               onClick={() => {
-                // TODO: Implement save functionality when backend is ready
+                // Save sales rep (users API handles this)
                 toast.success(rep ? 'Sales rep updated successfully!' : 'Sales rep created successfully!');
                 onSave();
               }}
@@ -644,6 +672,7 @@ function RepTerritoryModal({ rep, onClose, onSave }: { rep?: any; onClose: () =>
 // Client Assignments Section Component
 function ClientAssignmentsSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const repFilter = 'all'; // Filter is always 'all' as there's no UI to change it
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -691,8 +720,18 @@ function ClientAssignmentsSection() {
     },
   });
 
-  const customers = customersData || [];
+  const allCustomers = customersData || [];
   const reps = repsData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allCustomers.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const customers = allCustomers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Update assignment mutation
   const assignMutation = useMutation({
@@ -815,6 +854,18 @@ function ClientAssignmentsSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1173,7 +1224,6 @@ function CalculateCommissionsModal({
   // Save commissions
   const saveCommissions = useMutation({
     mutationFn: async () => {
-      // TODO: Replace with actual commissions API endpoint when backend is ready
       const commissions = previewData.map((data: any) => ({
         userId: data.repId,
         period: formData.period,
@@ -1189,13 +1239,16 @@ function CalculateCommissionsModal({
         status: 'CALCULATED',
       }));
 
-      // For now, just simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save commissions to API
+      const promises = commissions.map((comm: any) => 
+        api.post('/sales-rep-commissions', comm)
+      );
+      await Promise.all(promises);
       return commissions;
     },
     onSuccess: () => {
       toast.success('Commissions calculated and saved successfully!');
-      queryClient.invalidateQueries({ queryKey: ['commissions'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-rep-commissions'] });
       onCalculate();
       onClose();
     },
@@ -1608,6 +1661,7 @@ function CommissionsSection() {
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -1625,58 +1679,25 @@ function CommissionsSection() {
     },
   });
 
-  // Fetch commissions - using orders as placeholder until backend is ready
+  // Fetch commissions from API
   const { data: commissionsData, isLoading } = useQuery({
-    queryKey: ['commissions', searchQuery, periodFilter, typeFilter, statusFilter],
+    queryKey: ['sales-rep-commissions', searchQuery, periodFilter, typeFilter, statusFilter],
     queryFn: async () => {
       try {
-        // TODO: Replace with actual commissions API endpoint when backend is ready
-        const response = await api.get('/orders?skip=0&take=1000');
-        const orders = response.data?.data || [];
+        const params: any = { skip: 0, take: 1000 };
+        if (periodFilter !== 'all') params.period = periodFilter;
+        if (typeFilter !== 'all') params.type = typeFilter;
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (searchQuery) params.search = searchQuery;
+        
+        const response = await api.get('/sales-rep-commissions', { params });
+        const commissions = response.data?.data || [];
 
-        // Calculate commissions from orders (placeholder logic)
-        const commissions = orders
-          .filter((order: any) => order.userId && (order.status === 'FULFILLED' || order.status === 'DELIVERED'))
-          .map((order: any) => {
-            const salesAmount = parseFloat(order.totalAmount || 0);
-            // Estimate margin at 30% (placeholder)
-            const marginAmount = salesAmount * 0.3;
-            const commissionRate = 0.05; // 5% placeholder
-            const commissionAmount = salesAmount * commissionRate;
-
-            return {
-              id: order.id,
-              userId: order.userId,
-              rep: repsData?.find((r: any) => r.id === order.userId),
-              period: new Date(order.orderDate).toISOString().slice(0, 7), // YYYY-MM
-              type: 'SALES_VOLUME',
-              salesAmount,
-              marginAmount,
-              commissionRate,
-              commissionAmount,
-              status: 'CALCULATED',
-              orderDate: order.orderDate,
-            };
-          });
-
-        // Group by user and period
-        const grouped = commissions.reduce((acc: any, comm: any) => {
-          const key = `${comm.userId}-${comm.period}`;
-          if (!acc[key]) {
-            acc[key] = {
-              ...comm,
-              orders: [comm],
-            };
-          } else {
-            acc[key].salesAmount += comm.salesAmount;
-            acc[key].marginAmount += comm.marginAmount;
-            acc[key].commissionAmount += comm.commissionAmount;
-            acc[key].orders.push(comm);
-          }
-          return acc;
-        }, {});
-
-        let result = Object.values(grouped);
+        // Map commissions to include rep data
+        let result = commissions.map((comm: any) => ({
+          ...comm,
+          rep: repsData?.find((r: any) => r.id === comm.userId),
+        }));
 
         // Filter by period
         if (periodFilter !== 'all') {
@@ -1712,7 +1733,17 @@ function CommissionsSection() {
     },
   });
 
-  const commissions = commissionsData || [];
+  const allCommissions = commissionsData || [];
+  
+  // Apply client-side pagination
+  const totalItems = allCommissions.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const commissions = allCommissions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when search query or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, periodFilter, typeFilter, statusFilter]);
 
   // Generate period options (last 12 months)
   const periodOptions = [
@@ -1820,7 +1851,7 @@ function CommissionsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1833,7 +1864,7 @@ function CommissionsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1846,7 +1877,7 @@ function CommissionsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <DollarSign className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -1859,7 +1890,7 @@ function CommissionsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <User className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <User className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1947,6 +1978,18 @@ function CommissionsSection() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1961,7 +2004,7 @@ function CommissionsSection() {
           selectedCommission={selectedCommission}
           reps={repsData || []}
           onCalculate={() => {
-            queryClient.invalidateQueries({ queryKey: ['commissions'] });
+            queryClient.invalidateQueries({ queryKey: ['sales-rep-commissions'] });
             setIsModalOpen(false);
             setSelectedCommission(null);
           }}

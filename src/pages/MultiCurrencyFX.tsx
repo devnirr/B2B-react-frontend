@@ -152,9 +152,9 @@ function FXRatesSection() {
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const totalRates = filteredRates.length;
-    const increased = filteredRates.filter((rate: any) => rate.change > 0);
-    const decreased = filteredRates.filter((rate: any) => rate.change < 0);
-    const unchanged = filteredRates.filter((rate: any) => rate.change === 0);
+    const increased = filteredRates.filter((rate: any) => (parseFloat(rate.change) || 0) > 0);
+    const decreased = filteredRates.filter((rate: any) => (parseFloat(rate.change) || 0) < 0);
+    const unchanged = filteredRates.filter((rate: any) => (parseFloat(rate.change) || 0) === 0);
 
     return {
       total: totalRates,
@@ -236,7 +236,7 @@ function FXRatesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -250,7 +250,7 @@ function FXRatesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -264,7 +264,7 @@ function FXRatesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -278,7 +278,7 @@ function FXRatesSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <ArrowUpDown className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <ArrowUpDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -384,21 +384,21 @@ function FXRatesSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-gray-900 dark:text-white">
-                          {rate.rate.toFixed(4)}
+                          {(parseFloat(rate.rate) || 0).toFixed(4)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {rate.previousRate.toFixed(4)}
+                        {(parseFloat(rate.previousRate) || 0).toFixed(4)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`flex items-center gap-1 text-sm font-medium ${getChangeColor(rate.change)}`}>
+                        <div className={`flex items-center gap-1 text-sm font-medium ${getChangeColor(parseFloat(rate.change) || 0)}`}>
                           <ChangeIcon className="w-4 h-4" />
-                          {rate.change > 0 ? '+' : ''}{rate.change.toFixed(4)}
+                          {(parseFloat(rate.change) || 0) > 0 ? '+' : ''}{(parseFloat(rate.change) || 0).toFixed(4)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`text-sm font-medium ${getChangeColor(rate.changePercent)}`}>
-                          {rate.changePercent > 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%
+                        <div className={`text-sm font-medium ${getChangeColor(parseFloat(rate.changePercent) || 0)}`}>
+                          {(parseFloat(rate.changePercent) || 0) > 0 ? '+' : ''}{(parseFloat(rate.changePercent) || 0).toFixed(2)}%
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -420,7 +420,6 @@ function FXRatesSection() {
                           className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
-                          View
                         </button>
                       </td>
                     </tr>
@@ -585,20 +584,20 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Current Rate</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                  {rate.rate.toFixed(4)}
+                  {(parseFloat(rate.rate) || 0).toFixed(4)}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  1 {fromCurrencyInfo.code} = {rate.rate.toFixed(4)} {toCurrencyInfo.code}
+                  1 {fromCurrencyInfo.code} = {(parseFloat(rate.rate) || 0).toFixed(4)} {toCurrencyInfo.code}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Change</p>
-                <div className={`flex items-center gap-1 text-2xl font-bold mt-1 ${getChangeColor(rate.change)}`}>
-                  <ChangeIcon className="w-6 h-6" />
-                  {rate.change > 0 ? '+' : ''}{rate.change.toFixed(4)}
+                <div className={`flex items-center gap-1 text-2xl font-bold mt-1 ${getChangeColor(parseFloat(rate.change) || 0)}`}>
+                  <ChangeIcon className="w-5 h-5" />
+                  {(parseFloat(rate.change) || 0) > 0 ? '+' : ''}{(parseFloat(rate.change) || 0).toFixed(4)}
                 </div>
-                <p className={`text-sm font-medium mt-1 ${getChangeColor(rate.changePercent)}`}>
-                  {rate.changePercent > 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%
+                <p className={`text-sm font-medium mt-1 ${getChangeColor(parseFloat(rate.changePercent) || 0)}`}>
+                  {(parseFloat(rate.changePercent) || 0) > 0 ? '+' : ''}{(parseFloat(rate.changePercent) || 0).toFixed(2)}%
                 </p>
               </div>
             </div>
@@ -661,25 +660,25 @@ function FXRateDetailsModal({ rate, onClose, currencies }: FXRateDetailsModalPro
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Current Rate</p>
                 <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
-                  {rate.rate.toFixed(4)}
+                  {(parseFloat(rate.rate) || 0).toFixed(4)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Previous Rate</p>
                 <p className="text-lg font-bold text-gray-500 dark:text-gray-400 mt-1">
-                  {rate.previousRate.toFixed(4)}
+                  {(parseFloat(rate.previousRate) || 0).toFixed(4)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Change</p>
-                <p className={`text-lg font-bold mt-1 ${getChangeColor(rate.change)}`}>
-                  {rate.change > 0 ? '+' : ''}{rate.change.toFixed(4)}
+                <p className={`text-lg font-bold mt-1 ${getChangeColor(parseFloat(rate.change) || 0)}`}>
+                  {(parseFloat(rate.change) || 0) > 0 ? '+' : ''}{(parseFloat(rate.change) || 0).toFixed(4)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Change Percentage</p>
-                <p className={`text-lg font-bold mt-1 ${getChangeColor(rate.changePercent)}`}>
-                  {rate.changePercent > 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%
+                <p className={`text-lg font-bold mt-1 ${getChangeColor(parseFloat(rate.changePercent) || 0)}`}>
+                  {(parseFloat(rate.changePercent) || 0) > 0 ? '+' : ''}{(parseFloat(rate.changePercent) || 0).toFixed(2)}%
                 </p>
               </div>
             </div>
@@ -877,7 +876,7 @@ function MarketCurrencySettingsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Globe className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -891,7 +890,7 @@ function MarketCurrencySettingsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -905,7 +904,7 @@ function MarketCurrencySettingsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <RefreshCw className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1278,7 +1277,7 @@ function CreateMarketModal({ onClose, onCreate }: CreateMarketModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

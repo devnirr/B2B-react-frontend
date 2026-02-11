@@ -23,7 +23,7 @@ export default function Pagination({
   const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
   return (
-    <div className={`flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 ${className}`}>
+    <div className={`flex items-center justify-between border-gray-200 dark:border-gray-700 mt-4 ${className}`}>
       <div className="text-sm text-gray-700 dark:text-gray-300">
         Showing <span className="font-medium">{startItem}</span> to{' '}
         <span className="font-medium">{endItem}</span> of{' '}

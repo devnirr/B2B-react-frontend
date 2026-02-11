@@ -16,10 +16,10 @@ import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
-import Tasks from './pages/Tasks';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Calendar from './pages/Calendar';
+import UpcomingEvents from './pages/UpcomingEvents';
 import AssetsDAM from './pages/AssetsDAM';
 import Alerts from './pages/Alerts';
 import Exceptions from './pages/Exceptions';
@@ -251,16 +251,6 @@ function App() {
             }
           />
           <Route
-            path="/tasks"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Tasks />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/settings"
             element={
               <ProtectedRoute>
@@ -286,6 +276,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Calendar />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/upcoming-events"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UpcomingEvents />
                 </Layout>
               </ProtectedRoute>
             }

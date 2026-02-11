@@ -325,7 +325,7 @@ export default function InventoryFulfillmentDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Inventory Value</span>
@@ -337,7 +337,7 @@ export default function InventoryFulfillmentDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <Box className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Box className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Total Stock Units</span>
@@ -349,7 +349,7 @@ export default function InventoryFulfillmentDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <Warehouse className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Warehouse className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Warehouses</span>
@@ -361,7 +361,7 @@ export default function InventoryFulfillmentDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Low Stock Items</span>
@@ -373,7 +373,7 @@ export default function InventoryFulfillmentDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
               <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 block">Out of Stock</span>

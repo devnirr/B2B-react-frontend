@@ -8,8 +8,6 @@ import {
   Plus,
   Search,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   X,
   CheckCircle,
@@ -27,10 +25,11 @@ import {
   Trash2,
   Copy,
   Edit,
-  AlertTriangle,
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = 'connected-channels' | 'api-keys-webhooks' | 'sync-health';
 type ChannelType = 'ecommerce' | 'pos' | 'marketplace' | '3pl' | 'shipping';
@@ -144,69 +143,63 @@ function ConnectedChannelsSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const queryClient = useQueryClient();
 
-  // Load channels from localStorage
-  const [channels, setChannels] = useState<Channel[]>(() => {
-    const saved = localStorage.getItem('integration-channels');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Default channels
-    return [
-      {
-        id: 1,
-        name: 'Shopify Store',
-        type: 'ecommerce',
-        provider: 'Shopify',
-        status: 'connected' as ConnectionStatus,
-        lastSync: new Date(Date.now() - 3600000).toISOString(),
-        syncFrequency: '1 hour',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        name: 'Amazon Marketplace',
-        type: 'marketplace',
-        provider: 'Amazon',
-        status: 'connected' as ConnectionStatus,
-        lastSync: new Date(Date.now() - 7200000).toISOString(),
-        syncFrequency: '2 hours',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 3,
-        name: 'Square POS',
-        type: 'pos',
-        provider: 'Square',
-        status: 'pending' as ConnectionStatus,
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 4,
-        name: 'FedEx Shipping',
-        type: 'shipping',
-        provider: 'FedEx',
-        status: 'connected' as ConnectionStatus,
-        lastSync: new Date(Date.now() - 1800000).toISOString(),
-        syncFrequency: '30 minutes',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 5,
-        name: '3PL Warehouse',
-        type: '3pl',
-        provider: 'Custom',
-        status: 'error' as ConnectionStatus,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  // Fetch channels from API (using integrations endpoint)
+  const { data: channelsData, isLoading: channelsLoading } = useQuery({
+    queryKey: ['integrations', 'channels', currentPage],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/integrations', {
+          params: {
+            skip: (currentPage - 1) * ITEMS_PER_PAGE,
+            take: ITEMS_PER_PAGE,
+          },
+        });
+        return Array.isArray(response.data) 
+          ? { data: response.data, total: response.data.length }
+          : { data: response.data?.data || [], total: response.data?.total || 0 };
+      } catch (error) {
+        return { data: [], total: 0 };
+      }
+    },
   });
 
-  // Save to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('integration-channels', JSON.stringify(channels));
-  }, [channels]);
+  const channels: Channel[] = (channelsData?.data || []).map((integration: any) => ({
+    id: integration.id,
+    name: integration.name,
+    type: mapIntegrationTypeToChannelType(integration.type),
+    provider: integration.name.split(' ')[0] || 'Custom',
+    status: mapIntegrationStatusToConnectionStatus(integration.status),
+    lastSync: integration.lastSync || undefined,
+    syncFrequency: '1 hour', // Default, can be configured
+    createdAt: integration.createdAt,
+    updatedAt: integration.updatedAt,
+  }));
+
+
+  // Helper functions to map integration types/statuses to channel types/statuses
+  function mapIntegrationTypeToChannelType(type: string): ChannelType {
+    const typeMap: Record<string, ChannelType> = {
+      'E_COMMERCE': 'ecommerce',
+      'MARKETING': 'ecommerce',
+      'ANALYTICS': 'ecommerce',
+      'SHIPPING': 'shipping',
+      'ACCOUNTING': 'pos',
+      'OTHER': '3pl',
+    };
+    return typeMap[type] || 'ecommerce';
+  }
+
+  function mapIntegrationStatusToConnectionStatus(status: string): ConnectionStatus {
+    const statusMap: Record<string, ConnectionStatus> = {
+      'CONNECTED': 'connected',
+      'DISCONNECTED': 'disconnected',
+      'PENDING': 'pending',
+      'ERROR': 'error',
+    };
+    return statusMap[status] || 'disconnected';
+  }
 
   // Filter channels
   const filteredChannels = useMemo(() => {
@@ -236,10 +229,10 @@ function ConnectedChannelsSection() {
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [channels, searchQuery, typeFilter, statusFilter]);
 
-  // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredChannels.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  // Client-side pagination for filtered results
+  const totalPages = Math.max(1, Math.ceil(filteredChannels.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedChannels = filteredChannels.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -262,30 +255,101 @@ function ConnectedChannelsSection() {
     };
   }, [channels]);
 
+  // Create channel mutation
+  const createChannelMutation = useMutation({
+    mutationFn: async (channelData: any) => {
+      const integrationData = {
+        name: channelData.name,
+        type: mapChannelTypeToIntegrationType(channelData.type),
+        status: mapConnectionStatusToIntegrationStatus(channelData.status),
+        notes: `Provider: ${channelData.provider}, Sync Frequency: ${channelData.syncFrequency || '1 hour'}`,
+      };
+      const response = await api.post('/integrations', integrationData);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Channel created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['integrations', 'channels'] });
+      setShowCreateModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to create channel');
+    },
+  });
+
+  // Update channel mutation
+  const updateChannelMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string | number; updates: any }) => {
+      const integrationData = {
+        name: updates.name,
+        type: mapChannelTypeToIntegrationType(updates.type),
+        status: mapConnectionStatusToIntegrationStatus(updates.status),
+        notes: `Provider: ${updates.provider}, Sync Frequency: ${updates.syncFrequency || '1 hour'}`,
+      };
+      const response = await api.patch(`/integrations/${id}`, integrationData);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Channel updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['integrations', 'channels'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update channel');
+    },
+  });
+
+  // Delete channel mutation
+  const deleteChannelMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const response = await api.delete(`/integrations/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Channel deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['integrations', 'channels'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete channel');
+    },
+  });
+
   const handleCreateChannel = (channelData: any) => {
-    const newChannel: Channel = {
-      id: Date.now(),
-      ...channelData,
-      createdAt: new Date().toISOString(),
-    };
-    setChannels([...channels, newChannel]);
-    setShowCreateModal(false);
-    toast.success('Channel created successfully!');
+    createChannelMutation.mutate(channelData);
   };
 
   const handleUpdateChannel = (channelId: string | number, updates: any) => {
-    setChannels(channels.map((channel) =>
-      channel.id === channelId
-        ? { ...channel, ...updates, updatedAt: new Date().toISOString() }
-        : channel
-    ));
-    toast.success('Channel updated successfully!');
+    updateChannelMutation.mutate({ id: channelId, updates });
   };
 
   const handleDeleteChannel = (channelId: string | number) => {
-    setChannels(channels.filter((channel) => channel.id !== channelId));
-    toast.success('Channel deleted successfully!');
+    deleteChannelMutation.mutate(channelId);
   };
+
+  // Helper functions to map channel types/statuses to integration types/statuses
+  function mapChannelTypeToIntegrationType(type: ChannelType): string {
+    const typeMap: Record<ChannelType, string> = {
+      'ecommerce': 'E_COMMERCE',
+      'pos': 'ACCOUNTING',
+      'marketplace': 'E_COMMERCE',
+      '3pl': 'OTHER',
+      'shipping': 'SHIPPING',
+    };
+    return typeMap[type] || 'OTHER';
+  }
+
+  function mapConnectionStatusToIntegrationStatus(status: ConnectionStatus): string {
+    const statusMap: Record<ConnectionStatus, string> = {
+      'connected': 'CONNECTED',
+      'disconnected': 'DISCONNECTED',
+      'pending': 'PENDING',
+      'error': 'ERROR',
+    };
+    return statusMap[status] || 'DISCONNECTED';
+  }
+
+  if (channelsLoading) {
+    return <SkeletonPage />;
+  }
 
   const getTypeIcon = (type: ChannelType) => {
     switch (type) {
@@ -349,7 +413,7 @@ function ConnectedChannelsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Link2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -363,7 +427,7 @@ function ConnectedChannelsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -377,7 +441,7 @@ function ConnectedChannelsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -391,7 +455,7 @@ function ConnectedChannelsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -544,82 +608,15 @@ function ConnectedChannelsSection() {
       </div>
 
       {/* Pagination */}
-      {filteredChannels.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredChannels.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredChannels.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredChannels.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -657,17 +654,20 @@ function ConnectedChannelsSection() {
 
       {/* Delete Channel Modal */}
       {showDeleteModal && channelToDelete && (
-        <DeleteChannelModal
-          channel={channelToDelete}
+        <DeleteModal
+          title="Delete Channel"
+          message="Are you sure you want to delete"
+          itemName={channelToDelete.name}
           onClose={() => {
             setShowDeleteModal(false);
             setChannelToDelete(null);
           }}
-          onDelete={(id: string | number) => {
-            handleDeleteChannel(id);
+          onConfirm={() => {
+            handleDeleteChannel(channelToDelete.id);
             setShowDeleteModal(false);
             setChannelToDelete(null);
           }}
+          isLoading={deleteChannelMutation.isPending}
         />
       )}
     </div>
@@ -716,20 +716,20 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create New Channel</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1" style={{ overflowX: 'visible' }}>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Channel Name <span className="text-red-500">*</span>
@@ -744,8 +744,8 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-2 gap-4 overflow-visible">
+            <div className="overflow-visible">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Channel Type <span className="text-red-500">*</span>
               </label>
@@ -765,7 +765,7 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
               />
             </div>
 
-            <div>
+            <div className="overflow-visible">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Provider <span className="text-red-500">*</span>
               </label>
@@ -780,8 +780,8 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-2 gap-4 overflow-visible">
+            <div className="overflow-visible">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Status
               </label>
@@ -797,7 +797,7 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
               />
             </div>
 
-            <div>
+            <div className="overflow-visible">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Sync Frequency
               </label>
@@ -817,7 +817,7 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex text-[14px] items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -895,7 +895,7 @@ function ChannelViewModal({ channel, onClose }: ChannelViewModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -995,64 +995,7 @@ function ChannelViewModal({ channel, onClose }: ChannelViewModalProps) {
   );
 }
 
-interface DeleteChannelModalProps {
-  channel: Channel;
-  onClose: () => void;
-  onDelete: (channelId: string | number) => void;
-}
 
-function DeleteChannelModal({ channel, onClose, onDelete }: DeleteChannelModalProps) {
-  const handleDelete = () => {
-    onDelete(channel.id);
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Delete Channel</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                This action cannot be undone
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Are you sure you want to delete the channel <span className="font-semibold">{channel.name}</span>? This will permanently remove all associated data.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete Channel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface ChannelDetailsModalProps {
   channel: Channel;
@@ -1105,7 +1048,7 @@ function ChannelDetailsModal({ channel, onClose, onUpdate }: ChannelDetailsModal
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1254,7 +1197,6 @@ function ApiKeysWebhooksSection() {
   const [keyToDelete, setKeyToDelete] = useState<ApiKey | null>(null);
   const [isDeleteKeyModalShowing, setIsDeleteKeyModalShowing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -1308,9 +1250,9 @@ function ApiKeysWebhooksSection() {
   }, [apiKeys, searchQuery, typeFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredKeys.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredKeys.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedKeys = filteredKeys.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -1440,7 +1382,7 @@ function ApiKeysWebhooksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Key className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1454,7 +1396,7 @@ function ApiKeysWebhooksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <Key className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Key className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1468,7 +1410,7 @@ function ApiKeysWebhooksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Webhook className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Webhook className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1482,7 +1424,7 @@ function ApiKeysWebhooksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1673,82 +1615,15 @@ function ApiKeysWebhooksSection() {
       </div>
 
       {/* Pagination */}
-      {filteredKeys.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredKeys.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredKeys.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredKeys.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -1781,15 +1656,16 @@ function ApiKeysWebhooksSection() {
       )}
 
       {/* Delete API Key Modal */}
-      {keyToDelete && (
-        <DeleteApiKeyModal
-          apiKey={keyToDelete}
+      {keyToDelete && isDeleteKeyModalShowing && (
+        <DeleteModal
+          title={`Delete ${keyToDelete.type === 'api-key' ? 'API Key' : 'Webhook'}`}
+          message="Are you sure you want to delete"
+          itemName={keyToDelete.name}
           onClose={() => {
             setIsDeleteKeyModalShowing(false);
             setKeyToDelete(null);
           }}
           onConfirm={handleConfirmDeleteKey}
-          isShowing={isDeleteKeyModalShowing}
         />
       )}
     </div>
@@ -1853,7 +1729,7 @@ function CreateApiKeyModal({ onClose, onCreate }: CreateApiKeyModalProps) {
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1994,7 +1870,7 @@ function ApiKeyViewModal({ apiKey, onClose, onCopy }: ApiKeyViewModalProps) {
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2184,7 +2060,7 @@ function ApiKeyEditModal({ apiKey, onClose, onUpdate, onCopy }: ApiKeyEditModalP
             onClick={onClose}
             className="text-[14px] text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2348,79 +2224,6 @@ function ApiKeyEditModal({ apiKey, onClose, onUpdate, onCopy }: ApiKeyEditModalP
 }
 
 // Delete API Key Modal Component
-function DeleteApiKeyModal({
-  apiKey,
-  onClose,
-  onConfirm,
-  isShowing,
-}: {
-  apiKey: ApiKey;
-  onClose: () => void;
-  onConfirm: () => void;
-  isShowing: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`modal-backdrop fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-      />
-      <div
-        className={`modal fade ${isShowing ? 'show' : ''}`}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteApiKeyModalLabel"
-        tabIndex={-1}
-      >
-        <div
-          className="modal-dialog modal-dialog-centered"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: '28rem' }}
-        >
-          <div className="modal-content">
-            <div className="modal-body text-center py-8 px-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" strokeWidth={2} />
-                </div>
-              </div>
-              <h5 id="deleteApiKeyModalLabel" className="text-[16px] font-semibold text-gray-900 dark:text-white mb-2">
-                Delete {apiKey.type === 'api-key' ? 'API Key' : 'Webhook'}
-              </h5>
-              <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Are you sure you want to delete
-              </p>
-              <p className="text-gray-900 dark:text-white font-semibold mb-4">
-                "{apiKey.name}"?
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
-            <div className="modal-footer border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-end gap-3 px-6 pb-6 text-[14px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete {apiKey.type === 'api-key' ? 'API Key' : 'Webhook'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Sync Health Section
 function SyncHealthSection() {
@@ -2428,7 +2231,6 @@ function SyncHealthSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedHealth, setSelectedHealth] = useState<SyncHealth | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch sync health from API
@@ -2475,9 +2277,9 @@ function SyncHealthSection() {
   }, [syncHealth, searchQuery, statusFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredHealth.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredHealth.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedHealth = filteredHealth.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -2552,7 +2354,7 @@ function SyncHealthSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -2566,7 +2368,7 @@ function SyncHealthSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -2580,7 +2382,7 @@ function SyncHealthSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -2594,7 +2396,7 @@ function SyncHealthSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <X className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <X className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -2608,7 +2410,7 @@ function SyncHealthSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <RefreshCw className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -2769,82 +2571,15 @@ function SyncHealthSection() {
       </div>
 
       {/* Pagination */}
-      {filteredHealth.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredHealth.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredHealth.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredHealth.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -2916,7 +2651,7 @@ function SyncHealthDetailsModal({ health, onClose }: SyncHealthDetailsModalProps
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

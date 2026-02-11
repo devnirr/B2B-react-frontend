@@ -8,13 +8,10 @@ import {
   Upload,
   Plus,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   X,
   CheckCircle,
   AlertCircle,
-  AlertTriangle,
   FileText,
   FileSpreadsheet,
   File,
@@ -28,6 +25,8 @@ import {
 } from 'lucide-react';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
+import DeleteModal from '../components/ui/DeleteModal';
 
 type TabType = 'imports' | 'exports';
 type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -129,7 +128,6 @@ function ImportsSection() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch imports from API
@@ -165,20 +163,27 @@ function ImportsSection() {
       return [];
     }
 
-    return importsData.map((item: any) => ({
-      id: item.id,
-      fileName: item.fileName || item.name || '',
-      type: (item.type || item.importType || 'custom').toLowerCase() as ImportType,
-      status: (item.status || 'pending').toLowerCase() as ImportStatus,
-      recordsTotal: item.recordsTotal || item.totalRecords || 0,
-      recordsProcessed: item.recordsProcessed || item.processedRecords || 0,
-      recordsFailed: item.recordsFailed || item.failedRecords || 0,
-      uploadedBy: item.uploadedBy || item.user?.firstName + ' ' + item.user?.lastName || item.user?.email || 'System',
-      uploadedAt: item.uploadedAt || item.createdAt || new Date().toISOString(),
-      completedAt: item.completedAt || item.finishedAt,
-      errorMessage: item.errorMessage || item.error,
-      fileUrl: item.fileUrl || item.filePath,
-    }));
+    return importsData.map((item: any) => {
+      const recordsTotal = item.recordsTotal || item.totalRecords || 0;
+      const recordsProcessed = item.recordsProcessed || item.processedRecords || 0;
+      // Ensure recordsProcessed never exceeds recordsTotal
+      const validRecordsProcessed = Math.min(recordsProcessed, recordsTotal);
+      
+      return {
+        id: item.id,
+        fileName: item.fileName || item.name || '',
+        type: (item.type || item.importType || 'custom').toLowerCase() as ImportType,
+        status: (item.status || 'pending').toLowerCase() as ImportStatus,
+        recordsTotal,
+        recordsProcessed: validRecordsProcessed,
+        recordsFailed: item.recordsFailed || item.failedRecords || 0,
+        uploadedBy: item.uploadedBy || item.user?.firstName + ' ' + item.user?.lastName || item.user?.email || 'System',
+        uploadedAt: item.uploadedAt || item.createdAt || new Date().toISOString(),
+        completedAt: item.completedAt || item.finishedAt,
+        errorMessage: item.errorMessage || item.error,
+        fileUrl: item.fileUrl || item.filePath,
+      };
+    });
   }, [importsData]);
 
   // Create import mutation
@@ -262,9 +267,9 @@ function ImportsSection() {
   }, [imports, searchQuery, typeFilter, statusFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredImports.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredImports.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedImports = filteredImports.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -373,7 +378,7 @@ function ImportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Upload className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -387,7 +392,7 @@ function ImportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -401,7 +406,7 @@ function ImportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Loader className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
+              <Loader className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
             </div>
           </div>
         </div>
@@ -415,7 +420,7 @@ function ImportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -429,7 +434,7 @@ function ImportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -557,7 +562,7 @@ function ImportsSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {imp.recordsProcessed} / {imp.recordsTotal}
+                          {Math.min(imp.recordsProcessed, imp.recordsTotal)} / {imp.recordsTotal}
                           {imp.recordsFailed > 0 && (
                             <span className="text-red-600 dark:text-red-400 ml-1">
                               ({imp.recordsFailed} failed)
@@ -569,7 +574,7 @@ function ImportsSection() {
                             <div
                               className="bg-primary-600 h-1.5 rounded-full"
                               style={{
-                                width: `${(imp.recordsProcessed / imp.recordsTotal) * 100}%`,
+                                width: `${Math.min((imp.recordsProcessed / imp.recordsTotal) * 100, 100)}%`,
                               }}
                             />
                           </div>
@@ -629,82 +634,15 @@ function ImportsSection() {
       </div>
 
       {/* Pagination */}
-      {filteredImports.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredImports.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredImports.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredImports.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -740,8 +678,10 @@ function ImportsSection() {
 
       {/* Delete Import Modal */}
       {importToDelete && (
-        <DeleteImportModal
-          importRecord={importToDelete}
+        <DeleteModal
+          title="Delete Import Record"
+          message="Are you sure you want to delete"
+          itemName={importToDelete.fileName}
           onClose={() => setImportToDelete(null)}
           onConfirm={() => handleDeleteImport(importToDelete.id)}
         />
@@ -807,7 +747,7 @@ function UploadFileModal({ onClose, onUpload, selectedFile, setSelectedFile }: U
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -937,7 +877,7 @@ function ViewImportModal({ importRecord, onClose }: ViewImportModalProps) {
   const StatusIcon = getStatusIcon(importRecord.status);
   const TypeIcon = getTypeIcon(importRecord.type);
   const progress = importRecord.recordsTotal > 0
-    ? (importRecord.recordsProcessed / importRecord.recordsTotal) * 100
+    ? Math.min((importRecord.recordsProcessed / importRecord.recordsTotal) * 100, 100)
     : 0;
 
   return (
@@ -958,7 +898,7 @@ function ViewImportModal({ importRecord, onClose }: ViewImportModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1000,7 +940,7 @@ function ViewImportModal({ importRecord, onClose }: ViewImportModalProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">
-                  {importRecord.recordsProcessed} / {importRecord.recordsTotal} records processed
+                  {Math.min(importRecord.recordsProcessed, importRecord.recordsTotal)} / {importRecord.recordsTotal} records processed
                 </span>
                 <span className="text-gray-600 dark:text-gray-400">{progress.toFixed(1)}%</span>
               </div>
@@ -1135,7 +1075,7 @@ function EditImportModal({ importRecord, onClose, onUpdate }: EditImportModalPro
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -1270,66 +1210,6 @@ function EditImportModal({ importRecord, onClose, onUpdate }: EditImportModalPro
 }
 
 // Delete Import Modal
-interface DeleteImportModalProps {
-  importRecord: ImportRecord;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-function DeleteImportModal({ importRecord, onClose, onConfirm }: DeleteImportModalProps) {
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        onClick={onClose}
-      />
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-6">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full">
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
-              Delete Import Record
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-1">
-              Are you sure you want to delete
-            </p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white text-center mb-4">
-              "{importRecord.fileName}"?
-            </p>
-            <p className="text-xs text-red-600 dark:text-red-400 text-center mb-6">
-              This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // Helper functions for Imports section
 function getStatusIcon(status: ImportStatus) {
@@ -1387,7 +1267,6 @@ function ExportsSection() {
   const [selectedExport, setSelectedExport] = useState<ExportRecord | null>(null);
   const [exportToDelete, setExportToDelete] = useState<ExportRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   // Fetch exports from API
@@ -1507,9 +1386,9 @@ function ExportsSection() {
   }, [exports, searchQuery, formatFilter, typeFilter, statusFilter]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredExports.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredExports.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedExports = filteredExports.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
@@ -1551,16 +1430,31 @@ function ExportsSection() {
     setShowCreateModal(false);
   };
 
-  const handleDownload = (exportRecord: ExportRecord) => {
-    if (exportRecord.fileUrl && exportRecord.status === 'completed') {
-      // Download the file
-      const link = document.createElement('a');
-      link.href = exportRecord.fileUrl;
-      link.download = `${exportRecord.name}.${exportRecord.format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success(`Downloading ${exportRecord.name}...`);
+  const handleDownload = async (exportRecord: ExportRecord) => {
+    if (exportRecord.status === 'completed') {
+      try {
+        // Use the API endpoint to download the file
+        const response = await api.get(`/data-exports/${exportRecord.id}/download`, {
+          responseType: 'blob',
+        });
+
+        // Create a blob URL and download
+        const blob = new Blob([response.data], {
+          type: exportRecord.format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${exportRecord.name}.${exportRecord.format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success(`Downloading ${exportRecord.name}...`);
+      } catch (error: any) {
+        console.error('Download error:', error);
+        toast.error(error.response?.data?.message || 'Failed to download export');
+      }
     } else {
       toast.error('Export is not ready for download');
     }
@@ -1631,7 +1525,7 @@ function ExportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Download className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1645,7 +1539,7 @@ function ExportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -1659,7 +1553,7 @@ function ExportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Loader className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
+              <Loader className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
             </div>
           </div>
         </div>
@@ -1673,7 +1567,7 @@ function ExportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -1687,7 +1581,7 @@ function ExportsSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -1895,82 +1789,15 @@ function ExportsSection() {
       </div>
 
       {/* Pagination */}
-      {filteredExports.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing <span className="font-medium text-gray-900 dark:text-white">{startIndex + 1}</span> to{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {Math.min(endIndex, filteredExports.length)}
-              </span>{' '}
-              of <span className="font-medium text-gray-900 dark:text-white">{filteredExports.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="First page"
-                >
-                  &lt;&lt;
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                
-                {/* Page numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-sm border rounded transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 text-gray-900 dark:text-white"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-                  title="Last page"
-                >
-                  &gt;&gt;
-                </button>
-              </div>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredExports.length}
+            onPageChange={setCurrentPage}
+            className="border-0 pt-0 mt-0"
+          />
         </div>
       )}
 
@@ -1993,8 +1820,10 @@ function ExportsSection() {
 
       {/* Delete Export Modal */}
       {exportToDelete && (
-        <DeleteExportModal
-          exportRecord={exportToDelete}
+        <DeleteModal
+          title="Delete Export Record"
+          message="Are you sure you want to delete"
+          itemName={exportToDelete.name}
           onClose={() => setExportToDelete(null)}
           onConfirm={confirmDeleteExport}
         />
@@ -2038,7 +1867,7 @@ function CreateExportModal({ onClose, onCreate }: CreateExportModalProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2201,7 +2030,7 @@ function ViewExportModal({ exportRecord, onClose, onDownload }: ViewExportModalP
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -2309,63 +2138,3 @@ function ViewExportModal({ exportRecord, onClose, onDownload }: ViewExportModalP
 }
 
 // Delete Export Modal
-interface DeleteExportModalProps {
-  exportRecord: ExportRecord;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-function DeleteExportModal({ exportRecord, onClose, onConfirm }: DeleteExportModalProps) {
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        onClick={onClose}
-      />
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-6">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full">
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
-              Delete Export Record
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-1">
-              Are you sure you want to delete
-            </p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white text-center mb-4">
-              "{exportRecord.name}"?
-            </p>
-            <p className="text-xs text-red-600 dark:text-red-400 text-center mb-6">
-              This action cannot be undone.
-            </p>
-            <div className="flex text-[14px] items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onConfirm}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   Clock,
@@ -21,6 +21,7 @@ import {
 import api from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 type TabType = 'priority-queue' | 'exception-triage' | 'automated-tasks';
 
@@ -85,6 +86,7 @@ function PriorityQueueSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch orders
   const { data: ordersData } = useQuery({
@@ -283,6 +285,18 @@ function PriorityQueueSection() {
       .sort((a: any, b: any) => b.priorityScore - a.priorityScore);
   }, [orders, inventory, purchaseOrders, searchQuery, priorityFilter, categoryFilter]);
 
+  // Pagination
+  const totalItems = priorityQueue.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedQueue = priorityQueue.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, priorityFilter, categoryFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const critical = priorityQueue.filter((item: any) => item.priority === 'critical');
@@ -341,7 +355,7 @@ function PriorityQueueSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <ListChecks className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -355,7 +369,7 @@ function PriorityQueueSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -369,7 +383,7 @@ function PriorityQueueSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -383,7 +397,7 @@ function PriorityQueueSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -444,7 +458,7 @@ function PriorityQueueSection() {
         </div>
       ) : (
         <div className="space-y-3">
-          {priorityQueue.map((item: any) => {
+          {paginatedQueue.map((item: any) => {
             const CategoryIcon = getCategoryIcon(item.category);
             return (
               <div
@@ -529,6 +543,18 @@ function PriorityQueueSection() {
               </div>
             );
           })}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -540,6 +566,7 @@ function ExceptionTriageSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [exceptionTypeFilter, setExceptionTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch purchase orders for vendor delays
   const { data: purchaseOrdersData } = useQuery({
@@ -738,6 +765,18 @@ function ExceptionTriageSection() {
       });
   }, [purchaseOrders, shipments, inventory, orders, searchQuery, exceptionTypeFilter, statusFilter]);
 
+  // Pagination
+  const totalItems = exceptions.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedExceptions = exceptions.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, exceptionTypeFilter, statusFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const vendorDelays = exceptions.filter((e: any) => e.type === 'vendor-delay');
@@ -791,7 +830,7 @@ function ExceptionTriageSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
@@ -805,7 +844,7 @@ function ExceptionTriageSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Truck className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Truck className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -819,7 +858,7 @@ function ExceptionTriageSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Package className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -833,7 +872,7 @@ function ExceptionTriageSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Warehouse className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -893,7 +932,7 @@ function ExceptionTriageSection() {
         </div>
       ) : (
         <div className="space-y-3">
-          {exceptions.map((exception: any) => {
+          {paginatedExceptions.map((exception: any) => {
             const ExceptionIcon = getExceptionIcon(exception.type);
             return (
               <div
@@ -982,6 +1021,18 @@ function ExceptionTriageSection() {
               </div>
             );
           })}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -993,11 +1044,34 @@ function AutomatedTasksSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Get user-created tasks from localStorage
-  const [tasks, setTasks] = useState<any[]>(() => {
-    const stored = localStorage.getItem('automated-tasks');
-    return stored ? JSON.parse(stored) : [];
+  const queryClient = useQueryClient();
+
+  // Fetch tasks from API
+  const { data: tasksData, isLoading: _tasksLoading } = useQuery({
+    queryKey: ['tasks', 'automated'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/tasks?skip=0&take=1000');
+        return response.data?.data || [];
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return [];
+      }
+    },
+  });
+
+  const tasks = tasksData || [];
+
+  // Mutation for updating tasks
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      return api.patch(`/tasks/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'automated'] });
+    },
   });
 
   // Fetch users for assignment
@@ -1124,6 +1198,18 @@ function AutomatedTasksSection() {
       });
   }, [tasks, orders, inventory, searchQuery, statusFilter, assigneeFilter]);
 
+  // Pagination
+  const totalItems = automatedTasks.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTasks = automatedTasks.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, assigneeFilter]);
+
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const pending = automatedTasks.filter((t: any) => t.status === 'pending');
@@ -1141,9 +1227,17 @@ function AutomatedTasksSection() {
   }, [automatedTasks]);
 
   const updateTask = (taskId: string, updates: any) => {
-    const updated = tasks.map((t: any) => (t.id === taskId ? { ...t, ...updates } : t));
-    setTasks(updated);
-    localStorage.setItem('automated-tasks', JSON.stringify(updated));
+    // Check if it's an auto-generated task (starts with 'auto-')
+    if (taskId.startsWith('auto-')) {
+      // Auto-generated tasks can't be updated via API, just log
+      console.log('Auto-generated task cannot be updated:', taskId);
+      return;
+    }
+    // Update real task via API
+    const taskIdNum = typeof taskId === 'string' ? parseInt(taskId) : taskId;
+    if (!isNaN(taskIdNum)) {
+      updateTaskMutation.mutate({ id: taskIdNum, updates });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -1183,7 +1277,7 @@ function AutomatedTasksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <ListChecks className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1197,7 +1291,7 @@ function AutomatedTasksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <Clock className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
@@ -1211,7 +1305,7 @@ function AutomatedTasksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -1225,7 +1319,7 @@ function AutomatedTasksSection() {
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <UserPlus className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <UserPlus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -1289,7 +1383,7 @@ function AutomatedTasksSection() {
         </div>
       ) : (
         <div className="space-y-3">
-          {automatedTasks.map((task: any) => (
+          {paginatedTasks.map((task: any) => (
             <div
               key={task.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
@@ -1386,6 +1480,18 @@ function AutomatedTasksSection() {
               </div>
             </div>
           ))}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                onPageChange={setCurrentPage}
+                className="border-0 pt-0 mt-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
