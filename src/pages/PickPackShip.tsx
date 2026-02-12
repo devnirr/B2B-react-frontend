@@ -9,8 +9,6 @@ import {
   ChevronDown,
   ClipboardList,
   FileText,
-  Printer,
-  Download,
   Eye,
   CheckCircle2,
   Clock,
@@ -19,6 +17,8 @@ import {
   Tag,
   Barcode,
   X,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
@@ -212,9 +212,38 @@ export default function PickPackShip() {
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Reset status filter when switching tabs if current status is not valid for the new tab
+  useEffect(() => {
+    const validPickListStatuses = ['DRAFT', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+    const validPackSlipStatuses = ['DRAFT', 'PACKING', 'PACKED', 'SHIPPED', 'CANCELLED'];
+    const validShippingLabelStatuses = ['PENDING', 'PRINTED', 'SHIPPED', 'CANCELLED'];
+
+    let validStatuses: string[] = [];
+    if (activeTab === 'pick-lists') {
+      validStatuses = validPickListStatuses;
+    } else if (activeTab === 'pack-slips') {
+      validStatuses = validPackSlipStatuses;
+    } else if (activeTab === 'shipping-labels') {
+      validStatuses = validShippingLabelStatuses;
+    }
+
+    if (statusFilter !== 'all' && !validStatuses.includes(statusFilter)) {
+      setStatusFilter('all');
+    }
+  }, [activeTab, statusFilter]);
   const [isCreatePickListModalOpen, setIsCreatePickListModalOpen] = useState(false);
   const [isCreatePackSlipModalOpen, setIsCreatePackSlipModalOpen] = useState(false);
   const [isCreateShippingLabelModalOpen, setIsCreateShippingLabelModalOpen] = useState(false);
+  const [selectedPickListId, setSelectedPickListId] = useState<string | null>(null);
+  const [selectedPackSlipId, setSelectedPackSlipId] = useState<string | null>(null);
+  const [selectedShippingLabelId, setSelectedShippingLabelId] = useState<string | null>(null);
+  const [editingPickListId, setEditingPickListId] = useState<string | null>(null);
+  const [editingPackSlipId, setEditingPackSlipId] = useState<string | null>(null);
+  const [editingShippingLabelId, setEditingShippingLabelId] = useState<string | null>(null);
+  const [deletingPickListId, setDeletingPickListId] = useState<string | null>(null);
+  const [deletingPackSlipId, setDeletingPackSlipId] = useState<string | null>(null);
+  const [deletingShippingLabelId, setDeletingShippingLabelId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -322,7 +351,10 @@ export default function PickPackShip() {
           skip: (currentPage - 1) * itemsPerPage,
           take: itemsPerPage,
         };
-        if (statusFilter !== 'all') {
+        // Only apply status filter if it's valid for pack slips
+        // Valid pack slip statuses: DRAFT, PACKING, PACKED, SHIPPED, CANCELLED
+        const validPackSlipStatuses = ['DRAFT', 'PACKING', 'PACKED', 'SHIPPED', 'CANCELLED'];
+        if (statusFilter !== 'all' && validPackSlipStatuses.includes(statusFilter)) {
           params.status = statusFilter;
         }
         if (warehouseFilter !== 'all') {
@@ -366,7 +398,10 @@ export default function PickPackShip() {
           skip: (currentPage - 1) * itemsPerPage,
           take: itemsPerPage,
         };
-        if (statusFilter !== 'all') {
+        // Only apply status filter if it's valid for shipping labels
+        // Valid shipping label statuses: PENDING, PRINTED, SHIPPED, CANCELLED
+        const validShippingLabelStatuses = ['PENDING', 'PRINTED', 'SHIPPED', 'CANCELLED'];
+        if (statusFilter !== 'all' && validShippingLabelStatuses.includes(statusFilter)) {
           params.status = statusFilter;
         }
         const response = await api.get('/shipping-labels', { params });
@@ -461,16 +496,184 @@ export default function PickPackShip() {
     },
   });
 
+  // Update mutations
+  const updatePickListMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await api.patch(`/pick-lists/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pick-lists'] });
+      toast.success('Pick list updated successfully');
+      setSelectedPickListId(null);
+      setEditingPickListId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update pick list');
+    },
+  });
+
+  const updatePackSlipMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await api.patch(`/pack-slips/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pack-slips'] });
+      toast.success('Pack slip updated successfully');
+      setSelectedPackSlipId(null);
+      setEditingPackSlipId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update pack slip');
+    },
+  });
+
+  const updateShippingLabelMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await api.patch(`/shipping-labels/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipping-labels'] });
+      toast.success('Shipping label updated successfully');
+      setSelectedShippingLabelId(null);
+      setEditingShippingLabelId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update shipping label');
+    },
+  });
+
+  // Delete mutations
+  const deletePickListMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/pick-lists/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pick-lists'] });
+      toast.success('Pick list deleted successfully');
+      setDeletingPickListId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to delete pick list');
+    },
+  });
+
+  const deletePackSlipMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/pack-slips/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pack-slips'] });
+      toast.success('Pack slip deleted successfully');
+      setDeletingPackSlipId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to delete pack slip');
+    },
+  });
+
+  const deleteShippingLabelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/shipping-labels/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipping-labels'] });
+      toast.success('Shipping label deleted successfully');
+      setDeletingShippingLabelId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to delete shipping label');
+    },
+  });
+
   const handleCreatePickList = (pickListData: Omit<PickList, 'id' | 'pickListNumber' | 'createdAt'>) => {
-    createPickListMutation.mutate(pickListData);
+    // Map to backend DTO format
+    const apiData = {
+      orderId: pickListData.orderId,
+      warehouseId: pickListData.warehouseId,
+      status: pickListData.status,
+      assignedTo: pickListData.assignedTo,
+      notes: pickListData.notes,
+      items: pickListData.items.map(item => ({
+        orderLineId: item.orderLineId,
+        productId: item.productId,
+        binLocation: item.binLocation,
+        quantity: item.quantity,
+        pickedQuantity: item.pickedQuantity || 0,
+        status: item.status,
+        notes: item.notes,
+      })),
+    };
+    createPickListMutation.mutate(apiData as any);
   };
 
   const handleCreatePackSlip = (packSlipData: Omit<PackSlip, 'id' | 'packSlipNumber' | 'createdAt'>) => {
-    createPackSlipMutation.mutate(packSlipData);
+    // Map to backend DTO format
+    const apiData = {
+      orderId: packSlipData.orderId,
+      pickListId: packSlipData.pickListId?.toString(),
+      warehouseId: packSlipData.warehouseId,
+      status: packSlipData.status,
+      packedBy: packSlipData.packedBy,
+      weight: packSlipData.weight,
+      notes: packSlipData.notes,
+      items: packSlipData.items.map((item: any) => ({
+        orderLineId: item.orderLineId,
+        productId: item.productId,
+        quantity: item.quantity,
+        packedQty: item.packedQty || item.packedQuantity || 0,
+        notes: item.notes,
+      })),
+    };
+    createPackSlipMutation.mutate(apiData);
   };
 
   const handleCreateShippingLabel = (labelData: Omit<ShippingLabel, 'id' | 'labelNumber' | 'createdAt'>) => {
-    createShippingLabelMutation.mutate(labelData);
+    // Map to backend DTO format - remove fromAddress/toAddress, convert dimensions to string
+    const dimensionsStr = labelData.dimensions
+      ? `${labelData.dimensions.length || ''}x${labelData.dimensions.width || ''}x${labelData.dimensions.height || ''}`
+      : undefined;
+
+    const apiData: any = {
+      orderId: labelData.orderId,
+      carrier: labelData.carrier,
+    };
+
+    if (labelData.packSlipId) {
+      apiData.packSlipId = String(labelData.packSlipId);
+    }
+
+    if (labelData.serviceType) {
+      apiData.serviceType = labelData.serviceType;
+    }
+
+    if (labelData.trackingNumber) {
+      apiData.trackingNumber = labelData.trackingNumber;
+    }
+
+    if (labelData.weight !== undefined) {
+      apiData.weight = labelData.weight;
+    }
+
+    if (dimensionsStr) {
+      apiData.dimensions = dimensionsStr;
+    }
+
+    // Map status: DRAFT -> PENDING (valid status for shipping labels)
+    if (labelData.status) {
+      apiData.status = labelData.status === 'DRAFT' ? 'PENDING' : labelData.status;
+    }
+
+    if ((labelData as any).notes) {
+      apiData.notes = (labelData as any).notes;
+    }
+
+    createShippingLabelMutation.mutate(apiData);
   };
 
   // Filter pick lists (client-side search only, other filters done by API)
@@ -799,8 +1002,8 @@ export default function PickPackShip() {
                 setCurrentPage(1);
               }}
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pick-lists'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -814,8 +1017,8 @@ export default function PickPackShip() {
                 setCurrentPage(1);
               }}
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pack-slips'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -829,8 +1032,8 @@ export default function PickPackShip() {
                 setCurrentPage(1);
               }}
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'shipping-labels'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -1082,8 +1285,7 @@ export default function PickPackShip() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => {
-                                      // View pick list details
-                                      toast('View pick list details feature coming soon');
+                                      setSelectedPickListId(item.id?.toString() || '');
                                     }}
                                     className="text-primary-600 hover:text-primary-900 dark:text-primary-400 p-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
                                     title="View Details"
@@ -1092,14 +1294,21 @@ export default function PickPackShip() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      // Print pick list
-                                      window.print();
-                                      toast.success('Printing pick list...');
+                                      setEditingPickListId(item.id?.toString() || '');
                                     }}
-                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                    title="Print"
+                                    className="text-green-600 hover:text-green-900 dark:text-green-400 p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                                    title="Edit"
                                   >
-                                    <Printer className="w-4 h-4" />
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setDeletingPickListId(item.id?.toString() || '');
+                                    }}
+                                    className="text-red-600 hover:text-red-900 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                               </td>
@@ -1135,8 +1344,7 @@ export default function PickPackShip() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => {
-                                      // View pack slip details
-                                      toast('View pack slip details feature coming soon');
+                                      setSelectedPackSlipId(item.id?.toString() || '');
                                     }}
                                     className="text-primary-600 hover:text-primary-900 dark:text-primary-400 p-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
                                     title="View Details"
@@ -1145,14 +1353,21 @@ export default function PickPackShip() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      // Print pack slip
-                                      window.print();
-                                      toast.success('Printing pack slip...');
+                                      setEditingPackSlipId(item.id?.toString() || '');
                                     }}
-                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                    title="Print"
+                                    className="text-green-600 hover:text-green-900 dark:text-green-400 p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                                    title="Edit"
                                   >
-                                    <Printer className="w-4 h-4" />
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setDeletingPackSlipId(item.id?.toString() || '');
+                                    }}
+                                    className="text-red-600 hover:text-red-900 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                               </td>
@@ -1187,8 +1402,7 @@ export default function PickPackShip() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => {
-                                      // View shipping label
-                                      toast('View shipping label feature coming soon');
+                                      setSelectedShippingLabelId(item.id?.toString() || '');
                                     }}
                                     className="text-primary-600 hover:text-primary-900 dark:text-primary-400 p-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
                                     title="View Label"
@@ -1197,24 +1411,21 @@ export default function PickPackShip() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      // Print shipping label
-                                      window.print();
-                                      toast.success('Printing shipping label...');
+                                      setEditingShippingLabelId(item.id?.toString() || '');
                                     }}
-                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                    title="Print Label"
+                                    className="text-green-600 hover:text-green-900 dark:text-green-400 p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                                    title="Edit"
                                   >
-                                    <Printer className="w-4 h-4" />
+                                    <Edit className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={() => {
-                                      // Download shipping label
-                                      toast.success('Downloading shipping label...');
+                                      setDeletingShippingLabelId(item.id?.toString() || '');
                                     }}
-                                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 p-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
-                                    title="Download"
+                                    className="text-red-600 hover:text-red-900 dark:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                    title="Delete"
                                   >
-                                    <Download className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                               </td>
@@ -1302,6 +1513,95 @@ export default function PickPackShip() {
           warehouses={warehouses}
           onClose={() => setIsCreateShippingLabelModalOpen(false)}
           onSubmit={handleCreateShippingLabel}
+        />
+      )}
+
+      {/* View Details Modals */}
+      {selectedPickListId && (
+        <ViewPickListModal
+          pickListId={selectedPickListId}
+          onClose={() => setSelectedPickListId(null)}
+        />
+      )}
+
+      {selectedPackSlipId && (
+        <ViewPackSlipModal
+          packSlipId={selectedPackSlipId}
+          onClose={() => setSelectedPackSlipId(null)}
+        />
+      )}
+
+      {selectedShippingLabelId && (
+        <ViewShippingLabelModal
+          shippingLabelId={selectedShippingLabelId}
+          onClose={() => setSelectedShippingLabelId(null)}
+        />
+      )}
+
+      {/* Edit Modals */}
+      {editingPickListId && (
+        <EditPickListModal
+          pickListId={editingPickListId}
+          warehouses={warehouses}
+          orders={orders}
+          onClose={() => setEditingPickListId(null)}
+          onUpdate={(data) => {
+            updatePickListMutation.mutate({ id: editingPickListId, data });
+          }}
+        />
+      )}
+
+      {editingPackSlipId && (
+        <EditPackSlipModal
+          packSlipId={editingPackSlipId}
+          warehouses={warehouses}
+          orders={orders}
+          pickLists={pickLists}
+          onClose={() => setEditingPackSlipId(null)}
+          onUpdate={(data) => {
+            updatePackSlipMutation.mutate({ id: editingPackSlipId, data });
+          }}
+        />
+      )}
+
+      {editingShippingLabelId && (
+        <EditShippingLabelModal
+          shippingLabelId={editingShippingLabelId}
+          onClose={() => setEditingShippingLabelId(null)}
+          onUpdate={(data) => {
+            updateShippingLabelMutation.mutate({ id: editingShippingLabelId, data });
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modals */}
+      {deletingPickListId && (
+        <DeleteConfirmationModal
+          title="Delete Pick List"
+          message={`Are you sure you want to delete pick list ${pickLists.find(p => String(p.id) === deletingPickListId)?.pickListNumber || ''}? This action cannot be undone.`}
+          onConfirm={() => deletePickListMutation.mutate(deletingPickListId)}
+          onCancel={() => setDeletingPickListId(null)}
+          isLoading={deletePickListMutation.isPending}
+        />
+      )}
+
+      {deletingPackSlipId && (
+        <DeleteConfirmationModal
+          title="Delete Pack Slip"
+          message={`Are you sure you want to delete pack slip ${packSlips.find(p => String(p.id) === deletingPackSlipId)?.packSlipNumber || ''}? This action cannot be undone.`}
+          onConfirm={() => deletePackSlipMutation.mutate(deletingPackSlipId)}
+          onCancel={() => setDeletingPackSlipId(null)}
+          isLoading={deletePackSlipMutation.isPending}
+        />
+      )}
+
+      {deletingShippingLabelId && (
+        <DeleteConfirmationModal
+          title="Delete Shipping Label"
+          message={`Are you sure you want to delete shipping label ${shippingLabels.find(s => String(s.id) === deletingShippingLabelId)?.labelNumber || ''}? This action cannot be undone.`}
+          onConfirm={() => deleteShippingLabelMutation.mutate(deletingShippingLabelId)}
+          onCancel={() => setDeletingShippingLabelId(null)}
+          isLoading={deleteShippingLabelMutation.isPending}
         />
       )}
     </div>
@@ -1420,7 +1720,7 @@ function CreatePickListModal({
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Pick List</h2>
           <button
             onClick={onClose}
@@ -1439,10 +1739,15 @@ function CreatePickListModal({
             <CustomDropdown
               value={selectedOrderId}
               onChange={setSelectedOrderId}
-              options={orders.map((order) => ({
-                value: order.id.toString(),
-                label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
-              }))}
+              options={orders.map((order) => {
+                const totalAmount = typeof order.totalAmount === 'number'
+                  ? order.totalAmount.toFixed(2)
+                  : parseFloat(String(order.totalAmount || '0')).toFixed(2);
+                return {
+                  value: String(order.id),
+                  label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency || ''} ${totalAmount})`,
+                };
+              })}
               placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
             />
             {selectedOrder && (
@@ -1605,7 +1910,7 @@ function CreatePickListModal({
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
               placeholder="Enter assignee name (optional)"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 text-[14px] dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1617,7 +1922,7 @@ function CreatePickListModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes or instructions (optional)"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -1738,50 +2043,42 @@ function CreatePackSlipModal({
       return;
     }
 
-    const selectedWarehouse = warehouses.find((w) => w.id === Number(selectedWarehouseId));
+    let packSlipItems: Array<{ orderLineId: number; productId: number; quantity: number; packedQty?: number; notes?: string }> = [];
 
-    let packSlipItems: PackSlipItem[] = [];
+    // Since we're always showing order lines, selectedItems keys are orderLineIds
+    if (selectedOrder && selectedOrder.orderLines) {
+      packSlipItems = Object.entries(selectedItems)
+        .map(([orderLineIdStr, quantity]) => {
+          const orderLineId = Number(orderLineIdStr);
+          const orderLine = selectedOrder.orderLines?.find((l) => l.id === orderLineId);
+          
+          if (!orderLine || !orderLine.id || !orderLine.productId) {
+            console.warn('Invalid order line found:', { orderLineId, orderLine });
+            return null;
+          }
+          
+          return {
+            orderLineId: orderLine.id,
+            productId: orderLine.productId,
+            quantity,
+            packedQty: 0,
+          };
+        })
+        .filter((item): item is { orderLineId: number; productId: number; quantity: number; packedQty: number } => item !== null);
+    }
 
-    if (selectedPickList) {
-      // Use items from pick list
-      packSlipItems = Object.entries(selectedItems).map(([itemId, quantity]) => {
-        const pickListItem = selectedPickList.items.find((item) => item.id === Number(itemId));
-        return {
-          id: Date.now() + Number(itemId),
-          orderLineId: pickListItem?.orderLineId || 0,
-          productId: pickListItem?.productId || 0,
-          productName: pickListItem?.productName,
-          sku: pickListItem?.sku,
-          quantity,
-          packedQuantity: 0,
-        };
-      });
-    } else if (selectedOrder) {
-      // Use items from order
-      packSlipItems = Object.entries(selectedItems).map(([orderLineId, quantity]) => {
-        const orderLine = selectedOrder.orderLines?.find((l) => l.id === Number(orderLineId));
-        return {
-          id: Date.now() + Number(orderLineId),
-          orderLineId: Number(orderLineId),
-          productId: orderLine?.productId || 0,
-          productName: orderLine?.product?.name,
-          sku: orderLine?.product?.sku,
-          quantity,
-          packedQuantity: 0,
-        };
-      });
+    if (packSlipItems.length === 0) {
+      toast.error('Please select at least one valid item to pack');
+      return;
     }
 
     onSubmit({
       orderId: Number(selectedOrderId),
-      orderNumber: selectedOrder?.orderNumber,
-      pickListId: selectedPickListId ? Number(selectedPickListId) : undefined,
+      pickListId: selectedPickListId ? String(selectedPickListId) : undefined,
       warehouseId: Number(selectedWarehouseId),
-      warehouseName: selectedWarehouse?.name,
       packedBy: packedBy || undefined,
-      items: packSlipItems,
-      packageCount: packageCount || 1,
       weight: weight ? parseFloat(weight) : undefined,
+      items: packSlipItems,
       notes: notes || undefined,
       status: 'DRAFT',
     });
@@ -1821,7 +2118,7 @@ function CreatePackSlipModal({
                   ? []
                   : orders.map((order) => ({
                     value: order.id.toString(),
-                    label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
+                    label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency || ''} ${typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : parseFloat(String(order.totalAmount || '0')).toFixed(2)})`,
                   }))
               }
               placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
@@ -1955,12 +2252,18 @@ function CreatePackSlipModal({
                           : (item as OrderLine).quantity - (item as OrderLine).fulfilledQty;
                         const isSelected = !!selectedItems[itemId];
                         const packQty = selectedItems[itemId] || 0;
-                        const productName = selectedPickList
-                          ? (item as PickListItem).productName
-                          : (item as OrderLine).product?.name;
-                        const sku = selectedPickList
-                          ? (item as PickListItem).sku
-                          : (item as OrderLine).product?.sku;
+                        // Get product name - check product object first, then fallback to productName
+                        let productName = '';
+                        let sku = '';
+                        if (selectedPickList) {
+                          const pickListItem = item as any;
+                          productName = pickListItem.product?.name || pickListItem.productName || '';
+                          sku = pickListItem.product?.sku || pickListItem.sku || '';
+                        } else {
+                          const orderLine = item as OrderLine;
+                          productName = orderLine.product?.name || '';
+                          sku = orderLine.product?.sku || '';
+                        }
 
                         return (
                           <tr key={itemId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -2105,13 +2408,12 @@ function CreatePackSlipModal({
 function CreateShippingLabelModal({
   orders,
   packSlips,
-  warehouses,
   onClose,
   onSubmit,
 }: {
   orders: Order[];
   packSlips: PackSlip[];
-  warehouses: Warehouse[];
+  warehouses?: Warehouse[];
   onClose: () => void;
   onSubmit: (data: Omit<ShippingLabel, 'id' | 'labelNumber' | 'createdAt'>) => void;
 }) {
@@ -2124,22 +2426,7 @@ function CreateShippingLabelModal({
   const [length, setLength] = useState<string>('');
   const [width, setWidth] = useState<string>('');
   const [height, setHeight] = useState<string>('');
-
-  // From Address
-  const [fromName, setFromName] = useState('');
-  const [fromAddress, setFromAddress] = useState('');
-  const [fromCity, setFromCity] = useState('');
-  const [fromState, setFromState] = useState('');
-  const [fromPostalCode, setFromPostalCode] = useState('');
-  const [fromCountry, setFromCountry] = useState('');
-
-  // To Address
-  const [toName, setToName] = useState('');
-  const [toAddress, setToAddress] = useState('');
-  const [toCity, setToCity] = useState('');
-  const [toState, setToState] = useState('');
-  const [toPostalCode, setToPostalCode] = useState('');
-  const [toCountry, setToCountry] = useState('');
+  const [notes, setNotes] = useState('');
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -2157,24 +2444,6 @@ function CreateShippingLabelModal({
     return packSlips.find((ps) => ps.id === Number(selectedPackSlipId));
   }, [packSlips, selectedPackSlipId]);
 
-  // Auto-fill from address from warehouse if available
-  useEffect(() => {
-    if (warehouses.length > 0 && !fromName) {
-      const defaultWarehouse = warehouses[0];
-      setFromName(defaultWarehouse.name || '');
-      setFromAddress(defaultWarehouse.address || '');
-      setFromCity(defaultWarehouse.city || '');
-      setFromCountry(defaultWarehouse.country || '');
-    }
-  }, [warehouses, fromName]);
-
-  // Auto-fill to address from order customer if available
-  useEffect(() => {
-    if (selectedOrder && selectedOrder.customer) {
-      setToName(selectedOrder.customer.name || '');
-    }
-  }, [selectedOrder]);
-
   // Auto-fill weight from pack slip if available
   useEffect(() => {
     if (selectedPackSlip && selectedPackSlip.weight) {
@@ -2190,49 +2459,27 @@ function CreateShippingLabelModal({
       return;
     }
 
-    if (!fromName || !fromAddress || !fromCity || !fromPostalCode || !fromCountry) {
-      toast.error('Please fill in all required from address fields');
-      return;
-    }
-
-    if (!toName || !toAddress || !toCity || !toPostalCode || !toCountry) {
-      toast.error('Please fill in all required to address fields');
+    if (!carrier) {
+      toast.error('Please select a carrier');
       return;
     }
 
     onSubmit({
       orderId: Number(selectedOrderId),
-      orderNumber: selectedOrder?.orderNumber,
-      packSlipId: selectedPackSlipId ? Number(selectedPackSlipId) : undefined,
+      packSlipId: selectedPackSlipId ? String(selectedPackSlipId) : undefined,
       carrier,
       serviceType: serviceType || undefined,
       trackingNumber: trackingNumber || undefined,
-      fromAddress: {
-        name: fromName,
-        address: fromAddress,
-        city: fromCity,
-        state: fromState || undefined,
-        postalCode: fromPostalCode,
-        country: fromCountry,
-      },
-      toAddress: {
-        name: toName,
-        address: toAddress,
-        city: toCity,
-        state: toState || undefined,
-        postalCode: toPostalCode,
-        country: toCountry,
-      },
       weight: weight ? parseFloat(weight) : undefined,
       dimensions: length || width || height
         ? {
-          length: length ? parseFloat(length) : undefined,
-          width: width ? parseFloat(width) : undefined,
-          height: height ? parseFloat(height) : undefined,
-        }
+            length: length ? parseFloat(length) : undefined,
+            width: width ? parseFloat(width) : undefined,
+            height: height ? parseFloat(height) : undefined,
+          }
         : undefined,
       status: 'DRAFT',
-    });
+    } as any);
   };
 
   return (
@@ -2269,7 +2516,7 @@ function CreateShippingLabelModal({
                   ? []
                   : orders.map((order) => ({
                     value: order.id.toString(),
-                    label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency} ${order.totalAmount.toFixed(2)})`,
+                    label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency || ''} ${typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : parseFloat(String(order.totalAmount || '0')).toFixed(2)})`,
                   }))
               }
               placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
@@ -2322,7 +2569,7 @@ function CreateShippingLabelModal({
                 value={serviceType}
                 onChange={(e) => setServiceType(e.target.value)}
                 placeholder="e.g., Ground, Express, Overnight"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
@@ -2337,7 +2584,7 @@ function CreateShippingLabelModal({
               value={trackingNumber}
               onChange={(e) => setTrackingNumber(e.target.value)}
               placeholder="Enter tracking number (optional)"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -2354,7 +2601,7 @@ function CreateShippingLabelModal({
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 placeholder="Weight"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -2368,7 +2615,7 @@ function CreateShippingLabelModal({
                 value={length}
                 onChange={(e) => setLength(e.target.value)}
                 placeholder="Length"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -2382,7 +2629,7 @@ function CreateShippingLabelModal({
                 value={width}
                 onChange={(e) => setWidth(e.target.value)}
                 placeholder="Width"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -2396,141 +2643,21 @@ function CreateShippingLabelModal({
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
                 placeholder="Height"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
           </div>
 
-          {/* From Address */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white mb-4">From Address *</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
-                <input
-                  type="text"
-                  value={fromName}
-                  onChange={(e) => setFromName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address *</label>
-                <input
-                  type="text"
-                  value={fromAddress}
-                  onChange={(e) => setFromAddress(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City *</label>
-                <input
-                  type="text"
-                  value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
-                <input
-                  type="text"
-                  value={fromState}
-                  onChange={(e) => setFromState(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postal Code *</label>
-                <input
-                  type="text"
-                  value={fromPostalCode}
-                  onChange={(e) => setFromPostalCode(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country *</label>
-                <input
-                  type="text"
-                  value={fromCountry}
-                  onChange={(e) => setFromCountry(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* To Address */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white mb-4">To Address *</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
-                <input
-                  type="text"
-                  value={toName}
-                  onChange={(e) => setToName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address *</label>
-                <input
-                  type="text"
-                  value={toAddress}
-                  onChange={(e) => setToAddress(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City *</label>
-                <input
-                  type="text"
-                  value={toCity}
-                  onChange={(e) => setToCity(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
-                <input
-                  type="text"
-                  value={toState}
-                  onChange={(e) => setToState(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Postal Code *</label>
-                <input
-                  type="text"
-                  value={toPostalCode}
-                  onChange={(e) => setToPostalCode(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country *</label>
-                <input
-                  type="text"
-                  value={toCountry}
-                  onChange={(e) => setToCountry(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            </div>
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any notes or instructions (optional)"
+              rows={3}
+              className="w-full px-3 py-2 border ::placeholder-[12px] text-[14px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+            />
           </div>
 
           {/* Actions */}
@@ -2550,6 +2677,1935 @@ function CreateShippingLabelModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// View Pick List Modal Component
+function ViewPickListModal({
+  pickListId,
+  onClose,
+}: {
+  pickListId: string;
+  onClose: () => void;
+}) {
+  const { data: pickListData, isLoading } = useQuery({
+    queryKey: ['pick-list', pickListId],
+    queryFn: async () => {
+      const response = await api.get(`/pick-lists/${pickListId}`);
+      return response.data;
+    },
+  });
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Pick List: {pickListData?.pickListNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Order Number</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {pickListData?.order?.orderNumber}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {pickListData?.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Warehouse</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {pickListData?.warehouse?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Created At</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {pickListData?.createdAt ? new Date(pickListData.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Items</h3>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Product
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      SKU
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Bin Location
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Picked
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {pickListData?.items?.map((item: any) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {item.product?.name || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {item.product?.sku || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {item.binLocation || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {item.pickedQuantity || 0}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Status and Assignment Info (Read-only) */}
+          <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {pickListData?.status || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assigned To</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {pickListData?.assignedTo || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[80px]">
+                <span className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                  {pickListData?.notes || '—'}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// View Pack Slip Modal Component
+function ViewPackSlipModal({
+  packSlipId,
+  onClose,
+}: {
+  packSlipId: string;
+  onClose: () => void;
+}) {
+  const { data: packSlipData, isLoading } = useQuery({
+    queryKey: ['pack-slip', packSlipId],
+    queryFn: async () => {
+      const response = await api.get(`/pack-slips/${packSlipId}`);
+      return response.data;
+    },
+  });
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  if (isLoading || !packSlipData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">Loading pack slip...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Pack Slip: {packSlipData.packSlipNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Order Number</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {packSlipData?.order?.orderNumber}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {packSlipData?.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Warehouse</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {packSlipData?.warehouse?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Created At</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {packSlipData?.createdAt ? new Date(packSlipData.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Items</h3>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Product
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      SKU
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                      Packed
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {packSlipData?.items?.map((item: any) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {item.product?.name || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {item.product?.sku || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {item.packedQty || 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Status and Assignment Info (Read-only) */}
+          <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {packSlipData.status || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Packed By</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {packSlipData.packedBy || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[80px]">
+                <span className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                  {packSlipData.notes || '—'}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// View Shipping Label Modal Component
+function ViewShippingLabelModal({
+  shippingLabelId,
+  onClose,
+}: {
+  shippingLabelId: string;
+  onClose: () => void;
+}) {
+  const { data: labelData, isLoading } = useQuery({
+    queryKey: ['shipping-label', shippingLabelId],
+    queryFn: async () => {
+      const response = await api.get(`/shipping-labels/${shippingLabelId}`);
+      return response.data;
+    },
+  });
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  if (isLoading || !labelData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">Loading shipping label...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Shipping Label: {labelData.labelNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Order Number</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.order?.orderNumber}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Carrier</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.carrier || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Service Type</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.serviceType || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Weight</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.weight ? `${labelData.weight} kg` : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Dimensions</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData?.dimensions || '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Status and Info (Read-only) */}
+          <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {labelData.status || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tracking Number</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <span className="text-sm text-gray-900 dark:text-white">
+                  {labelData.trackingNumber || '—'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
+              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[80px]">
+                <span className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                  {labelData.notes || '—'}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Delete Confirmation Modal Component
+function DeleteConfirmationModal({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}: {
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onCancel();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+        </div>
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Edit Pick List Modal Component
+function EditPickListModal({
+  pickListId,
+  warehouses,
+  orders,
+  onClose,
+  onUpdate,
+}: {
+  pickListId: string;
+  warehouses: Warehouse[];
+  orders: Order[];
+  onClose: () => void;
+  onUpdate: (data: any) => void;
+}) {
+  const { data: pickListData, isLoading } = useQuery({
+    queryKey: ['pick-list', pickListId],
+    queryFn: async () => {
+      const response = await api.get(`/pick-lists/${pickListId}`);
+      return response.data;
+    },
+  });
+
+  const [orderId, setOrderId] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
+  const [warehouseId, setWarehouseId] = useState<string>('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [notes, setNotes] = useState('');
+  const [items, setItems] = useState<Array<{ id?: string; orderLineId: number; productId: number; quantity: number; binLocation?: string; notes?: string }>>([]);
+
+  const selectedOrder = useMemo(() => {
+    if (orderId) {
+      return orders.find((o) => o.id === Number(orderId));
+    }
+    if (!pickListData?.orderId) return null;
+    return orders.find((o) => o.id === pickListData.orderId);
+  }, [orders, pickListData, orderId]);
+
+  const availableOrderLines = useMemo(() => {
+    if (!selectedOrder || !selectedOrder.orderLines) return [];
+    return selectedOrder.orderLines.filter((line) => {
+      const remainingQty = line.quantity - line.fulfilledQty;
+      return remainingQty > 0;
+    });
+  }, [selectedOrder]);
+
+  // Track selected items by orderLineId for the checkbox table
+  const selectedItemsMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    items.forEach((item) => {
+      map[item.orderLineId] = item.quantity;
+    });
+    return map;
+  }, [items]);
+
+  // Reset items when order changes
+  useEffect(() => {
+    if (orderId && orderId !== pickListData?.orderId?.toString()) {
+      // Order changed, reset items
+      setItems([]);
+    }
+  }, [orderId, pickListData?.orderId]);
+
+  useEffect(() => {
+    if (pickListData) {
+      setOrderId(pickListData.orderId?.toString() || '');
+      setStatus(pickListData.status || 'DRAFT');
+      setWarehouseId(pickListData.warehouseId?.toString() || '');
+      setAssignedTo(pickListData.assignedTo || '');
+      setNotes(pickListData.notes || '');
+      // Initialize items from pick list data
+      if (pickListData.items && Array.isArray(pickListData.items)) {
+        setItems(pickListData.items.map((item: any) => ({
+          id: item.id,
+          orderLineId: item.orderLineId,
+          productId: item.productId,
+          quantity: item.quantity,
+          binLocation: item.binLocation,
+          notes: item.notes,
+        })));
+      }
+    }
+  }, [pickListData]);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const handleItemToggle = (orderLineId: number, maxQuantity: number) => {
+    setItems((prev) => {
+      const existingIndex = prev.findIndex((item) => item.orderLineId === orderLineId);
+      if (existingIndex >= 0) {
+        // Remove item
+        return prev.filter((_, i) => i !== existingIndex);
+      } else {
+        // Add item
+        const orderLine = availableOrderLines.find((line) => line.id === orderLineId);
+        return [
+          ...prev,
+          {
+            orderLineId,
+            productId: orderLine?.productId || 0,
+            quantity: maxQuantity,
+            binLocation: '',
+          },
+        ];
+      }
+    });
+  };
+
+  const handleQuantityChange = (orderLineId: number, quantity: number, maxQuantity: number) => {
+    setItems((prev) => {
+      const existingIndex = prev.findIndex((item) => item.orderLineId === orderLineId);
+      if (existingIndex >= 0) {
+        const newItems = [...prev];
+        if (quantity <= 0) {
+          // Remove item if quantity is 0
+          return newItems.filter((_, i) => i !== existingIndex);
+        } else {
+          // Update quantity
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: Math.min(quantity, maxQuantity),
+          };
+          return newItems;
+        }
+      } else if (quantity > 0) {
+        // Add new item
+        const orderLine = availableOrderLines.find((line) => line.id === orderLineId);
+        return [
+          ...prev,
+          {
+            orderLineId,
+            productId: orderLine?.productId || 0,
+            quantity: Math.min(quantity, maxQuantity),
+            binLocation: '',
+          },
+        ];
+      }
+      return prev;
+    });
+  };
+
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!orderId) {
+      toast.error('Please select an order');
+      return;
+    }
+
+    if (!warehouseId) {
+      toast.error('Please select a warehouse');
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error('Please add at least one item');
+      return;
+    }
+
+    onUpdate({
+      orderId: Number(orderId),
+      status,
+      warehouseId: Number(warehouseId),
+      assignedTo: assignedTo || undefined,
+      notes: notes || undefined,
+      items: items.map((item) => ({
+        orderLineId: item.orderLineId,
+        productId: item.productId,
+        quantity: item.quantity,
+        binLocation: item.binLocation || undefined,
+        notes: item.notes || undefined,
+      })),
+    });
+  };
+
+  if (isLoading || !pickListData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">Loading pick list...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Edit Pick List: {pickListData.pickListNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {selectedOrder?.customer?.name || pickListData.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Created At</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {pickListData.createdAt ? new Date(pickListData.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Order Items - Show all available items from order */}
+          {selectedOrder && availableOrderLines.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Select Items to Pick *
+              </label>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">
+                          <input
+                            type="checkbox"
+                            checked={availableOrderLines.length > 0 && availableOrderLines.every((item) => selectedItemsMap[item.id])}
+                            onChange={() => {
+                              if (availableOrderLines.every((item) => selectedItemsMap[item.id])) {
+                                // Unselect all
+                                setItems((prev) => prev.filter((item) => !availableOrderLines.some((line) => line.id === item.orderLineId)));
+                              } else {
+                                // Select all
+                                const newItems: Array<{ orderLineId: number; productId: number; quantity: number; binLocation?: string }> = [];
+                                availableOrderLines.forEach((item) => {
+                                  const remainingQty = item.quantity - item.fulfilledQty;
+                                  if (remainingQty > 0) {
+                                    const existingIndex = items.findIndex((i) => i.orderLineId === item.id);
+                                    if (existingIndex < 0) {
+                                      newItems.push({
+                                        orderLineId: item.id,
+                                        productId: item.productId,
+                                        quantity: remainingQty,
+                                        binLocation: '',
+                                      });
+                                    }
+                                  }
+                                });
+                                setItems((prev) => [...prev, ...newItems]);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Product
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          SKU
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Ordered
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Fulfilled
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Available
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Pick Qty
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          Bin Location
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {availableOrderLines.map((item) => {
+                        const remainingQty = item.quantity - item.fulfilledQty;
+                        const isSelected = !!selectedItemsMap[item.id];
+                        const pickQty = selectedItemsMap[item.id] || 0;
+                        const itemIndex = items.findIndex((i) => i.orderLineId === item.id);
+                        const binLocation = itemIndex >= 0 ? items[itemIndex].binLocation : '';
+
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleItemToggle(item.id, remainingQty)}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                              {item.product?.name || 'Unknown Product'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {item.product?.sku || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.quantity}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {item.fulfilledQty}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                              {remainingQty}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isSelected ? (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={remainingQty}
+                                  value={pickQty}
+                                  onChange={(e) =>
+                                    handleQuantityChange(item.id, parseInt(e.target.value) || 0, remainingQty)
+                                  }
+                                  className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isSelected ? (
+                                <input
+                                  type="text"
+                                  value={binLocation || ''}
+                                  onChange={(e) => {
+                                    if (itemIndex >= 0) {
+                                      const newItems = [...items];
+                                      newItems[itemIndex] = { ...newItems[itemIndex], binLocation: e.target.value };
+                                      setItems(newItems);
+                                    }
+                                  }}
+                                  placeholder="Bin location"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {items.length > 0 && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {items.length} item(s) selected
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedOrder && availableOrderLines.length === 0 && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                This order has no items available for picking (all items are already fulfilled).
+              </p>
+            </div>
+          )}
+
+          {/* Edit Form */}
+          <form onSubmit={handleSubmit} className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Order *
+              </label>
+              <CustomDropdown
+                value={orderId}
+                onChange={setOrderId}
+                options={orders.map((order) => {
+                  const totalAmount = typeof order.totalAmount === 'number'
+                    ? order.totalAmount.toFixed(2)
+                    : parseFloat(String(order.totalAmount || '0')).toFixed(2);
+                  return {
+                    value: String(order.id),
+                    label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency || ''} ${totalAmount})`,
+                  };
+                })}
+                placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
+              />
+              {selectedOrder && (
+                <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Customer:</span> {selectedOrder.customer?.name || 'Unknown'}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Order Date:</span>{' '}
+                    {new Date(selectedOrder.orderDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Status:</span> {selectedOrder.status}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className='grid grid-cols-3 gap-4'>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Warehouse *
+                </label>
+                <CustomDropdown
+                  value={warehouseId}
+                  onChange={setWarehouseId}
+                  options={warehouses.map((warehouse) => ({
+                    value: warehouse.id.toString(),
+                    label: warehouse.name,
+                  }))}
+                  placeholder="Select warehouse..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Status *
+                </label>
+                <CustomDropdown
+                  value={status}
+                  onChange={setStatus}
+                  options={[
+                    { value: 'DRAFT', label: 'Draft' },
+                    { value: 'ASSIGNED', label: 'Assigned' },
+                    { value: 'IN_PROGRESS', label: 'In Progress' },
+                    { value: 'COMPLETED', label: 'Completed' },
+                    { value: 'CANCELLED', label: 'Cancelled' },
+                  ]}
+                  placeholder="Select status..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Assigned To
+                </label>
+                <input
+                  type="text"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  placeholder="Enter assigned personnel name or ID"
+                  className="w-full px-3 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                placeholder="Enter any additional notes..."
+                className="w-full px-3 py-2 border text-[14px] ::placeholder-[12px] border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Edit Pack Slip Modal Component
+function EditPackSlipModal({
+  packSlipId,
+  warehouses,
+  orders,
+  pickLists,
+  onClose,
+  onUpdate,
+}: {
+  packSlipId: string;
+  warehouses: Warehouse[];
+  orders: Order[];
+  pickLists: PickList[];
+  onClose: () => void;
+  onUpdate: (data: any) => void;
+}) {
+  const { data: packSlipData, isLoading } = useQuery({
+    queryKey: ['pack-slip', packSlipId],
+    queryFn: async () => {
+      const response = await api.get(`/pack-slips/${packSlipId}`);
+      return response.data;
+    },
+  });
+
+  const [orderId, setOrderId] = useState<string>('');
+  const [pickListId, setPickListId] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
+  const [warehouseId, setWarehouseId] = useState<string>('');
+  const [packedBy, setPackedBy] = useState('');
+  const [weight, setWeight] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Record<number, number>>({});
+
+  const selectedOrder = useMemo(() => {
+    if (orderId) {
+      return orders.find((o) => o.id === Number(orderId));
+    }
+    if (!packSlipData?.orderId) return null;
+    return orders.find((o) => o.id === packSlipData.orderId);
+  }, [orders, orderId, packSlipData]);
+
+  const selectedPickList = useMemo(() => {
+    if (pickListId) {
+      return pickLists.find((pl) => String(pl.id) === pickListId);
+    }
+    if (!packSlipData?.pickListId) return null;
+    return pickLists.find((pl) => String(pl.id) === String(packSlipData.pickListId));
+  }, [pickLists, pickListId, packSlipData]);
+
+  // Get available items from order or pick list (same logic as Create modal)
+  const availableItems = useMemo(() => {
+    // Always prioritize showing items from the selected order
+    if (selectedOrder && selectedOrder.orderLines && Array.isArray(selectedOrder.orderLines)) {
+      return selectedOrder.orderLines;
+    }
+    // Fallback: if no order but pick list is selected, use pick list items
+    if (selectedPickList && selectedPickList.items && selectedPickList.items.length > 0) {
+      return selectedPickList.items;
+    }
+    return [];
+  }, [selectedOrder, selectedPickList]);
+
+  useEffect(() => {
+    if (packSlipData) {
+      setOrderId(packSlipData.orderId?.toString() || '');
+      setPickListId(packSlipData.pickListId?.toString() || '');
+      setStatus(packSlipData.status || 'DRAFT');
+      setWarehouseId(packSlipData.warehouseId?.toString() || '');
+      setPackedBy(packSlipData.packedBy || '');
+      setWeight(packSlipData.weight?.toString() || '');
+      setNotes(packSlipData.notes || '');
+      // Initialize selectedItems from pack slip items
+      // Always use orderLineId to match with order lines being displayed
+      if (packSlipData.items && Array.isArray(packSlipData.items)) {
+        const itemsMap: Record<number, number> = {};
+        packSlipData.items.forEach((item: any) => {
+          // Always use orderLineId since we're displaying order lines
+          const itemId = item.orderLineId;
+          if (itemId) {
+            itemsMap[itemId] = item.quantity;
+          }
+        });
+        setSelectedItems(itemsMap);
+      }
+    }
+  }, [packSlipData]);
+
+  // Reset selectedItems when order changes (if user manually changes them)
+  useEffect(() => {
+    if (orderId) {
+      // If orderId changed from initial value, reset items and pick list
+      if (!packSlipData || orderId !== packSlipData.orderId?.toString()) {
+        setSelectedItems({});
+        setPickListId(''); // Reset pick list if order changes
+      }
+    }
+  }, [orderId, packSlipData]);
+
+  // Reset selectedItems when pickList changes (if user manually changes them)
+  useEffect(() => {
+    if (pickListId) {
+      // If pickListId changed from initial value, reset items
+      if (!packSlipData || pickListId !== packSlipData.pickListId?.toString()) {
+        setSelectedItems({});
+      }
+    }
+  }, [pickListId, packSlipData]);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const handleItemToggle = (itemId: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (newItems[itemId]) {
+        delete newItems[itemId];
+      } else {
+        newItems[itemId] = maxQuantity;
+      }
+      return newItems;
+    });
+  };
+
+  const handleQuantityChange = (itemId: number, quantity: number, maxQuantity: number) => {
+    setSelectedItems((prev) => {
+      const newItems = { ...prev };
+      if (quantity <= 0) {
+        delete newItems[itemId];
+      } else {
+        newItems[itemId] = Math.min(quantity, maxQuantity);
+      }
+      return newItems;
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!orderId || !warehouseId) {
+      toast.error('Please select an order and warehouse');
+      return;
+    }
+
+    if (Object.keys(selectedItems).length === 0) {
+      toast.error('Please select at least one item to pack');
+      return;
+    }
+
+    let packSlipItems: Array<{ orderLineId: number; productId: number; quantity: number; packedQty?: number; notes?: string }> = [];
+
+    // Since we're always showing order lines, selectedItems keys are orderLineIds
+    if (selectedOrder && selectedOrder.orderLines) {
+      packSlipItems = Object.entries(selectedItems)
+        .map(([orderLineIdStr, quantity]) => {
+          const orderLineId = Number(orderLineIdStr);
+          const orderLine = selectedOrder.orderLines?.find((l) => l.id === orderLineId);
+          
+          if (!orderLine || !orderLine.id || !orderLine.productId) {
+            console.warn('Invalid order line found:', { orderLineId, orderLine });
+            return null;
+          }
+          
+          return {
+            orderLineId: orderLine.id,
+            productId: orderLine.productId,
+            quantity,
+            packedQty: 0,
+          };
+        })
+        .filter((item): item is { orderLineId: number; productId: number; quantity: number; packedQty: number } => item !== null);
+    }
+
+    if (packSlipItems.length === 0) {
+      toast.error('Please select at least one valid item to pack');
+      return;
+    }
+
+    const updateData: any = {
+      status,
+    };
+
+    // Only include orderId if it's different from the original
+    if (orderId && packSlipData && Number(orderId) !== packSlipData.orderId) {
+      updateData.orderId = Number(orderId);
+    }
+
+    // Only include warehouseId if it's different from the original
+    if (warehouseId && packSlipData && Number(warehouseId) !== packSlipData.warehouseId) {
+      updateData.warehouseId = Number(warehouseId);
+    }
+
+    // Only include pickListId if it's different from the original
+    const currentPickListId = packSlipData?.pickListId?.toString() || '';
+    if (pickListId !== currentPickListId) {
+      if (pickListId && pickListId.trim() !== '') {
+        updateData.pickListId = String(pickListId);
+      } else {
+        updateData.pickListId = null;
+      }
+    }
+
+    if (packedBy !== (packSlipData?.packedBy || '')) {
+      if (packedBy && packedBy.trim() !== '') {
+        updateData.packedBy = packedBy;
+      } else {
+        updateData.packedBy = null;
+      }
+    }
+
+    const currentWeight = packSlipData?.weight?.toString() || '';
+    if (weight !== currentWeight) {
+      if (weight && weight.trim() !== '') {
+        updateData.weight = parseFloat(weight);
+      } else {
+        updateData.weight = null;
+      }
+    }
+
+    if (notes !== (packSlipData?.notes || '')) {
+      if (notes && notes.trim() !== '') {
+        updateData.notes = notes;
+      } else {
+        updateData.notes = null;
+      }
+    }
+
+    // Always include items if there are any selected items
+    if (packSlipItems.length > 0) {
+      updateData.items = packSlipItems;
+    }
+
+    onUpdate(updateData);
+  };
+
+  if (isLoading || !packSlipData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">Loading pack slip...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Edit Pack Slip: {packSlipData.packSlipNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {selectedOrder?.customer?.name || packSlipData.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Created At</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {packSlipData.createdAt ? new Date(packSlipData.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Order Items - Show all items from order/pick list */}
+          {selectedOrder && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Select Items to Pack *
+              </label>
+              {availableItems.length > 0 ? (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">
+                            <input
+                              type="checkbox"
+                              checked={availableItems.length > 0 && availableItems.every((item) => {
+                                const itemId = 'id' in item ? item.id : item.orderLineId || item.id;
+                                return selectedItems[itemId as number];
+                              })}
+                              onChange={() => {
+                                const allSelected = availableItems.every((item) => {
+                                  const itemId = 'id' in item ? item.id : item.orderLineId || item.id;
+                                  return selectedItems[itemId as number];
+                                });
+                                if (allSelected) {
+                                  setSelectedItems({});
+                                } else {
+                                  const allItems: Record<number, number> = {};
+                                  availableItems.forEach((item) => {
+                                    const itemId = ('id' in item ? item.id : item.orderLineId || item.id) as number;
+                                    let maxQty = 0;
+                                    if (selectedPickList) {
+                                      maxQty = (item as PickListItem).pickedQuantity || (item as PickListItem).quantity || 0;
+                                    } else {
+                                      const orderLine = item as OrderLine;
+                                      maxQty = orderLine.quantity - (orderLine.fulfilledQty || 0);
+                                    }
+                                    allItems[itemId] = maxQty;
+                                  });
+                                  setSelectedItems(allItems);
+                                }
+                              }}
+                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            />
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Product
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            SKU
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            {selectedPickList ? 'Picked' : 'Available'}
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Pack Qty
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {availableItems.map((item) => {
+                          // Since we're always showing order lines, use the order line's id
+                          const orderLine = item as OrderLine;
+                          const itemId = orderLine.id;
+                          let maxQty = 0;
+                          if (selectedPickList) {
+                            // For pick list items, use pickedQuantity if available, otherwise use quantity
+                            maxQty = (item as PickListItem).pickedQuantity || (item as PickListItem).quantity || 0;
+                          } else {
+                            // For order lines, use remaining quantity (ordered - fulfilled)
+                            const orderLine = item as OrderLine;
+                            maxQty = orderLine.quantity - (orderLine.fulfilledQty || 0);
+                          }
+                          const isSelected = !!selectedItems[itemId];
+                          const packQty = selectedItems[itemId] || 0;
+                          // Get product name - check product object first, then fallback to productName
+                          let productName = '';
+                          let sku = '';
+                          if (selectedPickList) {
+                            const pickListItem = item as any;
+                            productName = pickListItem.product?.name || pickListItem.productName || '';
+                            sku = pickListItem.product?.sku || pickListItem.sku || '';
+                          } else {
+                            const orderLine = item as OrderLine;
+                            productName = orderLine.product?.name || '';
+                            sku = orderLine.product?.sku || '';
+                          }
+
+                          return (
+                            <tr key={itemId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                              <td className="px-4 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleItemToggle(itemId, maxQty)}
+                                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                {productName || 'Unknown Product'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                {sku || '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                                {maxQty}
+                              </td>
+                              <td className="px-4 py-3">
+                                {isSelected ? (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={maxQty}
+                                    value={packQty}
+                                    onChange={(e) =>
+                                      handleQuantityChange(itemId, parseInt(e.target.value) || 0, maxQty)
+                                    }
+                                    className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm text-gray-400">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                    {selectedPickList 
+                      ? 'This pick list has no items.' 
+                      : 'This order has no items.'}
+                  </p>
+                </div>
+              )}
+              {Object.keys(selectedItems).length > 0 && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {Object.keys(selectedItems).length} item(s) selected
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Edit Form */}
+          <form onSubmit={handleSubmit} className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+            {/* Order Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Order *
+              </label>
+              <CustomDropdown
+                value={orderId}
+                onChange={setOrderId}
+                options={
+                  orders.length === 0
+                    ? []
+                    : orders.map((order) => ({
+                        value: order.id.toString(),
+                        label: `${order.orderNumber} - ${order.customer?.name || 'Unknown'} (${order.currency || ''} ${typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : parseFloat(String(order.totalAmount || '0')).toFixed(2)})`,
+                      }))
+                }
+                placeholder={orders.length === 0 ? 'No orders available' : 'Select an order...'}
+              />
+              {selectedOrder && (
+                <div className="mt-2 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Customer:</span> {selectedOrder.customer?.name || 'Unknown'}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Order Date:</span>{' '}
+                    {new Date(selectedOrder.orderDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Status:</span> {selectedOrder.status}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Pick List Selection (Optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Pick List (Optional)
+              </label>
+              <CustomDropdown
+                value={pickListId}
+                onChange={setPickListId}
+                options={pickLists
+                  .filter((pl) => pl.orderId === Number(orderId) || !orderId)
+                  .map((pickList) => ({
+                    value: pickList.id?.toString() || '',
+                    label: `${pickList.pickListNumber} - ${pickList.warehouseName || 'Unknown Warehouse'}`,
+                  }))}
+                placeholder={pickLists.length === 0 ? 'No pick lists available' : 'Select a pick list (optional)...'}
+              />
+              {selectedPickList && (
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <span className="font-medium">Pick List:</span> {selectedPickList.pickListNumber}
+                  </p>
+                  <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <span className="font-medium">Status:</span> {selectedPickList.status}
+                  </p>
+                  <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <span className="font-medium">Items:</span> {selectedPickList.items?.length || 0}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Warehouse Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Warehouse *
+              </label>
+              <CustomDropdown
+                value={warehouseId}
+                onChange={setWarehouseId}
+                options={
+                  warehouses.length === 0
+                    ? []
+                    : warehouses.map((warehouse) => ({
+                        value: warehouse.id.toString(),
+                        label: warehouse.name,
+                      }))
+                }
+                placeholder={warehouses.length === 0 ? 'No warehouses available' : 'Select a warehouse...'}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status *
+              </label>
+              <CustomDropdown
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: 'DRAFT', label: 'Draft' },
+                  { value: 'PACKING', label: 'Packing' },
+                  { value: 'PACKED', label: 'Packed' },
+                  { value: 'SHIPPED', label: 'Shipped' },
+                  { value: 'CANCELLED', label: 'Cancelled' },
+                ]}
+                placeholder="Select status..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Packed By
+              </label>
+              <input
+                type="text"
+                value={packedBy}
+                onChange={(e) => setPackedBy(e.target.value)}
+                placeholder="Enter personnel name or ID who packed the items"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="Enter weight in kg"
+                className="w-full px-3 ::placeholder-[12px] text-[14px] py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                placeholder="Enter any additional notes..."
+                className="w-full px-3 py-2 border border-gray-300 ::placeholder-[12px] text-[14px] dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Edit Shipping Label Modal Component
+function EditShippingLabelModal({
+  shippingLabelId,
+  onClose,
+  onUpdate,
+}: {
+  shippingLabelId: string;
+  onClose: () => void;
+  onUpdate: (data: any) => void;
+}) {
+  const { data: labelData, isLoading } = useQuery({
+    queryKey: ['shipping-label', shippingLabelId],
+    queryFn: async () => {
+      const response = await api.get(`/shipping-labels/${shippingLabelId}`);
+      return response.data;
+    },
+  });
+
+  const [status, setStatus] = useState<string>('');
+  const [carrier, setCarrier] = useState<'FEDEX' | 'UPS' | 'DHL' | 'USPS' | 'OTHER'>('FEDEX');
+  const [serviceType, setServiceType] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [weight, setWeight] = useState<string>('');
+  const [length, setLength] = useState<string>('');
+  const [width, setWidth] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (labelData) {
+      setStatus(labelData.status || 'PENDING');
+      setCarrier(labelData.carrier || 'FEDEX');
+      setServiceType(labelData.serviceType || '');
+      setTrackingNumber(labelData.trackingNumber || '');
+      setWeight(labelData.weight?.toString() || '');
+      // Parse dimensions if they exist (format: "LxWxH")
+      if (labelData.dimensions) {
+        const dims = labelData.dimensions.split('x');
+        if (dims.length === 3) {
+          setLength(dims[0].trim());
+          setWidth(dims[1].trim());
+          setHeight(dims[2].trim());
+        }
+      }
+      setNotes(labelData.notes || '');
+    }
+  }, [labelData]);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const dimensions = length || width || height
+      ? `${length || 0}x${width || 0}x${height || 0}`
+      : undefined;
+
+    onUpdate({
+      status,
+      carrier,
+      serviceType: serviceType || undefined,
+      trackingNumber: trackingNumber || undefined,
+      weight: weight ? parseFloat(weight) : undefined,
+      dimensions,
+      notes: notes || undefined,
+    });
+  };
+
+  if (isLoading || !labelData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">Loading shipping label...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white z-[50] dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Edit Shipping Label: {labelData.labelNumber}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Order Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Order Number</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData.order?.orderNumber || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData.order?.customer?.name || '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Created At</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {labelData.createdAt ? new Date(labelData.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Edit Form */}
+          <form onSubmit={handleSubmit} className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status *
+              </label>
+              <CustomDropdown
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: 'PENDING', label: 'Pending' },
+                  { value: 'PRINTED', label: 'Printed' },
+                  { value: 'SHIPPED', label: 'Shipped' },
+                  { value: 'CANCELLED', label: 'Cancelled' },
+                ]}
+                placeholder="Select status..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Carrier *
+              </label>
+              <CustomDropdown
+                value={carrier}
+                onChange={(value) => setCarrier(value as 'FEDEX' | 'UPS' | 'DHL' | 'USPS' | 'OTHER')}
+                options={[
+                  { value: 'FEDEX', label: 'FedEx' },
+                  { value: 'UPS', label: 'UPS' },
+                  { value: 'DHL', label: 'DHL' },
+                  { value: 'USPS', label: 'USPS' },
+                  { value: 'OTHER', label: 'Other' },
+                ]}
+                placeholder="Select carrier..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Service Type
+              </label>
+              <input
+                type="text"
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+                placeholder="Enter service type (e.g., Ground, Express)"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tracking Number
+              </label>
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Enter tracking number"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="Enter weight"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Dimensions (L x W x H in cm)
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                  placeholder="Length"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  placeholder="Width"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  placeholder="Height"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                placeholder="Enter any additional notes..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

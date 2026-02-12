@@ -41,3 +41,4 @@ export default function FilterBar({ filters, className = '' }: FilterBarProps) {
 
 
 
+
