@@ -11,8 +11,39 @@ interface OperatingHoursPickerProps {
 }
 
 // Helper functions to parse and format time
-const parseOperatingHours = (hours: string | undefined) => {
-  if (!hours || hours === 'Closed') {
+const parseOperatingHours = (hours: string | { open?: string; close?: string } | undefined) => {
+  if (!hours) {
+    return { start: '', end: '', isClosed: true };
+  }
+  
+  // Handle object format {open, close}
+  if (typeof hours !== 'string') {
+    const hoursObj = hours as { open?: string; close?: string };
+    if (hoursObj.open && hoursObj.close) {
+      // Convert 12-hour format to 24-hour format for time inputs
+      const parseTime = (timeStr: string) => {
+        const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (match) {
+          let hour = parseInt(match[1]);
+          const min = match[2];
+          const period = match[3].toUpperCase();
+          if (period === 'PM' && hour !== 12) hour += 12;
+          if (period === 'AM' && hour === 12) hour = 0;
+          return `${String(hour).padStart(2, '0')}:${min}`;
+        }
+        return timeStr; // Return as-is if format is unexpected
+      };
+      return {
+        start: parseTime(hoursObj.open),
+        end: parseTime(hoursObj.close),
+        isClosed: false,
+      };
+    }
+    return { start: '', end: '', isClosed: true };
+  }
+  
+  // Handle string format
+  if (hours === 'Closed') {
     return { start: '', end: '', isClosed: true };
   }
   const match = hours.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);

@@ -853,7 +853,9 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <i className="fi fi-rr-file text-[20px] text-gray-700 dark:text-white"></i>
                   {unreadDocumentsCount > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-primary-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                      {unreadDocumentsCount > 9 ? '9+' : unreadDocumentsCount}
+                    </span>
                   )}
                 </button>
 
@@ -939,7 +941,9 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   <i className="fi fi-rr-bell text-[20px] text-gray-700 dark:text-white"></i>
                   {unreadNotificationsCount > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    </span>
                   )}
                 </button>
 

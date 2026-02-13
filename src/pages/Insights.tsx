@@ -5,11 +5,9 @@ import api from '../lib/api';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import Chart from 'react-apexcharts';
-import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 export default function Insights() {
   const [timeRange, setTimeRange] = useState<string>('30d');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
@@ -116,15 +114,8 @@ export default function Insights() {
       .sort((a: any, b: any) => b.revenue - a.revenue);
   }, [orders, dateRange]);
 
-  // Apply client-side pagination
-  const totalItems = topProducts.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const paginatedTopProducts = topProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  
-  // Reset to page 1 when time range changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [timeRange]);
+  // Limit to top 10 products only (no pagination)
+  const top10Products = topProducts.slice(0, 10);
 
   // Calculate trends
   const trends = useMemo(() => {
@@ -204,7 +195,7 @@ export default function Insights() {
         style: {
           colors: isDarkMode ? '#9CA3AF' : '#6B7280',
         },
-        formatter: (value: number) => `$${value.toFixed(0)}`,
+        formatter: (value: number) => `$${value.toFixed(2)}`,
       },
     },
     tooltip: {
@@ -246,7 +237,7 @@ export default function Insights() {
         style: {
           colors: isDarkMode ? '#9CA3AF' : '#6B7280',
         },
-        formatter: (value: number) => `$${value.toFixed(0)}`,
+        formatter: (value: number) => `$${value.toFixed(2)}`,
       },
     },
     tooltip: {
@@ -472,15 +463,15 @@ export default function Insights() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {topProducts.length === 0 ? (
+              {top10Products.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                     No product sales data available for the selected period
                   </td>
                 </tr>
               ) : (
-                paginatedTopProducts.map((product: any, index: number) => {
-                  const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                top10Products.map((product: any, index: number) => {
+                  const globalIndex = index;
                   // Calculate trend (compare with previous period)
                   const previousPeriod = orders.filter((order: any) => {
                     const orderDate = new Date(order.orderDate);
@@ -557,18 +548,6 @@ export default function Insights() {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              onPageChange={setCurrentPage}
-              className="border-0 pt-0 mt-0"
-            />
-          </div>
-        )}
       </div>
     </div>
   );

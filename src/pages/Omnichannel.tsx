@@ -8,9 +8,6 @@ import {
   Store,
   ArrowLeftRight,
   Plus,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronDown,
   Clock,
   Eye,
   ShoppingBag,
@@ -20,10 +17,13 @@ import {
   Edit,
   Trash2,
   X,
+  Grid3x3,
+  List,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/Skeleton';
 import Breadcrumb from '../components/Breadcrumb';
 import { CustomDropdown, SearchInput, DatePicker, OperatingHoursPicker, type OperatingHours } from '../components/ui';
+import Pagination, { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 
 // Types
 interface BOPISOrder {
@@ -172,19 +172,87 @@ interface Warehouse {
   country?: string;
 }
 
+// Store Modal Props Interface
+interface StoreModalProps {
+  store: Store | null;
+  isEditing: boolean;
+  onClose: () => void;
+  onSubmit: (storeId?: number, data?: Partial<Store>) => void;
+}
+
+// BOPIS Order Modal Props Interface
+interface BOPISOrderModalProps {
+  order: BOPISOrder | null;
+  orders: any[];
+  customers: any[];
+  stores: Store[];
+  onClose: () => void;
+  onSubmit: (data: Partial<BOPISOrder>) => void;
+  isLoading: boolean;
+}
+
+// BOPIS Order View Modal Props Interface
+interface BOPISOrderViewModalProps {
+  order: BOPISOrder;
+  onClose: () => void;
+}
+
+// BORIS Return Modal Props Interface
+interface BORISReturnModalProps {
+  returnItem: BORISReturn | null;
+  orders: any[];
+  customers: any[];
+  stores: Store[];
+  onClose: () => void;
+  onSubmit: (data: Partial<BORISReturn>) => void;
+  isLoading: boolean;
+}
+
+// BORIS Return View Modal Props Interface
+interface BORISReturnViewModalProps {
+  returnItem: BORISReturn;
+  onClose: () => void;
+}
+
+// Endless Aisle Product Modal Props Interface
+interface EndlessAisleProductModalProps {
+  product: EndlessAisleProduct | null;
+  products: any[];
+  warehouses: Warehouse[];
+  endlessAisleProducts?: EndlessAisleProduct[];
+  onClose: () => void;
+  onSubmit: (data: Partial<EndlessAisleProduct>) => void;
+  isLoading: boolean;
+}
+
+// Endless Aisle Product View Modal Props Interface
+interface EndlessAisleProductViewModalProps {
+  product: EndlessAisleProduct;
+  onClose: () => void;
+}
+
+// Helper function to format operating hours
+const formatOperatingHours = (hours: string | { open?: string; close?: string } | undefined): string => {
+  if (!hours) return '';
+  if (typeof hours === 'string') return hours;
+  if (hours.open && hours.close) return `${hours.open} - ${hours.close}`;
+  return 'Closed';
+};
 
 export default function Omnichannel() {
   const [activeTab, setActiveTab] = useState<'bopis' | 'boris' | 'endless-aisle' | 'stores'>('bopis');
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [isEditingStore, setIsEditingStore] = useState(false);
+  // View mode states
+  const [endlessAisleViewMode, setEndlessAisleViewMode] = useState<'grid' | 'list'>('grid');
+  const [storesViewMode, setStoresViewMode] = useState<'grid' | 'list'>('grid');
   const [isDeleteStoreModalOpen, setIsDeleteStoreModalOpen] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // BOPIS Orders modal states
   const [isBOPISModalOpen, setIsBOPISModalOpen] = useState(false);
@@ -307,6 +375,17 @@ export default function Omnichannel() {
   const stores: Store[] = useMemo(() => {
     return Array.isArray(storesData) ? storesData : [];
   }, [storesData]);
+
+  // Filtered stores for pagination
+  const filteredStores = useMemo(() => {
+    return stores.filter((s) =>
+      searchQuery
+        ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          s.address?.toLowerCase().includes(searchQuery.toLowerCase())
+        : true
+    );
+  }, [stores, searchQuery]);
 
   // Fetch BOPIS orders from API
   const { data: bopisOrdersData } = useQuery({
@@ -586,7 +665,22 @@ export default function Omnichannel() {
   // Endless Aisle Product mutations
   const createEndlessAisleProductMutation = useMutation({
     mutationFn: async (data: Partial<EndlessAisleProduct>) => {
-      const response = await api.post('/endless-aisle-products', data);
+      // Transform data to match backend DTO
+      const transformedData = {
+        productId: data.productId,
+        basePrice: data.basePrice,
+        currency: data.currency,
+        estimatedShippingDays: data.estimatedShippingDays,
+        isAvailable: data.isAvailable,
+        category: data.category,
+        collection: data.collection,
+        availableAtWarehouses: (data.availableAtWarehouses || []).map((w: any) => ({
+          warehouseId: w.warehouseId,
+          availableQuantity: w.availableQuantity || 0,
+          estimatedShippingDays: w.estimatedShippingDays,
+        })),
+      };
+      const response = await api.post('/endless-aisle-products', transformedData);
       return response.data;
     },
     onSuccess: () => {
@@ -602,7 +696,22 @@ export default function Omnichannel() {
 
   const updateEndlessAisleProductMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<EndlessAisleProduct> }) => {
-      const response = await api.patch(`/endless-aisle-products/${id}`, data);
+      // Transform data to match backend DTO
+      const transformedData = {
+        productId: data.productId,
+        basePrice: data.basePrice,
+        currency: data.currency,
+        estimatedShippingDays: data.estimatedShippingDays,
+        isAvailable: data.isAvailable,
+        category: data.category,
+        collection: data.collection,
+        availableAtWarehouses: (data.availableAtWarehouses || []).map((w: any) => ({
+          warehouseId: w.warehouseId,
+          availableQuantity: w.availableQuantity || 0,
+          estimatedShippingDays: w.estimatedShippingDays,
+        })),
+      };
+      const response = await api.patch(`/endless-aisle-products/${id}`, transformedData);
       return response.data;
     },
     onSuccess: () => {
@@ -914,7 +1023,7 @@ export default function Omnichannel() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredBopisOrders
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                         .map((order) => {
                           const store = stores.find((s) => s.id === order.storeId);
                           const itemsCount = order.items?.length || 0;
@@ -1002,50 +1111,14 @@ export default function Omnichannel() {
               )}
 
               {/* Pagination */}
-              {Math.ceil(filteredBopisOrders.length / itemsPerPage) > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * itemsPerPage, filteredBopisOrders.length)}
-                    </span>{' '}
-                    of <span className="font-medium">{filteredBopisOrders.length}</span> orders
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 rotate-90" />
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                      Page {currentPage} of {Math.ceil(filteredBopisOrders.length / itemsPerPage)}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(Math.ceil(filteredBopisOrders.length / itemsPerPage), prev + 1))
-                      }
-                      disabled={currentPage >= Math.ceil(filteredBopisOrders.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(Math.ceil(filteredBopisOrders.length / itemsPerPage))}
-                      disabled={currentPage >= Math.ceil(filteredBopisOrders.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </button>
-                  </div>
+              {Math.ceil(filteredBopisOrders.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredBopisOrders.length / ITEMS_PER_PAGE)}
+                    totalItems={filteredBopisOrders.length}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </>
@@ -1156,7 +1229,7 @@ export default function Omnichannel() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredBorisReturns
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                         .map((returnItem) => {
                           const store = stores.find((s) => s.id === returnItem.storeId);
                           const itemsCount = returnItem.items?.length || 0;
@@ -1181,7 +1254,7 @@ export default function Omnichannel() {
                                 {itemsCount} item{itemsCount !== 1 ? 's' : ''}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                {returnItem.currency} {returnItem.refundAmount.toFixed(2)}
+                                {returnItem.currency || 'USD'} {typeof returnItem.refundAmount === 'number' ? returnItem.refundAmount.toFixed(2) : (returnItem.refundAmount ? parseFloat(String(returnItem.refundAmount)).toFixed(2) : '0.00')}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span
@@ -1247,50 +1320,14 @@ export default function Omnichannel() {
               )}
 
               {/* Pagination */}
-              {Math.ceil(filteredBorisReturns.length / itemsPerPage) > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * itemsPerPage, filteredBorisReturns.length)}
-                    </span>{' '}
-                    of <span className="font-medium">{filteredBorisReturns.length}</span> returns
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 rotate-90" />
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                      Page {currentPage} of {Math.ceil(filteredBorisReturns.length / itemsPerPage)}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(Math.ceil(filteredBorisReturns.length / itemsPerPage), prev + 1))
-                      }
-                      disabled={currentPage >= Math.ceil(filteredBorisReturns.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(Math.ceil(filteredBorisReturns.length / itemsPerPage))}
-                      disabled={currentPage >= Math.ceil(filteredBorisReturns.length / itemsPerPage)}
-                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </button>
-                  </div>
+              {Math.ceil(filteredBorisReturns.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredBorisReturns.length / ITEMS_PER_PAGE)}
+                    totalItems={filteredBorisReturns.length}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </>
@@ -1311,19 +1348,46 @@ export default function Omnichannel() {
                     placeholder="Search endless aisle products..."
                   />
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedEndlessAisleProduct(null);
-                    setIsEndlessAisleModalOpen(true);
-                  }}
-                  className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Product
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                    <button
+                      onClick={() => setEndlessAisleViewMode('grid')}
+                      className={`p-2 rounded transition-colors ${
+                        endlessAisleViewMode === 'grid'
+                          ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                      title="Grid View"
+                    >
+                      <Grid3x3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setEndlessAisleViewMode('list')}
+                      className={`p-2 rounded transition-colors ${
+                        endlessAisleViewMode === 'list'
+                          ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                      title="List View"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedEndlessAisleProduct(null);
+                      setIsEndlessAisleModalOpen(true);
+                    }}
+                    className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Product
+                  </button>
+                </div>
               </div>
 
-              {/* Endless Aisle Products Grid */}
+              {/* Endless Aisle Products Table/Grid */}
               {filteredEndlessAisleProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Globe className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
@@ -1336,164 +1400,286 @@ export default function Omnichannel() {
                     </p>
                   )}
                 </div>
+              ) : endlessAisleViewMode === 'list' ? (
+                <>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Product
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              SKU
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Price
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Warehouses
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Total Quantity
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Est. Shipping
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {filteredEndlessAisleProducts
+                            .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                            .map((product) => {
+                              const totalQuantity = product.availableAtWarehouses.reduce(
+                                (sum, w) => sum + (w.availableQuantity || 0),
+                                0
+                              );
+                              return (
+                                <tr
+                                  key={product.id}
+                                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                >
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                                        {product.images && product.images.length > 0 ? (
+                                          <img
+                                            src={product.images[0]}
+                                            alt={product.productName}
+                                            className="h-10 w-10 object-cover rounded-lg"
+                                          />
+                                        ) : (
+                                          <Store className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                          {product.productName}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      {product.sku}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {product.currency} {product.basePrice.toFixed(2)}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="text-sm text-gray-900 dark:text-white">
+                                      {product.availableAtWarehouses.length} warehouse
+                                      {product.availableAtWarehouses.length !== 1 ? 's' : ''}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {product.availableAtWarehouses.slice(0, 2).map((w, idx) => (
+                                        <span key={idx}>
+                                          {w.warehouseName}
+                                          {w.warehouseCity && `, ${w.warehouseCity}`}
+                                          {idx < Math.min(product.availableAtWarehouses.length, 2) - 1 && ', '}
+                                        </span>
+                                      ))}
+                                      {product.availableAtWarehouses.length > 2 && (
+                                        <span> +{product.availableAtWarehouses.length - 2} more</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900 dark:text-white">
+                                      {totalQuantity} units
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      {product.estimatedShippingDays} days
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                        product.isAvailable
+                                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                                      }`}
+                                    >
+                                      {product.isAvailable ? 'Available' : 'Unavailable'}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setEndlessAisleProductToView(product);
+                                          setIsEndlessAisleViewModalOpen(true);
+                                        }}
+                                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300"
+                                        title="View"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedEndlessAisleProduct(product);
+                                          setIsEndlessAisleModalOpen(true);
+                                        }}
+                                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300"
+                                        title="Edit"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEndlessAisleProductToDelete(product);
+                                          setIsEndlessAisleDeleteModalOpen(true);
+                                        }}
+                                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <>
+                  {/* Grid View */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredEndlessAisleProducts
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                      .map((product) => (
-                        <div
-                          key={product.id}
-                          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
-                        >
-                          {/* Product Image */}
-                          <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                            {product.images && product.images.length > 0 ? (
-                              <img
-                                src={product.images[0]}
-                                alt={product.productName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Store className="w-16 h-16 text-gray-400 dark:text-gray-500" />
-                            )}
-                          </div>
+                      .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                      .map((product) => {
+                        return (
+                          <div
+                            key={product.id}
+                            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
+                          >
+                            {/* Product Image */}
+                            <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                              {product.images && product.images.length > 0 ? (
+                                <img
+                                  src={product.images[0]}
+                                  alt={product.productName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Store className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                              )}
+                            </div>
 
-                          {/* Product Info */}
-                          <div className="p-4">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
-                              {product.productName}
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">SKU: {product.sku}</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                              {product.currency} {product.basePrice.toFixed(2)}
-                            </p>
-
-                            {/* Available Warehouses */}
-                            <div className="mb-3">
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                                Available at {product.availableAtWarehouses.length} warehouse
-                                {product.availableAtWarehouses.length !== 1 ? 's' : ''}:
+                            {/* Product Info */}
+                            <div className="p-4">
+                              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+                                {product.productName}
+                              </h3>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">SKU: {product.sku}</p>
+                              <p className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                                {product.currency} {product.basePrice.toFixed(2)}
                               </p>
-                              <div className="space-y-1">
-                                {product.availableAtWarehouses.slice(0, 2).map((warehouse, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-700 dark:text-gray-300">
-                                      {warehouse.warehouseName}
-                                      {warehouse.warehouseCity && `, ${warehouse.warehouseCity}`}
-                                    </span>
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                      {warehouse.availableQuantity} units
-                                    </span>
-                                  </div>
-                                ))}
-                                {product.availableAtWarehouses.length > 2 && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    +{product.availableAtWarehouses.length - 2} more
-                                  </p>
-                                )}
+
+                              {/* Available Warehouses */}
+                              <div className="mb-3">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                  Available at {product.availableAtWarehouses.length} warehouse
+                                  {product.availableAtWarehouses.length !== 1 ? 's' : ''}:
+                                </p>
+                                <div className="space-y-1">
+                                  {product.availableAtWarehouses.slice(0, 2).map((warehouse, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-700 dark:text-gray-300">
+                                        {warehouse.warehouseName}
+                                        {warehouse.warehouseCity && `, ${warehouse.warehouseCity}`}
+                                      </span>
+                                      <span className="text-gray-500 dark:text-gray-400">
+                                        {warehouse.availableQuantity} units
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {product.availableAtWarehouses.length > 2 && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      +{product.availableAtWarehouses.length - 2} more
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Shipping Info */}
+                              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-3">
+                                <span>Est. shipping: {product.estimatedShippingDays} days</span>
+                                <span
+                                  className={`px-2 py-1 rounded-full ${product.isAvailable
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                                    }`}
+                                >
+                                  {product.isAvailable ? 'Available' : 'Unavailable'}
+                                </span>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEndlessAisleProductToView(product);
+                                    setIsEndlessAisleViewModalOpen(true);
+                                  }}
+                                  className="flex-1 px-3 py-2 text-xs font-medium text-primary-600 dark:text-primary-400 border border-primary-600 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                                >
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedEndlessAisleProduct(product);
+                                    setIsEndlessAisleModalOpen(true);
+                                  }}
+                                  className="flex-1 px-3 py-2 text-xs font-medium text-primary-600 dark:text-primary-400 border border-primary-600 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEndlessAisleProductToDelete(product);
+                                    setIsEndlessAisleDeleteModalOpen(true);
+                                  }}
+                                  className="px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
                               </div>
                             </div>
-
-                            {/* Shipping Info */}
-                            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-3">
-                              <span>Est. shipping: {product.estimatedShippingDays} days</span>
-                              <span
-                                className={`px-2 py-1 rounded-full ${product.isAvailable
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                                  }`}
-                              >
-                                {product.isAvailable ? 'Available' : 'Unavailable'}
-                              </span>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  setEndlessAisleProductToView(product);
-                                  setIsEndlessAisleViewModalOpen(true);
-                                }}
-                                className="flex-1 px-3 py-2 text-xs font-medium text-primary-600 dark:text-primary-400 border border-primary-600 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
-                              >
-                                View
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedEndlessAisleProduct(product);
-                                  setIsEndlessAisleModalOpen(true);
-                                }}
-                                className="flex-1 px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEndlessAisleProductToDelete(product);
-                                  setIsEndlessAisleDeleteModalOpen(true);
-                                }}
-                                className="px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
-
-                  {/* Pagination */}
-                  {Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage) > 1 && (
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
-                      <div className="text-sm text-gray-700 dark:text-gray-300">
-                        Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                        <span className="font-medium">
-                          {Math.min(currentPage * itemsPerPage, filteredEndlessAisleProducts.length)}
-                        </span>{' '}
-                        of <span className="font-medium">{filteredEndlessAisleProducts.length}</span> products
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setCurrentPage(1)}
-                          disabled={currentPage === 1}
-                          className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ChevronsLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
-                          className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ChevronDown className="w-4 h-4 rotate-90" />
-                        </button>
-                        <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                          Page {currentPage} of {Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage)}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setCurrentPage((prev) =>
-                              Math.min(Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage), prev + 1)
-                            )
-                          }
-                          disabled={currentPage >= Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage)}
-                          className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ChevronDown className="w-4 h-4 -rotate-90" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage(Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage))}
-                          disabled={currentPage >= Math.ceil(filteredEndlessAisleProducts.length / itemsPerPage)}
-                          className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ChevronsRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </>
+              )}
+
+              {/* Pagination */}
+              {Math.ceil(filteredEndlessAisleProducts.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredEndlessAisleProducts.length / ITEMS_PER_PAGE)}
+                    totalItems={filteredEndlessAisleProducts.length}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               )}
             </>
           )}
@@ -1504,27 +1690,53 @@ export default function Omnichannel() {
               {/* Header with Create Button */}
               <div className="flex items-center justify-between mb-6">
                 {/* Search */}
-                <SearchInput
-                  value={searchQuery}
-                  onChange={(value) => {
-                    setSearchQuery(value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search stores..."
-                />
-
-                <button
-                  onClick={handleAddStore}
-                  className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Store
-                </button>
+                <div className="flex-1 max-w-md">
+                  <SearchInput
+                    value={searchQuery}
+                    onChange={(value) => {
+                      setSearchQuery(value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search stores..."
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                    <button
+                      onClick={() => setStoresViewMode('grid')}
+                      className={`p-2 rounded transition-colors ${
+                        storesViewMode === 'grid'
+                          ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                      title="Grid View"
+                    >
+                      <Grid3x3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setStoresViewMode('list')}
+                      className={`p-2 rounded transition-colors ${
+                        storesViewMode === 'list'
+                          ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                      title="List View"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleAddStore}
+                    className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Store
+                  </button>
+                </div>
               </div>
 
-
-
-              {/* Stores Grid */}
+              {/* Stores Grid/List */}
               {stores.filter((s) =>
                 searchQuery
                   ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1538,7 +1750,7 @@ export default function Omnichannel() {
                     {searchQuery ? 'No matching stores found' : 'No stores found'}
                   </p>
                 </div>
-              ) : (
+              ) : storesViewMode === 'grid' ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {stores
@@ -1549,7 +1761,7 @@ export default function Omnichannel() {
                           s.address?.toLowerCase().includes(searchQuery.toLowerCase())
                           : true
                       )
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                       .map((store) => (
                         <div
                           key={store.id}
@@ -1612,25 +1824,25 @@ export default function Omnichannel() {
                               </p>
                               <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                                 {store.operatingHours.monday && (
-                                  <div>Mon: {store.operatingHours.monday}</div>
+                                  <div>Mon: {formatOperatingHours(store.operatingHours.monday as any)}</div>
                                 )}
                                 {store.operatingHours.tuesday && (
-                                  <div>Tue: {store.operatingHours.tuesday}</div>
+                                  <div>Tue: {formatOperatingHours(store.operatingHours.tuesday as any)}</div>
                                 )}
                                 {store.operatingHours.wednesday && (
-                                  <div>Wed: {store.operatingHours.wednesday}</div>
+                                  <div>Wed: {formatOperatingHours(store.operatingHours.wednesday as any)}</div>
                                 )}
                                 {store.operatingHours.thursday && (
-                                  <div>Thu: {store.operatingHours.thursday}</div>
+                                  <div>Thu: {formatOperatingHours(store.operatingHours.thursday as any)}</div>
                                 )}
                                 {store.operatingHours.friday && (
-                                  <div>Fri: {store.operatingHours.friday}</div>
+                                  <div>Fri: {formatOperatingHours(store.operatingHours.friday as any)}</div>
                                 )}
                                 {store.operatingHours.saturday && (
-                                  <div>Sat: {store.operatingHours.saturday}</div>
+                                  <div>Sat: {formatOperatingHours(store.operatingHours.saturday as any)}</div>
                                 )}
                                 {store.operatingHours.sunday && (
-                                  <div>Sun: {store.operatingHours.sunday}</div>
+                                  <div>Sun: {formatOperatingHours(store.operatingHours.sunday as any)}</div>
                                 )}
                               </div>
                             </div>
@@ -1654,145 +1866,134 @@ export default function Omnichannel() {
                         </div>
                       ))}
                   </div>
-
-                  {/* Pagination */}
-                  {Math.ceil(
-                    stores.filter((s) =>
-                      searchQuery
-                        ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                        : true
-                    ).length / itemsPerPage
-                  ) > 1 && (
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                          Showing{' '}
-                          <span className="font-medium">
-                            {(currentPage - 1) * itemsPerPage + 1}
-                          </span>{' '}
-                          to{' '}
-                          <span className="font-medium">
-                            {Math.min(
-                              currentPage * itemsPerPage,
-                              stores.filter((s) =>
-                                searchQuery
-                                  ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                  : true
-                              ).length
-                            )}
-                          </span>{' '}
-                          of{' '}
-                          <span className="font-medium">
-                            {
-                              stores.filter((s) =>
-                                searchQuery
-                                  ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                  : true
-                              ).length
-                            }
-                          </span>{' '}
-                          stores
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setCurrentPage(1)}
-                            disabled={currentPage === 1}
-                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronsLeft className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronDown className="w-4 h-4 rotate-90" />
-                          </button>
-                          <span className="text-sm text-gray-700 dark:text-gray-300 px-4">
-                            Page {currentPage} of{' '}
-                            {Math.ceil(
-                              stores.filter((s) =>
-                                searchQuery
-                                  ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                  : true
-                              ).length / itemsPerPage
-                            )}
-                          </span>
-                          <button
-                            onClick={() =>
-                              setCurrentPage((prev) =>
-                                Math.min(
-                                  Math.ceil(
-                                    stores.filter((s) =>
-                                      searchQuery
-                                        ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                        : true
-                                    ).length / itemsPerPage
-                                  ),
-                                  prev + 1
-                                )
-                              )
-                            }
-                            disabled={
-                              currentPage >=
-                              Math.ceil(
-                                stores.filter((s) =>
-                                  searchQuery
-                                    ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                    : true
-                                ).length / itemsPerPage
-                              )
-                            }
-                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronDown className="w-4 h-4 -rotate-90" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              setCurrentPage(
-                                Math.ceil(
-                                  stores.filter((s) =>
-                                    searchQuery
-                                      ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                      s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                      s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                      : true
-                                  ).length / itemsPerPage
-                                )
-                              )
-                            }
-                            disabled={
-                              currentPage >=
-                              Math.ceil(
-                                stores.filter((s) =>
-                                  searchQuery
-                                    ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    s.address?.toLowerCase().includes(searchQuery.toLowerCase())
-                                    : true
-                                ).length / itemsPerPage
-                              )
-                            }
-                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronsRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                </>
+              ) : (
+                <>
+                  {/* List View */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Store
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Code
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Location
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Contact
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {stores
+                            .filter((s) =>
+                              searchQuery
+                                ? s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                s.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                s.address?.toLowerCase().includes(searchQuery.toLowerCase())
+                                : true
+                            )
+                            .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                            .map((store) => (
+                              <tr
+                                key={store.id}
+                                className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="flex-shrink-0 h-10 w-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mr-3">
+                                      <Store className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        {store.name}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                                    {store.code || '-'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-900 dark:text-white">
+                                    {store.address && (
+                                      <div>
+                                        {store.address}
+                                        {store.city && `, ${store.city}`}
+                                        {store.postalCode && ` ${store.postalCode}`}
+                                        {store.country && `, ${store.country}`}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-900 dark:text-white">
+                                    {store.phone && <div>{store.phone}</div>}
+                                    {store.email && <div className="text-xs text-gray-500 dark:text-gray-400">{store.email}</div>}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span
+                                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                      store.isActive
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                                    }`}
+                                  >
+                                    {store.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleEditStore(store)}
+                                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300"
+                                      title="Edit"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteStoreClick(store)}
+                                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </>
               )}
+
+              {/* Pagination */}
+                  {Math.ceil(filteredStores.length / ITEMS_PER_PAGE) > 1 && (
+                      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 mt-6">
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={Math.ceil(filteredStores.length / ITEMS_PER_PAGE)}
+                          totalItems={filteredStores.length}
+                          onPageChange={setCurrentPage}
+                        />
+                      </div>
+                    )}
             </>
           )}
         </div>
@@ -1956,6 +2157,7 @@ export default function Omnichannel() {
           product={selectedEndlessAisleProduct}
           products={productsData || []}
           warehouses={warehouses}
+          endlessAisleProducts={endlessAisleProducts}
           onClose={() => {
             setIsEndlessAisleModalOpen(false);
             setSelectedEndlessAisleProduct(null);
@@ -1991,12 +2193,7 @@ function StoreModal({
   isEditing,
   onClose,
   onSubmit,
-}: {
-  store: Store | null;
-  isEditing: boolean;
-  onClose: () => void;
-  onSubmit: (storeId?: number, data?: Partial<Store>) => void;
-}) {
+}: StoreModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<Omit<Store, 'id'>>({
     name: store?.name || '',
@@ -2232,15 +2429,7 @@ function BOPISOrderModal({
   onClose,
   onSubmit,
   isLoading,
-}: {
-  order: BOPISOrder | null;
-  orders: any[];
-  customers: any[];
-  stores: Store[];
-  onClose: () => void;
-  onSubmit: (data: Partial<BOPISOrder>) => void;
-  isLoading: boolean;
-}) {
+}: BOPISOrderModalProps) {
   const [formData, setFormData] = useState<Partial<BOPISOrder>>({
     orderId: order?.orderId || (orders.length > 0 ? orders[0].id : 0),
     orderNumber: order?.orderNumber || '',
@@ -2435,10 +2624,7 @@ function BOPISOrderModal({
 function BOPISOrderViewModal({
   order,
   onClose,
-}: {
-  order: BOPISOrder;
-  onClose: () => void;
-}) {
+}: BOPISOrderViewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -2573,15 +2759,7 @@ function BORISReturnModal({
   onClose,
   onSubmit,
   isLoading,
-}: {
-  returnItem: BORISReturn | null;
-  orders: any[];
-  customers: any[];
-  stores: Store[];
-  onClose: () => void;
-  onSubmit: (data: Partial<BORISReturn>) => void;
-  isLoading: boolean;
-}) {
+}: BORISReturnModalProps) {
   const [formData, setFormData] = useState<Partial<BORISReturn>>({
     returnId: returnItem?.returnId || 0,
     returnNumber: returnItem?.returnNumber || '',
@@ -2781,10 +2959,7 @@ function BORISReturnModal({
 function BORISReturnViewModal({
   returnItem,
   onClose,
-}: {
-  returnItem: BORISReturn;
-  onClose: () => void;
-}) {
+}: BORISReturnViewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -2921,17 +3096,34 @@ function EndlessAisleProductModal({
   product,
   products,
   warehouses,
+  endlessAisleProducts = [],
   onClose,
   onSubmit,
   isLoading,
-}: {
-  product: EndlessAisleProduct | null;
-  products: any[];
-  warehouses: Warehouse[];
-  onClose: () => void;
-  onSubmit: (data: Partial<EndlessAisleProduct>) => void;
-  isLoading: boolean;
-}) {
+}: EndlessAisleProductModalProps) {
+  // Fetch collections for dropdown
+  const { data: collectionsData } = useQuery({
+    queryKey: ['collections', 'endless-aisle'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/collections?skip=0&take=10000');
+        return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      } catch (error) {
+        console.error('Error fetching collections:', error);
+        return [];
+      }
+    },
+  });
+
+  const collections = useMemo(() => {
+    const allCollections = Array.isArray(collectionsData) ? collectionsData : [];
+    // Remove duplicates by name, keeping the first occurrence
+    const uniqueCollections = allCollections.filter((col: any, index: number, self: any[]) => 
+      index === self.findIndex((c: any) => c.name === col.name)
+    );
+    return uniqueCollections;
+  }, [collectionsData]);
+
   const [formData, setFormData] = useState<Partial<EndlessAisleProduct>>({
     productId: product?.productId || (products.length > 0 ? products[0].id : 0),
     basePrice: product?.basePrice || 0,
@@ -2942,6 +3134,44 @@ function EndlessAisleProductModal({
     collection: product?.collection || '',
     availableAtWarehouses: product?.availableAtWarehouses || [],
   });
+
+  // Fetch inventory for the selected product to get max available quantities
+  const { data: inventoryData } = useQuery({
+    queryKey: ['inventory', 'endless-aisle', formData.productId],
+    queryFn: async () => {
+      if (!formData.productId) return [];
+      try {
+        const response = await api.get(`/inventory?productId=${formData.productId}`);
+        return Array.isArray(response.data) ? response.data : [];
+      } catch (error) {
+        console.error('Error fetching inventory:', error);
+        return [];
+      }
+    },
+    enabled: !!formData.productId,
+  });
+
+  // Create a map of warehouseId to availableQty for quick lookup
+  const inventoryMap = useMemo(() => {
+    const map = new Map<number, number>();
+    if (Array.isArray(inventoryData)) {
+      inventoryData.forEach((item: any) => {
+        const warehouseId = item.warehouseId !== undefined && item.warehouseId !== null ? Number(item.warehouseId) : null;
+        const availableQty = item.availableQty !== undefined && item.availableQty !== null ? Number(item.availableQty) : null;
+        if (warehouseId !== null && availableQty !== null) {
+          map.set(warehouseId, availableQty);
+        }
+      });
+    }
+    return map;
+  }, [inventoryData]);
+
+  // Find collection ID from collection name for dropdown value
+  const collectionIdForDropdown = useMemo(() => {
+    if (!formData.collection) return '';
+    const foundCollection = collections.find((col: any) => col.name === formData.collection);
+    return foundCollection ? foundCollection.id.toString() : formData.collection;
+  }, [formData.collection, collections]);
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -2957,19 +3187,42 @@ function EndlessAisleProductModal({
       toast.error('Please select a product');
       return;
     }
+    if (!formData.availableAtWarehouses || formData.availableAtWarehouses.length === 0) {
+      toast.error('Please add at least one warehouse');
+      return;
+    }
+    // Validate that all warehouses have required fields
+    const invalidWarehouses = formData.availableAtWarehouses.filter(
+      (w: any) => !w.warehouseId || w.warehouseId === 0
+    );
+    if (invalidWarehouses.length > 0) {
+      toast.error('Please select a warehouse for all entries');
+      return;
+    }
     onSubmit(formData);
   };
 
   const handleAddWarehouse = () => {
+    const defaultWarehouse = warehouses[0];
+    const warehouseId = defaultWarehouse?.id || 0;
+    
+    // Auto-populate available quantity from inventory if available
+    const availableQty = inventoryMap.has(warehouseId) 
+      ? (inventoryMap.get(warehouseId) || 0)
+      : 0;
+    
+    // Auto-populate estimated shipping days from product-level default
+    const defaultShippingDays = formData.estimatedShippingDays || 3;
+    
     setFormData({
       ...formData,
       availableAtWarehouses: [
         ...(formData.availableAtWarehouses || []),
         {
-          warehouseId: warehouses[0]?.id || 0,
-          warehouseName: warehouses[0]?.name || '',
-          availableQuantity: 0,
-          estimatedShippingDays: 3,
+          warehouseId,
+          warehouseName: defaultWarehouse?.name || '',
+          availableQuantity: availableQty,
+          estimatedShippingDays: defaultShippingDays,
         },
       ],
     });
@@ -3017,7 +3270,40 @@ function EndlessAisleProductModal({
               </label>
               <CustomDropdown
                 value={formData.productId?.toString() || ''}
-                onChange={(value) => setFormData({ ...formData, productId: Number(value) || 0 })}
+                onChange={(value) => {
+                  const selectedProduct = products.find((p) => p.id?.toString() === value);
+                  if (selectedProduct) {
+                    // Get base price
+                    const basePrice = selectedProduct.basePrice ? parseFloat(selectedProduct.basePrice.toString()) : (selectedProduct.price ? parseFloat(selectedProduct.price.toString()) : 0);
+                    
+                    // Get collection name from collectionId
+                    let collectionName = '';
+                    if (selectedProduct.collectionId) {
+                      const productCollection = collections.find((col: any) => col.id === selectedProduct.collectionId);
+                      collectionName = productCollection?.name || '';
+                    } else if (selectedProduct.collection?.name) {
+                      collectionName = selectedProduct.collection.name;
+                    }
+                    
+                    // Get currency from existing endless aisle product if available, otherwise keep current or default to USD
+                    const productIdNum = Number(value) || 0;
+                    const existingEaProduct = endlessAisleProducts.find((ea: EndlessAisleProduct) => ea.productId === productIdNum);
+                    const currency = existingEaProduct?.currency || formData.currency || 'USD';
+                    
+                    setFormData({
+                      ...formData,
+                      productId: productIdNum,
+                      basePrice,
+                      collection: collectionName,
+                      currency,
+                    });
+                  } else {
+                    setFormData({
+                      ...formData,
+                      productId: Number(value) || 0,
+                    });
+                  }
+                }}
                 options={products.map((p) => ({
                   value: p.id?.toString() || '',
                   label: p.name || p.sku || 'Unknown',
@@ -3032,8 +3318,9 @@ function EndlessAisleProductModal({
                 type="number"
                 step="0.01"
                 value={typeof formData.basePrice === 'number' ? formData.basePrice : 0}
-                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                readOnly
+                disabled
+                className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-400 cursor-not-allowed"
               />
             </div>
 
@@ -3042,6 +3329,7 @@ function EndlessAisleProductModal({
               <CustomDropdown
                 value={formData.currency || 'USD'}
                 onChange={(value) => setFormData({ ...formData, currency: value })}
+                disabled={true}
                 options={[
                   { value: 'USD', label: 'USD - US Dollar' },
                   { value: 'EUR', label: 'EUR - Euro' },
@@ -3071,24 +3359,20 @@ function EndlessAisleProductModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
-              <input
-                type="text"
-                value={formData.category || ''}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Product category..."
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Collection</label>
-              <input
-                type="text"
-                value={formData.collection || ''}
-                onChange={(e) => setFormData({ ...formData, collection: e.target.value })}
-                className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Product collection..."
+              <CustomDropdown
+                value={collectionIdForDropdown}
+                onChange={(value) => {
+                  // Find the collection name from the selected ID
+                  const selectedCollection = collections.find((col: any) => col.id.toString() === value);
+                  setFormData({ ...formData, collection: selectedCollection?.name || '' });
+                }}
+                disabled={true}
+                options={collections.map((col: any) => ({
+                  value: col.id.toString(),
+                  label: col.name,
+                }))}
+                placeholder="Select collection..."
               />
             </div>
           </div>
@@ -3112,12 +3396,33 @@ function EndlessAisleProductModal({
                 <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Warehouse <span className="text-red-500">*</span>
+                      </label>
                       <CustomDropdown
                         value={warehouse.warehouseId?.toString() || ''}
                         onChange={(value) => {
                           const selectedWarehouse = warehouses.find((w) => w.id === Number(value));
-                          handleUpdateWarehouse(idx, 'warehouseId', Number(value) || 0);
-                          handleUpdateWarehouse(idx, 'warehouseName', selectedWarehouse?.name || '');
+                          const warehouseIdNum = Number(value) || 0;
+                          
+                          // Auto-populate available quantity from inventory
+                          const availableQty = inventoryMap.has(warehouseIdNum) 
+                            ? (inventoryMap.get(warehouseIdNum) || 0)
+                            : 0;
+                          
+                          // Auto-populate estimated shipping days from product-level default
+                          const defaultShippingDays = formData.estimatedShippingDays || 3;
+                          
+                          // Update all fields in a single state update
+                          const updated = [...(formData.availableAtWarehouses || [])];
+                          updated[idx] = {
+                            ...updated[idx],
+                            warehouseId: warehouseIdNum,
+                            warehouseName: selectedWarehouse?.name || '',
+                            availableQuantity: availableQty,
+                            estimatedShippingDays: defaultShippingDays,
+                          };
+                          setFormData({ ...formData, availableAtWarehouses: updated });
                         }}
                         options={warehouses.map((w) => ({
                           value: w.id.toString(),
@@ -3127,17 +3432,48 @@ function EndlessAisleProductModal({
                       />
                     </div>
                     <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Available Quantity
+                      </label>
                       <input
                         type="number"
                         value={warehouse.availableQuantity || 0}
-                        onChange={(e) =>
-                          handleUpdateWarehouse(idx, 'availableQuantity', parseInt(e.target.value) || 0)
-                        }
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          const warehouseIdNum = Number(warehouse.warehouseId);
+                          // Only enforce max if inventory data exists
+                          if (warehouseIdNum && inventoryMap.has(warehouseIdNum)) {
+                            const maxQty = inventoryMap.get(warehouseIdNum) || 0;
+                            // Ensure value doesn't exceed max
+                            const finalValue = Math.min(value, maxQty);
+                            handleUpdateWarehouse(idx, 'availableQuantity', finalValue);
+                          } else {
+                            // No max restriction if no inventory data
+                            handleUpdateWarehouse(idx, 'availableQuantity', Math.max(0, value));
+                          }
+                        }}
                         className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        placeholder="Quantity"
+                        placeholder="0"
+                        min="0"
+                        max={warehouse.warehouseId && inventoryMap.has(Number(warehouse.warehouseId)) ? inventoryMap.get(Number(warehouse.warehouseId)) : undefined}
+                        title={warehouse.warehouseId && inventoryMap.has(Number(warehouse.warehouseId)) ? `Maximum available: ${inventoryMap.get(Number(warehouse.warehouseId))}` : undefined}
                       />
+                      {warehouse.warehouseId ? (
+                        inventoryMap.has(Number(warehouse.warehouseId)) ? (
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                            Max available: {inventoryMap.get(Number(warehouse.warehouseId))} units
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 italic">
+                            No inventory data available
+                          </p>
+                        )
+                      ) : null}
                     </div>
                     <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Estimated Shipping Days
+                      </label>
                       <input
                         type="number"
                         value={warehouse.estimatedShippingDays || 3}
@@ -3145,7 +3481,8 @@ function EndlessAisleProductModal({
                           handleUpdateWarehouse(idx, 'estimatedShippingDays', parseInt(e.target.value) || 3)
                         }
                         className="w-full px-3 py-2 text-[14px] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        placeholder="Shipping Days"
+                        placeholder="3"
+                        min="1"
                       />
                     </div>
                   </div>
@@ -3153,6 +3490,7 @@ function EndlessAisleProductModal({
                     type="button"
                     onClick={() => handleRemoveWarehouse(idx)}
                     className="text-red-600 hover:text-red-900 dark:text-red-400 p-1"
+                    title="Remove Warehouse"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -3205,10 +3543,7 @@ function EndlessAisleProductModal({
 function EndlessAisleProductViewModal({
   product,
   onClose,
-}: {
-  product: EndlessAisleProduct;
-  onClose: () => void;
-}) {
+}: EndlessAisleProductViewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {

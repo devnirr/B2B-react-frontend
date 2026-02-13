@@ -3,7 +3,7 @@ import { logCreate, logUpdate, logDelete } from '../utils/auditLog';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
-import { Package, Plus, X, ChevronDown, ChevronRight, Edit, Trash2, Upload,  Eye, ChevronLeft } from 'lucide-react';
+import { Package, Plus, X, ChevronDown, ChevronRight, Edit, Trash2, Upload, Eye, ChevronLeft, Grid3x3, List } from 'lucide-react';
 import { validators } from '../utils/validation';
 import { generateEAN13 } from '../utils/ean';
 import { SkeletonPage } from '../components/Skeleton';
@@ -25,6 +25,7 @@ export default function Products() {
   const [isViewModalShowing, setIsViewModalShowing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'table' | 'variants'>('table'); // Default: table view
+  const [displayViewMode, setDisplayViewMode] = useState<'grid' | 'list'>('grid'); // Grid/List view for products display
   const [activeTab, setActiveTab] = useState<'products' | 'attributes' | 'bundles'>('products'); // Tab state for Catalog sections
   const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set()); // Track expanded styles in variant view
   const [expandedColors, setExpandedColors] = useState<Set<string>>(new Set()); // Track expanded colors (key: "style-color")
@@ -360,10 +361,37 @@ export default function Products() {
                 Variant View (Style → Color → Size)
               </button>
             </div>
-            <ButtonWithWaves onClick={openModal}>
-              <Plus className="w-4 h-4" />
-              Add Product
-            </ButtonWithWaves>
+            <div className="flex items-center gap-2">
+              {/* Grid/List View Toggle */}
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setDisplayViewMode('grid')}
+                  className={`p-2 rounded transition-colors ${
+                    displayViewMode === 'grid'
+                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title="Grid View"
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setDisplayViewMode('list')}
+                  className={`p-2 rounded transition-colors ${
+                    displayViewMode === 'list'
+                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                  title="List View"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+              <ButtonWithWaves onClick={openModal}>
+                <Plus className="w-4 h-4" />
+                Add Product
+              </ButtonWithWaves>
+            </div>
           </div>
 
           {/* Variant Hierarchy View */}
@@ -540,7 +568,176 @@ export default function Products() {
                   Get started by adding your first product to the inventory.
                 </p>
               </div>
+            ) : displayViewMode === 'list' ? (
+              /* List/Table View */
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Product
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          SKU
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Collection
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          EAN
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Sizes
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Colors
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Materials
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {data.data.map((product: any) => (
+                        <tr
+                          key={product.id}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                                {product.images && product.images.length > 0 ? (
+                                  <img
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    className="h-10 w-10 object-cover rounded-lg"
+                                  />
+                                ) : (
+                                  <Package className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {product.name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {product.sku}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {product.collection?.name || '-'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {product.ean || '-'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {product.sizes && product.sizes.length > 0 ? (
+                                product.sizes.map((size: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                  >
+                                    {size}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {product.colors && product.colors.length > 0 ? (
+                                product.colors.map((color: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                  >
+                                    {color}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {product.materials ? (
+                                Array.isArray(product.materials) ? (
+                                  product.materials.map((material: string, idx: number) => (
+                                    <span
+                                      key={idx}
+                                      className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                    >
+                                      {material}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                                    {product.materials}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedProduct(product);
+                                  setIsViewModalOpen(true);
+                                }}
+                                className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300"
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedProduct(product);
+                                  setIsEditModalOpen(true);
+                                }}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedProduct(product);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
+              /* Grid View */
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-5">
                 {data.data.map((product: any) => (
                   <div
@@ -2958,7 +3155,9 @@ function AttributesTaxonomySection() {
     queryFn: async () => {
       try {
         const response = await api.get('/product-configurations/ATTRIBUTES');
-        return response.data?.data || [];
+        const data = response.data?.data;
+        // Ensure we always return an array
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         return [];
       }
@@ -2971,7 +3170,9 @@ function AttributesTaxonomySection() {
     queryFn: async () => {
       try {
         const response = await api.get('/product-configurations/TAXONOMY');
-        return response.data?.data || [];
+        const data = response.data?.data;
+        // Ensure we always return an array
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         return [];
       }
@@ -2979,11 +3180,19 @@ function AttributesTaxonomySection() {
   });
 
   useEffect(() => {
-    if (attributesData) setAttributes(attributesData);
+    if (attributesData) {
+      // Ensure attributesData is always an array
+      const attributesArray = Array.isArray(attributesData) ? attributesData : [];
+      setAttributes(attributesArray);
+    }
   }, [attributesData]);
 
   useEffect(() => {
-    if (taxonomyData) setTaxonomy(taxonomyData);
+    if (taxonomyData) {
+      // Ensure taxonomyData is always an array
+      const taxonomyArray = Array.isArray(taxonomyData) ? taxonomyData : [];
+      setTaxonomy(taxonomyArray);
+    }
   }, [taxonomyData]);
 
   // Mutation for saving attributes
@@ -2996,7 +3205,8 @@ function AttributesTaxonomySection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-configuration', 'ATTRIBUTES'] });
-      setAttributes(attributesData || []);
+      const attributesArray = Array.isArray(attributesData) ? attributesData : [];
+      setAttributes(attributesArray);
     },
   });
 
@@ -3042,7 +3252,7 @@ function AttributesTaxonomySection() {
           </ButtonWithWaves>
         </div>
 
-        {attributes.length === 0 ? (
+        {!Array.isArray(attributes) || attributes.length === 0 ? (
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4">No attributes defined yet</p>
@@ -3118,7 +3328,7 @@ function AttributesTaxonomySection() {
           </ButtonWithWaves>
         </div>
 
-        {taxonomy.length === 0 ? (
+        {!Array.isArray(taxonomy) || taxonomy.length === 0 ? (
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4">No taxonomy defined yet</p>
@@ -3402,7 +3612,9 @@ function BundlesKitsSection() {
     queryFn: async () => {
       try {
         const response = await api.get('/product-configurations/BUNDLES');
-        return response.data?.data || [];
+        const data = response.data?.data;
+        // Ensure we always return an array
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         return [];
       }
@@ -3410,7 +3622,11 @@ function BundlesKitsSection() {
   });
 
   useEffect(() => {
-    if (bundlesData) setBundles(bundlesData);
+    if (bundlesData) {
+      // Ensure bundlesData is always an array
+      const bundlesArray = Array.isArray(bundlesData) ? bundlesData : [];
+      setBundles(bundlesArray);
+    }
   }, [bundlesData]);
 
   // Mutation for saving bundles
@@ -3447,7 +3663,7 @@ function BundlesKitsSection() {
         </ButtonWithWaves>
       </div>
 
-      {bundles.length === 0 ? (
+      {!Array.isArray(bundles) || bundles.length === 0 ? (
         <div className="text-center py-12">
           <Package className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400 mb-4">No bundles created yet</p>

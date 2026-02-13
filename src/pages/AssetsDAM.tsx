@@ -1228,7 +1228,9 @@ function LookbooksSection() {
   const [_isDeleteModalShowing, setIsDeleteModalShowing] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [editFile, setEditFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch lookbooks/line sheets from DAM API (filter by DOCUMENT type and lookbook tags/description)
@@ -1360,6 +1362,10 @@ function LookbooksSection() {
     setTimeout(() => {
       setIsEditModalOpen(false);
       setSelectedAsset(null);
+      setEditFile(null);
+      if (editFileInputRef.current) {
+        editFileInputRef.current.value = '';
+      }
     }, 300);
   };
 
@@ -1438,6 +1444,25 @@ function LookbooksSection() {
     }
   };
 
+  // Handle edit file selection
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type (PDF, DOC, DOCX)
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please select a PDF or Word document');
+        return;
+      }
+      // Validate file size (max 50MB for documents)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('File size must be less than 50MB');
+        return;
+      }
+      setEditFile(file);
+    }
+  };
+
   // Handle upload
   const handleUpload = async (formData: any) => {
     if (!uploadFile) {
@@ -1490,6 +1515,13 @@ function LookbooksSection() {
       assetData.tags = tagsArray.length > 0 ? tagsArray : undefined;
     } else {
       assetData.tags = undefined;
+    }
+
+    // If a new file is selected, include file-related data
+    if (editFile) {
+      assetData.url = URL.createObjectURL(editFile);
+      assetData.fileSize = editFile.size;
+      assetData.mimeType = editFile.type;
     }
 
     console.log('Updating lookbook:', selectedAsset.id, assetData);
@@ -1737,6 +1769,29 @@ function LookbooksSection() {
                   });
                 }}>
                   <div className="modal-body p-6">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Document File {editFile ? '(Optional - leave unchanged to keep current file)' : '(Optional)'}
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
+                        {editFile ? (
+                          <div className="space-y-4">
+                            <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{editFile.name}</p>
+                            <button type="button" onClick={() => { setEditFile(null); if (editFileInputRef.current) editFileInputRef.current.value = ''; }} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remove</button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Click to upload or drag and drop</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">PDF, DOC, DOCX up to 50MB</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Current file: {selectedAsset.name}</p>
+                            <input ref={editFileInputRef} type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleEditFileSelect} className="hidden" id="edit-lookbook-file-upload" />
+                            <label htmlFor="edit-lookbook-file-upload" className="mt-4 inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors">Select New File</label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name <span className="text-red-500">*</span></label>
                       <input type="text" name="name" defaultValue={selectedAsset.name} required className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-[14px]" placeholder="Enter lookbook name" />

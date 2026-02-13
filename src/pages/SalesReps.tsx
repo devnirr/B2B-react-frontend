@@ -42,8 +42,8 @@ export default function SalesReps() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -115,12 +115,12 @@ function RepAccountsTerritoriesSection() {
 
   const allReps = repsData || [];
   const territories = territoriesData || [];
-  
+
   // Apply client-side pagination
   const totalItems = allReps.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const reps = allReps.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  
+
   // Reset to page 1 when search query changes
   useEffect(() => {
     setCurrentPage(1);
@@ -232,8 +232,8 @@ function RepAccountsTerritoriesSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${rep.isActive
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
                           }`}>
                           {rep.isActive ? 'Active' : 'Inactive'}
                         </span>
@@ -722,12 +722,12 @@ function ClientAssignmentsSection() {
 
   const allCustomers = customersData || [];
   const reps = repsData || [];
-  
+
   // Apply client-side pagination
   const totalItems = allCustomers.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const customers = allCustomers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  
+
   // Reset to page 1 when search query changes
   useEffect(() => {
     setCurrentPage(1);
@@ -834,8 +834,8 @@ function ClientAssignmentsSection() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${customer.isActive
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
                           }`}>
                           {customer.isActive ? 'Active' : 'Inactive'}
                         </span>
@@ -981,7 +981,7 @@ function CalculateCommissionsModal({
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  
+
   // Period calendar state
   const [isPeriodCalendarOpen, setIsPeriodCalendarOpen] = useState(false);
   const [periodCalendarDate, setPeriodCalendarDate] = useState(() => {
@@ -1075,9 +1075,9 @@ function CalculateCommissionsModal({
       const viewportWidth = window.innerWidth;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-      
+
       const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
-      
+
       let top: number;
       if (openUpward) {
         top = Math.max(16, rect.top - calendarHeight - 4);
@@ -1087,20 +1087,20 @@ function CalculateCommissionsModal({
           top = viewportHeight - calendarHeight - 16;
         }
       }
-      
+
       // Align calendar to the left edge of the input field
       let left = rect.left;
-      
+
       // If calendar goes off the right edge, align to the right edge of the input
       if (left + calendarWidth > viewportWidth - 16) {
         left = rect.right - calendarWidth;
       }
-      
+
       // Ensure calendar doesn't go off the left edge
       if (left < 16) {
         left = 16;
       }
-      
+
       setPeriodCalendarPosition({ top, left });
     }
   };
@@ -1240,7 +1240,7 @@ function CalculateCommissionsModal({
       }));
 
       // Save commissions to API
-      const promises = commissions.map((comm: any) => 
+      const promises = commissions.map((comm: any) =>
         api.post('/sales-rep-commissions', comm)
       );
       await Promise.all(promises);
@@ -1417,14 +1417,14 @@ function CalculateCommissionsModal({
                       <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </button>
                   </div>
-                  
+
                   {isPeriodCalendarOpen && (
                     <>
                       <div className="fixed inset-0 z-[10001]" onClick={() => setIsPeriodCalendarOpen(false)} />
-                      <div 
+                      <div
                         ref={periodCalendarRef}
-                        className="fixed w-80 bg-gray-800 dark:bg-gray-800 rounded-lg shadow-xl border border-gray-700 dark:border-gray-700" 
-                        style={{ 
+                        className="fixed w-80 bg-gray-800 dark:bg-gray-800 rounded-lg shadow-xl border border-gray-700 dark:border-gray-700"
+                        style={{
                           zIndex: 10002,
                           top: `${periodCalendarPosition.top}px`,
                           left: `${periodCalendarPosition.left}px`,
@@ -1495,13 +1495,12 @@ function CalculateCommissionsModal({
                                   key={day}
                                   type="button"
                                   onClick={() => handlePeriodDateSelect(day)}
-                                  className={`aspect-square text-sm rounded transition-colors ${
-                                    isSelected
-                                      ? 'bg-primary-500 text-white font-semibold'
-                                      : isToday
-                                        ? 'bg-primary-500/50 text-white font-semibold'
-                                        : 'text-white dark:text-white hover:bg-gray-700 dark:hover:bg-gray-700'
-                                  }`}
+                                  className={`aspect-square text-sm rounded transition-colors ${isSelected
+                                    ? 'bg-primary-500 text-white font-semibold'
+                                    : isToday
+                                      ? 'bg-primary-500/50 text-white font-semibold'
+                                      : 'text-white dark:text-white hover:bg-gray-700 dark:hover:bg-gray-700'
+                                    }`}
                                 >
                                   {day}
                                 </button>
@@ -1689,7 +1688,7 @@ function CommissionsSection() {
         if (typeFilter !== 'all') params.type = typeFilter;
         if (statusFilter !== 'all') params.status = statusFilter;
         if (searchQuery) params.search = searchQuery;
-        
+
         const response = await api.get('/sales-rep-commissions', { params });
         const commissions = response.data?.data || [];
 
@@ -1734,12 +1733,12 @@ function CommissionsSection() {
   });
 
   const allCommissions = commissionsData || [];
-  
+
   // Apply client-side pagination
   const totalItems = allCommissions.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const commissions = allCommissions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  
+
   // Reset to page 1 when search query or filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -1780,62 +1779,62 @@ function CommissionsSection() {
     <div>
       {/* Header with Search and Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search commissions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-              />
+        <div className="flex flex-col">
+          <div className="flex flex-col sm:flex-row items-center justify-between">
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 relative w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search commissions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full ::placeholder-[12px] text-[14px] pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <CustomDropdown
+                  value={periodFilter}
+                  onChange={(value) => setPeriodFilter(value)}
+                  options={periodOptions}
+                />
+              </div>
+              <div>
+                <CustomDropdown
+                  value={typeFilter}
+                  onChange={(value) => setTypeFilter(value)}
+                  options={[
+                    { value: 'all', label: 'All Types' },
+                    { value: 'SALES_VOLUME', label: 'Sales Volume' },
+                    { value: 'MARGIN', label: 'Margin' },
+                    { value: 'HYBRID', label: 'Hybrid' },
+                  ]}
+                />
+              </div>
+              <div>
+                <CustomDropdown
+                  value={statusFilter}
+                  onChange={(value) => setStatusFilter(value)}
+                  options={[
+                    { value: 'all', label: 'All Statuses' },
+                    { value: 'PENDING', label: 'Pending' },
+                    { value: 'CALCULATED', label: 'Calculated' },
+                    { value: 'APPROVED', label: 'Approved' },
+                    { value: 'PAID', label: 'Paid' },
+                  ]}
+                />
+              </div>
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center text-[14px] gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Calculate Commissions
+              Calculate&nbsp;Commissions
             </button>
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period</label>
-              <CustomDropdown
-                value={periodFilter}
-                onChange={(value) => setPeriodFilter(value)}
-                options={periodOptions}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
-              <CustomDropdown
-                value={typeFilter}
-                onChange={(value) => setTypeFilter(value)}
-                options={[
-                  { value: 'all', label: 'All Types' },
-                  { value: 'SALES_VOLUME', label: 'Sales Volume' },
-                  { value: 'MARGIN', label: 'Margin' },
-                  { value: 'HYBRID', label: 'Hybrid' },
-                ]}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-              <CustomDropdown
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value)}
-                options={[
-                  { value: 'all', label: 'All Statuses' },
-                  { value: 'PENDING', label: 'Pending' },
-                  { value: 'CALCULATED', label: 'Calculated' },
-                  { value: 'APPROVED', label: 'Approved' },
-                  { value: 'PAID', label: 'Paid' },
-                ]}
-              />
-            </div>
+
           </div>
         </div>
       </div>
@@ -1847,7 +1846,7 @@ function CommissionsSection() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Sales</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                ${commissions.reduce((sum: number, c: any) => sum + (c.salesAmount || 0), 0).toFixed(2)}
+                ${(Array.isArray(commissions) ? commissions.reduce((sum: number, c: any) => sum + (Number(c.salesAmount) || 0), 0) : 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -1860,7 +1859,7 @@ function CommissionsSection() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Margin</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                ${commissions.reduce((sum: number, c: any) => sum + (c.marginAmount || 0), 0).toFixed(2)}
+                ${(Array.isArray(commissions) ? commissions.reduce((sum: number, c: any) => sum + (Number(c.marginAmount) || 0), 0) : 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
@@ -1873,7 +1872,7 @@ function CommissionsSection() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Commissions</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                ${commissions.reduce((sum: number, c: any) => sum + (c.commissionAmount || 0), 0).toFixed(2)}
+                ${(Array.isArray(commissions) ? commissions.reduce((sum: number, c: any) => sum + (Number(c.commissionAmount) || 0), 0) : 0).toFixed(2)}
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
@@ -1945,16 +1944,16 @@ function CommissionsSection() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        ${(commission.salesAmount || 0).toFixed(2)}
+                        ${(Number(commission.salesAmount) || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        ${(commission.marginAmount || 0).toFixed(2)}
+                        ${(Number(commission.marginAmount) || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {((commission.commissionRate || 0) * 100).toFixed(1)}%
+                        {(Number(commission.commissionRate || 0) * 100).toFixed(1)}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary-600 dark:text-primary-400">
-                        ${(commission.commissionAmount || 0).toFixed(2)}
+                        ${(Number(commission.commissionAmount) || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(commission.status)}`}>

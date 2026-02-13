@@ -29,6 +29,7 @@ import {
   CustomDropdown,
   DatePicker,
 } from '../components/ui';
+import { ITEMS_PER_PAGE } from '../components/ui/Pagination';
 import { ButtonWithWaves } from '../components/ui';
 
 // Types
@@ -148,7 +149,11 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [allocationRulesPage, setAllocationRulesPage] = useState(1);
+  const [preOrdersPage, setPreOrdersPage] = useState(1);
+  const [backordersPage, setBackordersPage] = useState(1);
+  const [partialShipmentsPage, setPartialShipmentsPage] = useState(1);
+  const itemsPerPage = ITEMS_PER_PAGE;
   
   // View modal state
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -329,6 +334,14 @@ export default function Orders() {
     return Array.isArray(allocationRulesData) ? allocationRulesData : [];
   }, [allocationRulesData]);
 
+  // Paginated allocation rules
+  const paginatedAllocationRules = useMemo(() => {
+    const startIndex = (allocationRulesPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return allocationRules.slice(startIndex, endIndex);
+  }, [allocationRules, allocationRulesPage]);
+  const allocationRulesTotalPages = Math.ceil(allocationRules.length / ITEMS_PER_PAGE);
+
   // Allocation Rules Mutations
   const createAllocationRuleMutation = useMutation({
     mutationFn: async (data: Omit<AllocationRule, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -405,6 +418,14 @@ export default function Orders() {
       createdAt: po.createdAt,
     })) : [];
   }, [preOrdersData]);
+
+  // Paginated pre-orders
+  const paginatedPreOrders = useMemo(() => {
+    const startIndex = (preOrdersPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return preOrders.slice(startIndex, endIndex);
+  }, [preOrders, preOrdersPage]);
+  const preOrdersTotalPages = Math.ceil(preOrders.length / ITEMS_PER_PAGE);
 
   // Pre-Orders Mutations
   const createPreOrderMutation = useMutation({
@@ -501,6 +522,14 @@ export default function Orders() {
     })) : [];
   }, [backordersData]);
 
+  // Paginated backorders
+  const paginatedBackorders = useMemo(() => {
+    const startIndex = (backordersPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return backorders.slice(startIndex, endIndex);
+  }, [backorders, backordersPage]);
+  const backordersTotalPages = Math.ceil(backorders.length / ITEMS_PER_PAGE);
+
   // Backorders Mutations
   const createBackorderMutation = useMutation({
     mutationFn: async (data: Omit<Backorder, 'id' | 'orderNumber' | 'createdAt'>) => {
@@ -576,6 +605,14 @@ export default function Orders() {
       createdAt: ps.createdAt,
     })) : [];
   }, [partialShipmentsData]);
+
+  // Paginated partial shipments
+  const paginatedPartialShipments = useMemo(() => {
+    const startIndex = (partialShipmentsPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return partialShipments.slice(startIndex, endIndex);
+  }, [partialShipments, partialShipmentsPage]);
+  const partialShipmentsTotalPages = Math.ceil(partialShipments.length / ITEMS_PER_PAGE);
 
   // Partial Shipments Mutations
   const createPartialShipmentMutation = useMutation({
@@ -768,6 +805,10 @@ export default function Orders() {
           onTabChange={(tabId) => {
             setActiveTab(tabId as typeof activeTab);
             setCurrentPage(1);
+            setAllocationRulesPage(1);
+            setPreOrdersPage(1);
+            setBackordersPage(1);
+            setPartialShipmentsPage(1);
           }}
           className="border-b px-5 border-gray-200 dark:border-gray-700"
         />
@@ -1001,7 +1042,7 @@ export default function Orders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {allocationRules.map((rule) => (
+                      {paginatedAllocationRules.map((rule) => (
                         <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -1070,6 +1111,17 @@ export default function Orders() {
                   </table>
                 </div>
               )}
+              {/* Pagination */}
+              {allocationRules.length > 0 && allocationRulesTotalPages > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={allocationRulesPage}
+                    totalPages={allocationRulesTotalPages}
+                    totalItems={allocationRules.length}
+                    onPageChange={setAllocationRulesPage}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1135,7 +1187,7 @@ export default function Orders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {preOrders.map((preOrder) => (
+                      {paginatedPreOrders.map((preOrder) => (
                         <tr key={preOrder.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {preOrder.orderNumber || `Order #${preOrder.orderId}`}
@@ -1207,6 +1259,17 @@ export default function Orders() {
                   </table>
                 </div>
               )}
+              {/* Pagination */}
+              {preOrders.length > 0 && preOrdersTotalPages > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={preOrdersPage}
+                    totalPages={preOrdersTotalPages}
+                    totalItems={preOrders.length}
+                    onPageChange={setPreOrdersPage}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1269,7 +1332,7 @@ export default function Orders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {backorders.map((backorder) => (
+                      {paginatedBackorders.map((backorder) => (
                         <tr key={backorder.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {backorder.orderNumber || `Order #${backorder.orderId}`}
@@ -1338,6 +1401,17 @@ export default function Orders() {
                   </table>
                 </div>
               )}
+              {/* Pagination */}
+              {backorders.length > 0 && backordersTotalPages > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={backordersPage}
+                    totalPages={backordersTotalPages}
+                    totalItems={backorders.length}
+                    onPageChange={setBackordersPage}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1400,7 +1474,7 @@ export default function Orders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {partialShipments.map((shipment) => (
+                      {paginatedPartialShipments.map((shipment) => (
                         <tr key={shipment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {shipment.shipmentNumber}
@@ -1467,6 +1541,17 @@ export default function Orders() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {/* Pagination */}
+              {partialShipments.length > 0 && partialShipmentsTotalPages > 1 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <Pagination
+                    currentPage={partialShipmentsPage}
+                    totalPages={partialShipmentsTotalPages}
+                    totalItems={partialShipments.length}
+                    onPageChange={setPartialShipmentsPage}
+                  />
                 </div>
               )}
             </div>

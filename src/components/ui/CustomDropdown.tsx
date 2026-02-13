@@ -97,7 +97,7 @@ export default function CustomDropdown({
         {isOpen && menuMaxHeight !== null && (
           <div 
             ref={menuRef}
-            className="custom-dropdown-menu absolute bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden hide-scrollbar z-50" 
+            className="custom-dropdown-menu absolute bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden hide-scrollbar z-[100]" 
             style={{ 
               top: '100%',
               left: 0,
@@ -108,6 +108,7 @@ export default function CustomDropdown({
               overflowY: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {options.length === 0 ? (
               <div className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -118,9 +119,15 @@ export default function CustomDropdown({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     onChange(option.value);
                     setIsOpen(false);
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                   className={` w-full px-3 py-2 text-sm text-left transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis ${
                     index === 0 ? 'rounded-t-lg' : ''

@@ -751,7 +751,7 @@ export default function ReturnsRMA() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                           Requested Date
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                           Actions
                         </th>
                       </tr>
@@ -940,7 +940,7 @@ export default function ReturnsRMA() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                           Destination
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                           Actions
                         </th>
                       </tr>
@@ -980,7 +980,7 @@ export default function ReturnsRMA() {
                                 : '—'}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                              <div className="flex items-center justify-end gap-2">
+                              <div className="flex items-center justify-start gap-2">
                                 <button
                                   onClick={() => {
                                     setReverseLogisticsToView(logistics);
@@ -1102,47 +1102,50 @@ export default function ReturnsRMA() {
             setSelectedReverseLogistics(null);
           }}
           onSubmit={(data) => {
+            // Transform data to match backend DTO (for both create and update)
+            const apiData: any = {};
+
+            // Add rmaId for create, or include it in update if provided
+            if (data.rmaId) {
+              apiData.rmaId = Number(data.rmaId) || 0;
+            }
+
+            // Add optional fields only if they have values
+            if (data.trackingNumber) apiData.trackingNumber = data.trackingNumber;
+            if (data.carrier) apiData.carrier = data.carrier;
+            if (data.status) apiData.status = data.status;
+
+            // Transform originAddress object to individual fields
+            if (data.originAddress) {
+              if (data.originAddress.name) apiData.originName = data.originAddress.name;
+              if (data.originAddress.address) apiData.originAddress = data.originAddress.address;
+              if (data.originAddress.city) apiData.originCity = data.originAddress.city;
+              if (data.originAddress.state) apiData.originState = data.originAddress.state;
+              if (data.originAddress.postalCode) apiData.originPostalCode = data.originAddress.postalCode;
+              if (data.originAddress.country) apiData.originCountry = data.originAddress.country;
+            }
+
+            // Transform destinationAddress object to individual fields
+            if (data.destinationAddress) {
+              if (data.destinationAddress.name) apiData.destinationName = data.destinationAddress.name;
+              if (data.destinationAddress.address) apiData.destinationAddress = data.destinationAddress.address;
+              if (data.destinationAddress.city) apiData.destinationCity = data.destinationAddress.city;
+              if (data.destinationAddress.state) apiData.destinationState = data.destinationAddress.state;
+              if (data.destinationAddress.postalCode) apiData.destinationPostalCode = data.destinationAddress.postalCode;
+              if (data.destinationAddress.country) apiData.destinationCountry = data.destinationAddress.country;
+            }
+
+            // Add date fields if they have values
+            if (data.shippedDate) apiData.shippedDate = data.shippedDate;
+            if (data.receivedDate) apiData.receivedDate = data.receivedDate;
+            if (data.inspectedDate) apiData.inspectedDate = data.inspectedDate;
+            if (data.processedDate) apiData.processedDate = data.processedDate;
+            if (data.estimatedDeliveryDate) apiData.estimatedDeliveryDate = data.estimatedDeliveryDate;
+            if (data.notes) apiData.notes = data.notes;
+
             if (selectedReverseLogistics?.id) {
-              updateReverseLogisticsMutation.mutate({ id: selectedReverseLogistics.id, logisticsData: data });
+              updateReverseLogisticsMutation.mutate({ id: selectedReverseLogistics.id, logisticsData: apiData });
             } else {
-              // Transform data to match backend DTO
-              const apiData: any = {
-                rmaId: Number(data.rmaId) || 0,
-              };
-
-              // Add optional fields only if they have values
-              if (data.trackingNumber) apiData.trackingNumber = data.trackingNumber;
-              if (data.carrier) apiData.carrier = data.carrier;
-              if (data.status) apiData.status = data.status;
-
-              // Transform originAddress object to individual fields
-              if (data.originAddress) {
-                if (data.originAddress.name) apiData.originName = data.originAddress.name;
-                if (data.originAddress.address) apiData.originAddress = data.originAddress.address;
-                if (data.originAddress.city) apiData.originCity = data.originAddress.city;
-                if (data.originAddress.state) apiData.originState = data.originAddress.state;
-                if (data.originAddress.postalCode) apiData.originPostalCode = data.originAddress.postalCode;
-                if (data.originAddress.country) apiData.originCountry = data.originAddress.country;
-              }
-
-              // Transform destinationAddress object to individual fields
-              if (data.destinationAddress) {
-                if (data.destinationAddress.name) apiData.destinationName = data.destinationAddress.name;
-                if (data.destinationAddress.address) apiData.destinationAddress = data.destinationAddress.address;
-                if (data.destinationAddress.city) apiData.destinationCity = data.destinationAddress.city;
-                if (data.destinationAddress.state) apiData.destinationState = data.destinationAddress.state;
-                if (data.destinationAddress.postalCode) apiData.destinationPostalCode = data.destinationAddress.postalCode;
-                if (data.destinationAddress.country) apiData.destinationCountry = data.destinationAddress.country;
-              }
-
-              // Add date fields if they have values
-              if (data.shippedDate) apiData.shippedDate = data.shippedDate;
-              if (data.receivedDate) apiData.receivedDate = data.receivedDate;
-              if (data.inspectedDate) apiData.inspectedDate = data.inspectedDate;
-              if (data.processedDate) apiData.processedDate = data.processedDate;
-              if (data.estimatedDeliveryDate) apiData.estimatedDeliveryDate = data.estimatedDeliveryDate;
-              if (data.notes) apiData.notes = data.notes;
-
               createReverseLogisticsMutation.mutate(apiData);
             }
           }}
@@ -2051,37 +2054,39 @@ function ReverseLogisticsViewModal({
             )}
           </div>
 
-          {reverseLogistics.originAddress && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Origin Address</h3>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <p>{reverseLogistics.originAddress.name}</p>
-                <p>{reverseLogistics.originAddress.address}</p>
-                <p>
-                  {reverseLogistics.originAddress.city}
-                  {reverseLogistics.originAddress.state && `, ${reverseLogistics.originAddress.state}`}{' '}
-                  {reverseLogistics.originAddress.postalCode}
-                </p>
-                <p>{reverseLogistics.originAddress.country}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {reverseLogistics.originAddress && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Origin Address</h3>
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p>{reverseLogistics.originAddress.name}</p>
+                  <p>{reverseLogistics.originAddress.address}</p>
+                  <p>
+                    {reverseLogistics.originAddress.city}
+                    {reverseLogistics.originAddress.state && `, ${reverseLogistics.originAddress.state}`}{' '}
+                    {reverseLogistics.originAddress.postalCode}
+                  </p>
+                  <p>{reverseLogistics.originAddress.country}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {reverseLogistics.destinationAddress && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Destination Address</h3>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <p>{reverseLogistics.destinationAddress.name}</p>
-                <p>{reverseLogistics.destinationAddress.address}</p>
-                <p>
-                  {reverseLogistics.destinationAddress.city}
-                  {reverseLogistics.destinationAddress.state && `, ${reverseLogistics.destinationAddress.state}`}{' '}
-                  {reverseLogistics.destinationAddress.postalCode}
-                </p>
-                <p>{reverseLogistics.destinationAddress.country}</p>
+            {reverseLogistics.destinationAddress && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Destination Address</h3>
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p>{reverseLogistics.destinationAddress.name}</p>
+                  <p>{reverseLogistics.destinationAddress.address}</p>
+                  <p>
+                    {reverseLogistics.destinationAddress.city}
+                    {reverseLogistics.destinationAddress.state && `, ${reverseLogistics.destinationAddress.state}`}{' '}
+                    {reverseLogistics.destinationAddress.postalCode}
+                  </p>
+                  <p>{reverseLogistics.destinationAddress.country}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {reverseLogistics.notes && (
             <div>
@@ -2090,7 +2095,7 @@ function ReverseLogisticsViewModal({
             </div>
           )}
 
-          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex text-[14px] justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={onClose}
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
